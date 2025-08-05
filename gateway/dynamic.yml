@@ -1,0 +1,22 @@
+http:
+  routers:
+    auth-service:
+      rule: "PathPrefix(`/auth`)"
+      service: auth-service
+      entryPoints:
+        - web
+    todo-service:
+      rule: "PathPrefix(`/todos`)"
+      service: todo-service
+      entryPoints:
+        - web
+
+  services:
+    auth-service:
+      loadBalancer:
+        servers:
+          - url: "http://auth-service:8000"
+    todo-service:
+      loadBalancer:
+        servers:
+          - url: "http://todo-service:8001"
