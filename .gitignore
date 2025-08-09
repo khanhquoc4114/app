@@ -1,2 +1,10 @@
+# Virtual envs
+.venv/
+venv/
+env/
+ENV/
+myenv/
+.python-version
+
 myenv
 ui-service
