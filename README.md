@@ -5,6 +5,8 @@
 ## 🚀 Quick Start
 
 # Chạy frontend
+
+``` bash
 cd frontend
 npm install
 npm start
