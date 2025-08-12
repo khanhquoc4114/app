@@ -19,6 +19,7 @@ import {
     FacebookOutlined
 } from '@ant-design/icons';
 import { useNavigate, Link } from 'react-router-dom';
+import { authAPI } from '../services/api';
 
 const { Title, Text } = Typography;
 
@@ -30,12 +31,22 @@ const RegisterPage = () => {
     const handleRegister = async (values) => {
         setLoading(true);
 
-        // Simulate API call
-        setTimeout(() => {
-            message.success('Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản.');
-            setLoading(false);
+        try {
+            // Gọi API đăng ký
+            await authAPI.register({
+                username: values.email, // Dùng email làm username
+                email: values.email,
+                full_name: values.fullName,
+                password: values.password
+            });
+
+            message.success('Đăng ký thành công! Bạn có thể đăng nhập ngay.');
             navigate('/login');
-        }, 2000);
+        } catch (error) {
+            message.error(error.message || 'Đăng ký thất bại');
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleSocialLogin = (provider) => {

@@ -1,27 +1,78 @@
-# 🏟️ Hệ thống Quản lý Sân Thể thao
+# Hệ thống Quản lý Sân Thể thao
 
-Ứng dụng web hiện đại để quản lý và đặt sân thể thao trực tuyến.
+Ứng dụng web quản lý và đặt sân thể thao, xây dựng bằng React và FastAPI.
 
-## 🚀 Quick Start
+## Tính năng
 
-# Chạy frontend
+- 🏟️ Quản lý sân thể thao (cầu lông, bóng đá, tennis...)
+- �  Đăng ký, đăng nhập người dùng
+- � Đặt sân ttrực tuyến (sắp có)
+- 💳 Thanh toán online (sắp có)
+- 🤖 Chatbot hỗ trợ (sắp có)
 
-``` bash
-cd frontend
-npm install
-npm start
+## Công nghệ sử dụng
+
+- **Frontend**: React, Ant Design
+- **Backend**: FastAPI, PostgreSQL
+- **Deployment**: Docker
+
+## Cách chạy dự án
+
+```bash
+# Tải code về
+git clone <link-repo>
+cd sports-facility-management
+
+# Chạy tất cả services
+docker-compose up -d
+
+# Tạo database và dữ liệu mẫu
+docker-compose exec backend python init_db.py
 ```
 
-Ứng dụng sẽ mở tại: `http://localhost:3000`
+Xong! Truy cập:
+- **Trang web**: http://localhost:3000
+- **API**: http://localhost:8000/docs
 
-## 📱 Tính năng chính
+## Tài khoản mẫu
 
-### ✅ Đã hoàn thành
-- 🏠 **Trang chủ**: Thống kê tổng quan, môn thể thao phổ biến
-- 🏟️ **Danh sách sân**: Lọc, tìm kiếm, xem chi tiết sân
-- 📅 **Đặt sân**: Chọn ngày/giờ, form đặt sân, tính tiền
-- 👤 **Đăng nhập/Đăng ký**: Authentication UI
-- 🌙 **Dark Mode**: Chuyển đổi giao diện sáng/tối
-- 🔔 **Thông báo**: Notification center
-- 📊 **Admin Dashboard**: Thống kê, quản lý
-- 📱 **Responsive**: Tối ưu mobile/tablet/desktop
+Sau khi chạy `init_db.py`:
+
+- **Admin**: `admin` / `admin123`
+- **User**: `user1` / `user123`
+
+## Cấu trúc dự án
+
+```
+├── backend/           # API server (FastAPI)
+├── frontend/          # Giao diện web (React)
+├── docker-compose.yml # Cấu hình Docker
+
+```
+
+## API có sẵn
+
+- `POST /api/auth/register` - Đăng ký
+- `POST /api/auth/login` - Đăng nhập
+- `GET /api/auth/me` - Thông tin user
+
+## Cấu hình
+
+Copy file `backend/.env.example` thành `backend/.env` và sửa:
+
+```env
+DB_USER=sports_user
+DB_PASSWORD=sports_password
+DB_HOST=localhost
+DB_NAME=sports_facility_db
+SECRET_KEY=your-secret-key
+```
+
+
+## 🔌 API Endpoints
+
+### Authentication
+- `POST /api/auth/register` - User registration
+- `POST /api/auth/login` - User login
+- `GET /api/auth/me` - Get current user info
+

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { Layout } from 'antd';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { AuthProvider } from './contexts/AuthContext';
 import Header from './components/Layout/Header';
 import Sidebar from './components/Layout/Sidebar';
 import QuickActions from './components/QuickActions';
@@ -15,6 +16,7 @@ import AdminDashboard from './pages/AdminDashboard';
 const { Content } = Layout;
 
 function AppContent() {
+    // Phat hien kich thuoc man hinh <= 768px = dien thoai
     const [isMobile, setIsMobile] = useState(false);
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     const location = useLocation();
@@ -26,12 +28,13 @@ function AppContent() {
         const checkMobile = () => {
             setIsMobile(window.innerWidth <= 768);
             if (window.innerWidth <= 768) {
+                // An sidebar
                 setSidebarCollapsed(true);
             }
         };
-
+        // Check ngay khi load
         checkMobile();
-        window.addEventListener('resize', checkMobile);
+        window.addEventListener('resize', checkMobile); // Check lai khi thay doi kich thuoc
         return () => window.removeEventListener('resize', checkMobile);
     }, []);
 
@@ -83,9 +86,11 @@ function AppContent() {
 function App() {
     return (
         <ThemeProvider>
-            <Router>
-                <AppContent />
-            </Router>
+            <AuthProvider>
+                <Router>
+                    <AppContent />
+                </Router>
+            </AuthProvider>
         </ThemeProvider>
     );
 }

@@ -16,6 +16,8 @@ import {
     FacebookOutlined
 } from '@ant-design/icons';
 import { useNavigate, Link } from 'react-router-dom';
+import { authAPI } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 
 const { Title, Text } = Typography;
 
@@ -23,16 +25,25 @@ const LoginPage = () => {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
     const [form] = Form.useForm();
+    const { login } = useAuth();
 
     const handleLogin = async (values) => {
         setLoading(true);
 
-        // Simulate API call
-        setTimeout(() => {
+        try {
+            // Gọi API đăng nhập
+            const response = await authAPI.login(values.email, values.password);
+
+            // Sử dụng AuthContext để lưu thông tin
+            login(response.user, response.access_token);
+
             message.success('Đăng nhập thành công!');
-            setLoading(false);
             navigate('/');
-        }, 1500);
+        } catch (error) {
+            message.error(error.message || 'Đăng nhập thất bại');
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleSocialLogin = (provider) => {
@@ -67,15 +78,14 @@ const LoginPage = () => {
                 >
                     <Form.Item
                         name="email"
-                        label="Email"
+                        label="Username"
                         rules={[
-                            { required: true, message: 'Vui lòng nhập email' },
-                            { type: 'email', message: 'Email không hợp lệ' }
+                            { required: true, message: 'Vui lòng nhập username' }
                         ]}
                     >
                         <Input
                             prefix={<UserOutlined />}
-                            placeholder="Nhập email của bạn"
+                            placeholder="Nhập username của bạn"
                         />
                     </Form.Item>
 

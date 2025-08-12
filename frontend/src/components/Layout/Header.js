@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Layout, Menu, Button, Avatar, Dropdown, Drawer, Switch, Tooltip } from 'antd';
+import { Layout, Menu, Button, Avatar, Dropdown, Drawer, Tooltip } from 'antd';
 import {
     UserOutlined,
     LogoutOutlined,
@@ -10,6 +10,7 @@ import {
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useAuth } from '../../contexts/AuthContext';
 import NotificationCenter from '../NotificationCenter';
 
 const { Header: AntHeader } = Layout;
@@ -18,21 +19,34 @@ const Header = ({ onMenuToggle }) => {
     const navigate = useNavigate();
     const [mobileMenuVisible, setMobileMenuVisible] = useState(false);
     const { isDarkMode, toggleDarkMode } = useTheme();
+    const { user, logout, isAuthenticated } = useAuth();
 
-    const userMenu = (
-        <Menu>
-            <Menu.Item key="profile" icon={<UserOutlined />}>
-                Thông tin cá nhân
-            </Menu.Item>
-            <Menu.Item key="settings" icon={<SettingOutlined />}>
-                Cài đặt
-            </Menu.Item>
-            <Menu.Divider />
-            <Menu.Item key="logout" icon={<LogoutOutlined />}>
-                Đăng xuất
-            </Menu.Item>
-        </Menu>
-    );
+    const handleLogout = () => {
+        logout();
+        navigate('/');
+    };
+
+    const userMenuItems = [
+        {
+            key: 'profile',
+            icon: <UserOutlined />,
+            label: 'Thông tin cá nhân',
+        },
+        {
+            key: 'settings',
+            icon: <SettingOutlined />,
+            label: 'Cài đặt',
+        },
+        {
+            type: 'divider',
+        },
+        {
+            key: 'logout',
+            icon: <LogoutOutlined />,
+            label: 'Đăng xuất',
+            onClick: handleLogout,
+        },
+    ];
 
     const mobileMenuItems = [
         { key: '/', label: 'Trang chủ' },
@@ -90,29 +104,40 @@ const Header = ({ onMenuToggle }) => {
 
                     <NotificationCenter />
 
-                    <Button
-                        type="primary"
-                        ghost
-                        onClick={() => navigate('/login')}
-                        size="small"
-                    >
-                        Đăng nhập
-                    </Button>
-                    <Button
-                        type="primary"
-                        onClick={() => navigate('/register')}
-                        size="small"
-                    >
-                        Đăng ký
-                    </Button>
-
-                    {/* Hiển thị khi đã đăng nhập */}
-                    {/* <Dropdown overlay={userMenu} placement="bottomRight">
-            <Avatar 
-              style={{ backgroundColor: '#87d068', cursor: 'pointer' }} 
-              icon={<UserOutlined />} 
-            />
-          </Dropdown> */}
+                    {isAuthenticated ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <span style={{ color: 'white' }}>
+                                Xin chào, {user?.full_name || user?.username}
+                            </span>
+                            <Dropdown
+                                menu={{ items: userMenuItems }}
+                                placement="bottomRight"
+                            >
+                                <Avatar
+                                    style={{ backgroundColor: '#87d068', cursor: 'pointer' }}
+                                    icon={<UserOutlined />}
+                                />
+                            </Dropdown>
+                        </div>
+                    ) : (
+                        <>
+                            <Button
+                                type="primary"
+                                ghost
+                                onClick={() => navigate('/login')}
+                                size="small"
+                            >
+                                Đăng nhập
+                            </Button>
+                            <Button
+                                type="primary"
+                                onClick={() => navigate('/register')}
+                                size="small"
+                            >
+                                Đăng ký
+                            </Button>
+                        </>
+                    )}
                 </div>
             </AntHeader>
 
@@ -140,18 +165,18 @@ const Header = ({ onMenuToggle }) => {
             </Drawer>
 
             <style jsx>{`
-        @media (max-width: 768px) {
-          .mobile-menu-btn {
-            display: inline-flex !important;
-          }
-        }
-        
-        @media (max-width: 576px) {
-          .header-title-text {
-            display: none;
-          }
-        }
-      `}</style>
+                @media (max-width: 768px) {
+                    .mobile-menu-btn {
+                        display: inline-flex !important;
+                    .header-title-text {
+                }
+                
+                @media (max-width: 576px) {
+                    .header-title-text {
+                        display: none;
+                    }
+                }
+            `}</style>
         </>
     );
 };

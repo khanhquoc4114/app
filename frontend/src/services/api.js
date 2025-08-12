@@ -1,0 +1,58 @@
+const API_BASE_URL = 'http://localhost:8000/api';
+
+// Helper function để gọi API
+const apiCall = async (endpoint, options = {}) => {
+    const url = `${API_BASE_URL}${endpoint}`;
+    const config = {
+        headers: {
+            'Content-Type': 'application/json',
+            ...options.headers,
+        },
+        ...options,
+    };
+
+    // Thêm token nếu có
+    const token = localStorage.getItem('token');
+    if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+    }
+
+    try {
+        const response = await fetch(url, config);
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.detail || 'Có lỗi xảy ra');
+        }
+
+        return data;
+    } catch (error) {
+        throw error;
+    }
+};
+
+// Auth API
+export const authAPI = {
+    // Đăng nhập
+    login: async (username, password) => {
+        return apiCall('/auth/login', {
+            method: 'POST',
+            body: JSON.stringify({ username, password }),
+        });
+    },
+
+    // Đăng ký
+    register: async (userData) => {
+        return apiCall('/auth/register', {
+            method: 'POST',
+            body: JSON.stringify(userData),
+        });
+    },
+
+    // Lấy thông tin user hiện tại
+    getMe: async () => {
+        return apiCall('/auth/me');
+    },
+};
+
+export default apiCall;
