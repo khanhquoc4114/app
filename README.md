@@ -49,13 +49,6 @@ Sau khi chạy `init_db.py`:
 ├── docker-compose.yml # Cấu hình Docker
 
 ```
-
-## API có sẵn
-
-- `POST /api/auth/register` - Đăng ký
-- `POST /api/auth/login` - Đăng nhập
-- `GET /api/auth/me` - Thông tin user
-
 ## Cấu hình
 
 Copy file `backend/.env.example` thành `backend/.env` và sửa:
