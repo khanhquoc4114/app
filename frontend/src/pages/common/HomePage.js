@@ -36,27 +36,36 @@ const HomePage = () => {
             name: 'Cầu lông',
             courts: 8,
             image: '🏸',
-            description: 'Sân cầu lông chất lượng cao với hệ thống chiếu sáng hiện đại'
+            description: 'Sân cầu lông chất lượng cao với hệ thống chiếu sáng hiện đại',
+            sportType: 'badminton'
         },
         {
             name: 'Bóng đá',
             courts: 4,
             image: '⚽',
-            description: 'Sân bóng đá cỏ nhân tạo, phù hợp cho các trận đấu 5v5, 7v7'
+            description: 'Sân bóng đá cỏ nhân tạo, phù hợp cho các trận đấu 5v5, 7v7',
+            sportType: 'football'
         },
         {
             name: 'Tennis',
             courts: 6,
             image: '🎾',
-            description: 'Sân tennis tiêu chuẩn quốc tế với mặt sân chuyên nghiệp'
+            description: 'Sân tennis tiêu chuẩn quốc tế với mặt sân chuyên nghiệp',
+            sportType: 'tennis'
         },
         {
             name: 'Bóng rổ',
             courts: 3,
             image: '🏀',
-            description: 'Sân bóng rổ trong nhà và ngoài trời với rổ chuẩn NBA'
+            description: 'Sân bóng rổ trong nhà và ngoài trời với rổ chuẩn NBA',
+            sportType: 'basketball'
         },
     ];
+
+    const handleSportClick = (sport) => {
+        // Navigate to facilities page with sport filter
+        navigate(`/facilities?sport=${sport.sportType}`);
+    };
 
     return (
         <div>
@@ -90,7 +99,8 @@ const HomePage = () => {
                         <Card
                             className="facility-card"
                             hoverable
-                            onClick={() => navigate('/facilities')}
+                            onClick={() => handleSportClick(sport)}
+                            style={{ cursor: 'pointer' }}
                         >
                             <div style={{ textAlign: 'center', marginBottom: 16 }}>
                                 <div style={{ fontSize: '48px', marginBottom: 8 }}>

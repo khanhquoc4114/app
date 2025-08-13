@@ -11,43 +11,42 @@ export const useAuth = () => {
 };
 
 export const AuthProvider = ({ children }) => {
-    const [user, setUser] = useState(null);
+    const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const [userRole, setUserRole] = useState('user');
     const [loading, setLoading] = useState(true);
 
-    // Kiểm tra token khi app khởi động
     useEffect(() => {
-        const token = localStorage.getItem('token');
-        const userData = localStorage.getItem('user');
+        // Check localStorage on app start
+        const storedAuth = localStorage.getItem('isAuthenticated');
+        const storedRole = localStorage.getItem('userRole');
 
-        if (token && userData) {
-            try {
-                setUser(JSON.parse(userData));
-            } catch (error) {
-                localStorage.removeItem('token');
-                localStorage.removeItem('user');
-            }
+        if (storedAuth === 'true') {
+            setIsAuthenticated(true);
+            setUserRole(storedRole || 'user');
         }
         setLoading(false);
     }, []);
 
-    const login = (userData, token) => {
-        localStorage.setItem('token', token);
-        localStorage.setItem('user', JSON.stringify(userData));
-        setUser(userData);
+    const login = (role = 'user') => {
+        localStorage.setItem('isAuthenticated', 'true');
+        localStorage.setItem('userRole', role);
+        setIsAuthenticated(true);
+        setUserRole(role);
     };
 
     const logout = () => {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        setUser(null);
+        localStorage.removeItem('isAuthenticated');
+        localStorage.removeItem('userRole');
+        setIsAuthenticated(false);
+        setUserRole('user');
     };
 
     const value = {
-        user,
-        login,
-        logout,
+        isAuthenticated,
+        userRole,
         loading,
-        isAuthenticated: !!user
+        login,
+        logout
     };
 
     return (

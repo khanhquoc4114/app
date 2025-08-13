@@ -1,97 +1,228 @@
-import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
-import { Layout } from 'antd';
-import { ThemeProvider } from './contexts/ThemeContext';
-import { AuthProvider } from './contexts/AuthContext';
-import Header from './components/Layout/Header';
-import Sidebar from './components/Layout/Sidebar';
-import QuickActions from './components/QuickActions';
-import HomePage from './pages/HomePage';
-import FacilitiesPage from './pages/FacilitiesPage';
-import BookingPage from './pages/BookingPage';
-import LoginPage from './pages/LoginPage';
-import RegisterPage from './pages/RegisterPage';
-import AdminDashboard from './pages/AdminDashboard';
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { ConfigProvider, Spin } from 'antd';
+import viVN from 'antd/locale/vi_VN';
+import 'dayjs/locale/vi';
+import dayjs from 'dayjs';
 
-const { Content } = Layout;
+// Context
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 
-function AppContent() {
-    // Phat hien kich thuoc man hinh <= 768px = dien thoai
-    const [isMobile, setIsMobile] = useState(false);
-    const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-    const location = useLocation();
+// Layout
+import MainLayout from './components/Layout/MainLayout';
 
-    // Check if current route should hide sidebar (login/register pages)
-    const hideSidebar = ['/login', '/register'].includes(location.pathname);
+// Common Pages
+import LoginPage from './pages/common/LoginPage';
+import HomePage from './pages/common/HomePage';
+import FacilitiesPage from './pages/common/FacilitiesPage';
+import ChatPage from './pages/common/ChatPage';
+import NotificationsPage from './pages/common/NotificationsPage';
 
-    useEffect(() => {
-        const checkMobile = () => {
-            setIsMobile(window.innerWidth <= 768);
-            if (window.innerWidth <= 768) {
-                // An sidebar
-                setSidebarCollapsed(true);
-            }
-        };
-        // Check ngay khi load
-        checkMobile();
-        window.addEventListener('resize', checkMobile); // Check lai khi thay doi kich thuoc
-        return () => window.removeEventListener('resize', checkMobile);
-    }, []);
+// User Pages
+import MyBookingsPage from './pages/user/MyBookingsPage';
+import ProfilePage from './pages/user/ProfilePage';
 
-    if (hideSidebar) {
+// Staff Pages
+import StaffDashboard from './pages/staff/StaffDashboard';
+import MyFacilitiesPage from './pages/staff/MyFacilitiesPage';
+
+// Admin Pages
+import AdminDashboard from './pages/admin/AdminDashboard';
+
+// Set Vietnamese locale for dayjs
+dayjs.locale('vi');
+
+// Protected Route Component
+const ProtectedRoute = ({ children, requiredRole = null }) => {
+    const { isAuthenticated, userRole, loading } = useAuth();
+
+    if (loading) {
         return (
-            <Layout style={{ minHeight: '100vh' }}>
-                <Routes>
-                    <Route path="/login" element={<LoginPage />} />
-                    <Route path="/register" element={<RegisterPage />} />
-                </Routes>
-            </Layout>
+            <div style={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                height: '100vh'
+            }}>
+                <Spin size="large" />
+            </div>
         );
     }
 
+    if (!isAuthenticated) {
+        return <Navigate to="/login" replace />;
+    }
+
+    if (requiredRole && userRole !== requiredRole) {
+        return <Navigate to="/" replace />;
+    }
+
+    return children;
+};
+
+// Layout wrapper for authenticated pages
+const LayoutWrapper = ({ children, userRole }) => {
     return (
-        <Layout style={{ minHeight: '100vh' }}>
-            <Header onMenuToggle={() => setSidebarCollapsed(!sidebarCollapsed)} />
-            <Layout>
-                {!isMobile && <Sidebar collapsed={sidebarCollapsed} />}
-                <Layout style={{
-                    padding: isMobile ? '16px' : '24px',
-                    marginLeft: isMobile ? 0 : (sidebarCollapsed ? 80 : 250)
-                }}>
-                    <Content
-                        style={{
-                            padding: isMobile ? 16 : 24,
-                            margin: 0,
-                            minHeight: 280,
-                            background: '#fff',
-                            borderRadius: '8px'
-                        }}
-                    >
-                        <Routes>
-                            <Route path="/" element={<HomePage />} />
-                            <Route path="/facilities" element={<FacilitiesPage />} />
-                            <Route path="/booking/:facilityId" element={<BookingPage />} />
-                            <Route path="/admin" element={<AdminDashboard />} />
-                            <Route path="/my-bookings" element={<div>Lịch đặt của tôi (Đang phát triển)</div>} />
-                            <Route path="/chat" element={<div>Hỗ trợ AI (Đang phát triển)</div>} />
-                        </Routes>
-                    </Content>
-                </Layout>
-                {!hideSidebar && <QuickActions />}
-            </Layout>
-        </Layout>
+        <MainLayout userRole={userRole}>
+            {children}
+        </MainLayout>
     );
-}
+};
+
+// App Routes Component
+const AppRoutes = () => {
+    const { isAuthenticated, userRole } = useAuth();
+
+    return (
+        <Routes>
+            {/* Public Routes */}
+            <Route
+                path="/login"
+                element={
+                    isAuthenticated ? <Navigate to="/" replace /> : <LoginPage />
+                }
+            />
+
+            {/* Protected Routes */}
+            <Route
+                path="/"
+                element={
+                    <ProtectedRoute>
+                        <LayoutWrapper userRole={userRole}>
+                            <HomePage />
+                        </LayoutWrapper>
+                    </ProtectedRoute>
+                }
+            />
+
+            <Route
+                path="/facilities"
+                element={
+                    <ProtectedRoute>
+                        <LayoutWrapper userRole={userRole}>
+                            <FacilitiesPage />
+                        </LayoutWrapper>
+                    </ProtectedRoute>
+                }
+            />
+
+            {/* User Routes */}
+            <Route
+                path="/my-bookings"
+                element={
+                    <ProtectedRoute requiredRole="user">
+                        <LayoutWrapper userRole={userRole}>
+                            <MyBookingsPage />
+                        </LayoutWrapper>
+                    </ProtectedRoute>
+                }
+            />
+
+            <Route
+                path="/chat"
+                element={
+                    <ProtectedRoute>
+                        <LayoutWrapper userRole={userRole}>
+                            <ChatPage />
+                        </LayoutWrapper>
+                    </ProtectedRoute>
+                }
+            />
+
+            <Route
+                path="/profile"
+                element={
+                    <ProtectedRoute>
+                        <LayoutWrapper userRole={userRole}>
+                            <ProfilePage />
+                        </LayoutWrapper>
+                    </ProtectedRoute>
+                }
+            />
+
+            <Route
+                path="/notifications"
+                element={
+                    <ProtectedRoute>
+                        <LayoutWrapper userRole={userRole}>
+                            <NotificationsPage />
+                        </LayoutWrapper>
+                    </ProtectedRoute>
+                }
+            />
+
+            {/* Staff Routes */}
+            <Route
+                path="/staff"
+                element={
+                    <ProtectedRoute requiredRole="staff">
+                        <LayoutWrapper userRole={userRole}>
+                            <StaffDashboard />
+                        </LayoutWrapper>
+                    </ProtectedRoute>
+                }
+            />
+
+            <Route
+                path="/my-facilities"
+                element={
+                    <ProtectedRoute requiredRole="staff">
+                        <LayoutWrapper userRole={userRole}>
+                            <MyFacilitiesPage />
+                        </LayoutWrapper>
+                    </ProtectedRoute>
+                }
+            />
+
+            {/* Admin Routes */}
+            <Route
+                path="/admin"
+                element={
+                    <ProtectedRoute requiredRole="admin">
+                        <LayoutWrapper userRole={userRole}>
+                            <AdminDashboard />
+                        </LayoutWrapper>
+                    </ProtectedRoute>
+                }
+            />
+
+            {/* Fallback */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+    );
+};
 
 function App() {
     return (
-        <ThemeProvider>
+        <ConfigProvider
+            locale={viVN}
+            theme={{
+                token: {
+                    colorPrimary: '#1890ff',
+                    borderRadius: 8,
+                    colorBgContainer: '#ffffff',
+                },
+                components: {
+                    Card: {
+                        borderRadius: 12,
+                    },
+                    Button: {
+                        borderRadius: 8,
+                    },
+                    Input: {
+                        borderRadius: 8,
+                    },
+                },
+            }}
+        >
             <AuthProvider>
                 <Router>
-                    <AppContent />
+                    <div className="App">
+                        <AppRoutes />
+                    </div>
                 </Router>
             </AuthProvider>
-        </ThemeProvider>
+        </ConfigProvider>
     );
 }
 
