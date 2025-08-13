@@ -23,6 +23,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Health check endpoint
+@app.get("/health")
+def health_check():
+    return {"status": "healthy", "timestamp": datetime.now()}
+
 # JWT config
 SECRET_KEY = "my-secret-key-123"
 ALGORITHM = "HS256"
