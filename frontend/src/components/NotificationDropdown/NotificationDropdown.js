@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Dropdown,
     Badge,
@@ -33,60 +33,44 @@ dayjs.extend(relativeTime);
 const { Text } = Typography;
 
 const NotificationDropdown = ({ children }) => {
-    const navigate = useNavigate();
-    const [visible, setVisible] = useState(false);
+  const navigate = useNavigate();
+  const [visible, setVisible] = useState(false);
+  const [notificationList, setNotificationList] = useState([]);
+    
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      try {
+        const res = await fetch(`${process.env.REACT_APP_API_URL}/api/notifications`);
+        const data = await res.json();
+        const parsed = data.map(n => ({
+          ...n,
+          timestamp: dayjs(n.timestamp)
+        }));
+
+        setNotificationList(parsed);
+      } catch (err) {
+        console.error("Lỗi fetch notifications:", err);
+      }
+    };
+
+    fetchNotifications();
+  }, []);
 
     // Mock notifications data
     const notifications = [
         {
             id: 1,
             type: 'booking_confirmed',
-            title: 'Đặt sân thành công',
-            message: 'Sân cầu lông VIP 1 ngày 20/01 lúc 08:00-10:00',
+            title: 'Mock title',
+            message: 'Mock message',
             timestamp: dayjs().subtract(5, 'minute'),
-            read: false,
-            priority: 'high'
-        },
-        {
-            id: 2,
-            type: 'payment_success',
-            title: 'Thanh toán thành công',
-            message: 'Thanh toán 160,000 VNĐ qua MoMo',
-            timestamp: dayjs().subtract(10, 'minute'),
-            read: false,
-            priority: 'medium'
-        },
-        {
-            id: 3,
-            type: 'booking_reminder',
-            title: 'Nhắc nhở đặt sân',
-            message: 'Sân tennis 14:00 hôm nay',
-            timestamp: dayjs().subtract(1, 'hour'),
-            read: true,
-            priority: 'medium'
-        },
-        {
-            id: 4,
-            type: 'promotion',
-            title: 'Khuyến mãi cuối tuần',
-            message: 'Giảm 20% tất cả sân cầu lông',
-            timestamp: dayjs().subtract(2, 'hour'),
-            read: true,
-            priority: 'low'
-        },
-        {
-            id: 5,
-            type: 'system',
-            title: 'Bảo trì hệ thống',
-            message: 'Hệ thống bảo trì 02:00-04:00 ngày 21/01',
-            timestamp: dayjs().subtract(1, 'day'),
             read: false,
             priority: 'high'
         }
     ];
 
-    const unreadCount = notifications.filter(n => !n.read).length;
-    const recentNotifications = notifications.slice(0, 4); // Chỉ hiển thị 4 thông báo gần nhất
+    const unreadCount = notificationList.filter(n => !n.read).length;
+    const recentNotifications = notificationList.slice(0, 4); // Chỉ hiển thị 4 thông báo gần nhất
 
     const getNotificationIcon = (type) => {
         const icons = {
@@ -291,7 +275,7 @@ const NotificationDropdown = ({ children }) => {
                                 padding: 0
                             }}
                         >
-                            Xem tất cả thông báo ({notifications.length})
+                            Xem tất cả thông báo ({notificationList.length})
                         </Button>
                     </div>
                 </>

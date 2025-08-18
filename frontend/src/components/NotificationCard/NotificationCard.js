@@ -61,13 +61,13 @@ const NotificationCard = ({
         fetchNotifications();
     }, []);
 
-    // // Mock notifications data
+    // Mock notifications data
     const mockNotifications = [
         {
             id: 1,
             type: 'booking_confirmed',
-            title: 'Đặt sân thành công',
-            message: 'Đặt sân cầu lông VIP 1 vào ngày 20/01/2024 lúc 08:00-10:00 đã được xác nhận.',
+            title: 'Mock title',
+            message: 'Mock message',
             timestamp: dayjs().subtract(5, 'minute'),
             read: false,
             priority: 'high',
@@ -75,62 +75,9 @@ const NotificationCard = ({
                 bookingId: 'BK001',
                 facilityName: 'Sân cầu lông VIP 1'
             }
-        },
-        {
-            id: 2,
-            type: 'payment_success',
-            title: 'Thanh toán thành công',
-            message: 'Thanh toán 160,000 VNĐ cho đặt sân BK001 đã được xử lý thành công.',
-            timestamp: dayjs().subtract(10, 'minute'),
-            read: false,
-            priority: 'medium',
-            data: {
-                amount: 160000,
-                bookingId: 'BK001'
-            }
-        },
-        {
-            id: 3,
-            type: 'booking_reminder',
-            title: 'Nhắc nhở đặt sân',
-            message: 'Bạn có lịch đặt sân tennis vào 14:00 hôm nay. Vui lòng đến đúng giờ.',
-            timestamp: dayjs().subtract(1, 'hour'),
-            read: true,
-            priority: 'medium',
-            data: {
-                facilityName: 'Sân tennis cao cấp',
-                time: '14:00'
-            }
-        },
-        {
-            id: 4,
-            type: 'promotion',
-            title: 'Khuyến mãi đặc biệt',
-            message: 'Giảm 20% cho tất cả sân cầu lông vào cuối tuần. Áp dụng từ 22-23/01/2024.',
-            timestamp: dayjs().subtract(2, 'hour'),
-            read: true,
-            priority: 'low',
-            data: {
-                discount: 20,
-                validUntil: '23/01/2024'
-            }
-        },
-        {
-            id: 5,
-            type: 'system',
-            title: 'Bảo trì hệ thống',
-            message: 'Hệ thống sẽ bảo trì từ 02:00-04:00 ngày 21/01/2024. Vui lòng hoàn tất giao dịch trước thời gian này.',
-            timestamp: dayjs().subtract(1, 'day'),
-            read: false,
-            priority: 'high',
-            data: {
-                maintenanceTime: '02:00-04:00',
-                date: '21/01/2024'
-            }
         }
     ];
 
-    // const allNotifications = notifications.length > 0 ? notifications : mockNotifications;
     const allNotifications = notificationList.length > 0 ? notificationList : mockNotifications;
 
     const getNotificationIcon = (type) => {
@@ -174,33 +121,48 @@ const NotificationCard = ({
     const unreadCount = allNotifications.filter(n => !n.read).length;
 
     const handleMarkAsRead = async (notificationId) => {
-  try {
-    const res = await fetch(
-      `${process.env.REACT_APP_API_URL}/api/notifications/${notificationId}/read`,
-      { method: "PATCH" }
-    );
+        try {
+            const res = await fetch(
+            `${process.env.REACT_APP_API_URL}/api/notifications/${notificationId}/read`,
+            { method: "PATCH" }
+            );
 
-    if (!res.ok) throw new Error("Failed to mark notification as read");
+            if (!res.ok) throw new Error("Failed to mark notification as read");
 
-    // Cập nhật local state (notificationList)
-    setNotificationList((prev) =>
-      prev.map((n) =>
-        n.id === notificationId ? { ...n, read: true } : n
-      )
-    );
+            setNotificationList((prev) =>
+            prev.map((n) =>
+                n.id === notificationId ? { ...n, read: true } : n
+            )
+            );
 
-    if (onMarkAsRead) {
-      onMarkAsRead(notificationId);
-    }
-  } catch (err) {
-    console.error("Lỗi khi mark as read:", err);
-  }
-};
+            if (onMarkAsRead) {
+            onMarkAsRead(notificationId);
+            }
+        } catch (err) {
+            console.error("Lỗi khi mark as read:", err);
+        }
+    };
 
 
-    const handleMarkAllAsRead = () => {
-        if (onMarkAllAsRead) {
+    const handleMarkAllAsRead = async () => {
+        try {
+            const res = await fetch(
+            `${process.env.REACT_APP_API_URL}/api/notifications/mark-all-read`,
+            { method: "PATCH" }
+            );
+
+            if (!res.ok) throw new Error("Failed to mark all as read");
+
+            // Update local state
+            setNotificationList((prev) =>
+            prev.map((n) => ({ ...n, read: true }))
+            );
+
+            if (onMarkAllAsRead) {
             onMarkAllAsRead();
+            }
+        } catch (err) {
+            console.error("Lỗi khi mark all as read:", err);
         }
     };
 

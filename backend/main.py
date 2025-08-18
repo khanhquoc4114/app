@@ -156,3 +156,13 @@ def mark_as_read(notification_id: int, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(notification)
     return notification
+
+@app.patch("/api/notifications/mark-all-read")
+def mark_all_as_read(db: Session = Depends(get_db)):
+    notifications = db.query(Notification).filter(Notification.read == False).all()
+
+    for n in notifications:
+        n.read = True
+
+    db.commit()
+    return {"message": f"{len(notifications)} notifications marked as read"}
