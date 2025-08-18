@@ -97,21 +97,25 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
 # Endpoint mới để lấy danh sách cơ sở thể thao
 @app.get("/api/facilities")
 def get_facilities(db: Session = Depends(get_db)):
-    """
-    Lấy danh sách tất cả các cơ sở thể thao
-    """
     facilities = db.query(Facility).filter(Facility.is_active == True).all()
     return [
         {
-            "id": facility.id,
-            "name": facility.name,
-            "sport_type": facility.sport_type,
-            "description": facility.description,
-            "price_per_hour": facility.price_per_hour,
-            "image_url": facility.image_url,
-            "is_active": facility.is_active
+            "id": f.id,
+            "name": f.name,
+            "sport_type": f.sport_type,
+            "description": f.description,
+            "price_per_hour": f.price_per_hour,
+            "image_url": f.image_url,
+            "location": f.location,
+            "rating": f.rating,
+            "reviews_count": f.reviews_count,
+            "amenities": f.amenities,
+            "opening_hours": f.opening_hours,
+            "is_active": f.is_active,
+            "created_at": f.created_at,
+            "updated_at": f.updated_at
         }
-        for facility in facilities
+        for f in facilities
     ]
 
 @app.get("/")

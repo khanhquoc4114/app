@@ -335,7 +335,7 @@ const FacilitiesPage = () => {
                 <Title level={2}>
                     {filters.sport !== 'all' ?
                         `Sân ${getSportName(filters.sport)}` :
-                        'Danh sách sân thể thao'
+                        'Danh sách sân thể tha'
                     }
                 </Title>
                 <Text type="secondary">
