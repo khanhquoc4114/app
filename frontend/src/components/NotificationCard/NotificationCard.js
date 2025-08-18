@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Card,
     List,
@@ -32,16 +32,36 @@ dayjs.extend(relativeTime);
 const { Text, Title } = Typography;
 
 const NotificationCard = ({
-    notifications = [],
+    notifications: initialNotifications = [],
     onMarkAsRead,
     onMarkAllAsRead,
     onDelete,
     maxHeight = 400,
     showActions = true
 }) => {
-    const [filter, setFilter] = useState('all'); // 'all', 'unread', 'read'
+    const [filter, setFilter] = useState('all');
+    const [notificationList, setNotificationList] = useState(initialNotifications);
 
-    // Mock notifications data
+    React.useEffect(() => {
+        const fetchNotifications = async () => {
+            try {
+                const res = await fetch(`${process.env.REACT_APP_API_URL}/api/notifications`);
+                const data = await res.json();
+                const parsed = data.map(n => ({
+                    ...n,
+                    timestamp: dayjs(n.timestamp)
+                }));
+
+                setNotificationList(parsed);
+            } catch (err) {
+                console.error("Lỗi fetch notifications:", err);
+            }
+        };
+
+        fetchNotifications();
+    }, []);
+
+    // // Mock notifications data
     const mockNotifications = [
         {
             id: 1,
@@ -110,7 +130,8 @@ const NotificationCard = ({
         }
     ];
 
-    const allNotifications = notifications.length > 0 ? notifications : mockNotifications;
+    // const allNotifications = notifications.length > 0 ? notifications : mockNotifications;
+    const allNotifications = notificationList.length > 0 ? notificationList : mockNotifications;
 
     const getNotificationIcon = (type) => {
         const icons = {
@@ -152,11 +173,30 @@ const NotificationCard = ({
 
     const unreadCount = allNotifications.filter(n => !n.read).length;
 
-    const handleMarkAsRead = (notificationId) => {
-        if (onMarkAsRead) {
-            onMarkAsRead(notificationId);
-        }
-    };
+    const handleMarkAsRead = async (notificationId) => {
+  try {
+    const res = await fetch(
+      `${process.env.REACT_APP_API_URL}/api/notifications/${notificationId}/read`,
+      { method: "PATCH" }
+    );
+
+    if (!res.ok) throw new Error("Failed to mark notification as read");
+
+    // Cập nhật local state (notificationList)
+    setNotificationList((prev) =>
+      prev.map((n) =>
+        n.id === notificationId ? { ...n, read: true } : n
+      )
+    );
+
+    if (onMarkAsRead) {
+      onMarkAsRead(notificationId);
+    }
+  } catch (err) {
+    console.error("Lỗi khi mark as read:", err);
+  }
+};
+
 
     const handleMarkAllAsRead = () => {
         if (onMarkAllAsRead) {

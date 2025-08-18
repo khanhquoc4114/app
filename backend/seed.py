@@ -1,14 +1,10 @@
 from sqlalchemy.orm import Session
-from models import Base, Facility
+from models import Base, Facility, Notification
 from database import engine, SessionLocal
+from datetime import datetime, timedelta
 
-def init_db():
-    # Tạo bảng nếu chưa có
-    Base.metadata.create_all(bind=engine)
 
-    db: Session = SessionLocal()
-
-    # Kiểm tra xem đã có dữ liệu chưa
+def seed_facilities(db: Session):
     if db.query(Facility).count() == 0:
         facilities = [
             Facility(
@@ -24,7 +20,7 @@ def init_db():
                 opening_hours="06:00 - 22:00"
             ),
             Facility(
-                name="Sân bóng đá 2 ",
+                name="Sân bóng đá 2",
                 sport_type="football",
                 description="Sân bóng đá mini 5v5 với cỏ nhân tạo cao cấp, hệ thống tưới nước tự động",
                 price_per_hour=200000,
@@ -64,9 +60,73 @@ def init_db():
         db.commit()
         print("✅ Seeded initial facilities data")
     else:
-        print("ℹ️ Facilities already seeded")
+        print("ℹ️ Facilities already exist")
 
-    db.close()
+def seed_notifications(db: Session):
+    if db.query(Notification).count() == 0:
+        sample_notifications = [
+            Notification(
+                type="booking_confirmed",
+                title="Đặt sân thành công",
+                message="Đặt sân cầu lông VIP 1 vào ngày 20/01/2024 lúc 08:00-10:00 đã được xác nhận.",
+                timestamp=datetime.utcnow() - timedelta(minutes=5),
+                read=False,
+                priority="high",
+                data={"bookingId": "BK001", "facilityName": "Sân cầu lông VIP 1"}
+            ),
+            Notification(
+                type="payment_success",
+                title="Thanh toán thành công ok chưa",
+                message="Thanh toán 160,000 VNĐ cho đặt sân BK001 đã được xử lý thành công.",
+                timestamp=datetime.utcnow() - timedelta(minutes=10),
+                read=False,
+                priority="medium",
+                data={"amount": 160000, "bookingId": "BK001"}
+            ),
+            Notification(
+                type="booking_reminder",
+                title="Nhắc nhở đặt sân",
+                message="Bạn có lịch đặt sân tennis vào 14:00 hôm nay. Vui lòng đến đúng giờ.",
+                timestamp=datetime.utcnow() - timedelta(hours=1),
+                read=True,
+                priority="medium",
+                data={"facilityName": "Sân tennis cao cấp", "time": "14:00"}
+            ),
+            Notification(
+                type="promotion",
+                title="Khuyến mãi đặc biệt",
+                message="Giảm 20% cho tất cả sân cầu lông vào cuối tuần. Áp dụng từ 22-23/01/2024.",
+                timestamp=datetime.utcnow() - timedelta(hours=2),
+                read=True,
+                priority="low",
+                data={"discount": 20, "validUntil": "23/01/2024"}
+            ),
+            Notification(
+                type="system",
+                title="Bảo trì hệ thống",
+                message="Hệ thống sẽ bảo trì từ 02:00-04:00 ngày 21/01/2024. Vui lòng hoàn tất giao dịch trước thời gian này.",
+                timestamp=datetime.utcnow() - timedelta(days=1),
+                read=False,
+                priority="high",
+                data={"maintenanceTime": "02:00-04:00", "date": "21/01/2024"}
+            )
+        ]
+        db.add_all(sample_notifications)
+        db.commit()
+        print("✅ Seeded notifications data")
+    else:
+        print("ℹ️ Notifications already exist")
+
+def init_db():
+    # Tạo bảng nếu chưa có
+    Base.metadata.create_all(bind=engine)
+
+    db: Session = SessionLocal()
+    try:
+        seed_facilities(db)
+        seed_notifications(db)
+    finally:
+        db.close()
 
 if __name__ == "__main__":
     init_db()

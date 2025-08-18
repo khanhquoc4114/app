@@ -1,5 +1,5 @@
 from sqlalchemy.dialects.postgresql import ARRAY
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, Text, ForeignKey, Float
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, Text, ForeignKey, Float, JSON
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database import Base
@@ -61,3 +61,15 @@ class Booking(Base):
     # Relationships
     user = relationship("User", back_populates="bookings")
     facility = relationship("Facility", back_populates="bookings")
+    
+class Notification(Base):
+    __tablename__ = "notifications"
+
+    id = Column(Integer, primary_key=True, index=True)
+    type = Column(String, nullable=False)             # booking_confirmed, payment_success, ...
+    title = Column(String, nullable=False)
+    message = Column(Text, nullable=False)
+    timestamp = Column(DateTime(timezone=True), server_default=func.now())
+    read = Column(Boolean, default=False)
+    priority = Column(String, default="medium")       # low, medium, high
+    data = Column(JSON) 

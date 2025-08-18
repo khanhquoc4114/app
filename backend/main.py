@@ -6,7 +6,7 @@ import jwt
 import bcrypt
 from sqlalchemy import func
 from database import get_db, engine
-from models import User, Facility, Base
+from models import *
 from schemas import UserCreate, UserLogin, UserResponse, Token
 
 # Create tables
@@ -140,3 +140,19 @@ def get_popular_sports(db: Session = Depends(get_db)):
 @app.get("/")
 def root():
     return {"message": "Auth API đang chạy"}
+
+@app.get("/api/notifications")
+def get_notifications(db: Session = Depends(get_db)):
+    notifications = db.query(Notification).filter(Facility.is_active == True).all()
+    return notifications
+
+@app.patch("/api/notifications/{notification_id}/read")
+def mark_as_read(notification_id: int, db: Session = Depends(get_db)):
+    notification = db.query(Notification).filter(Notification.id == notification_id).first()
+    if not notification:
+        raise HTTPException(status_code=404, detail="Notification not found")
+
+    notification.read = True
+    db.commit()
+    db.refresh(notification)
+    return notification
