@@ -1,3 +1,4 @@
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, Text, ForeignKey, Float
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -28,6 +29,11 @@ class Facility(Base):
     description = Column(Text)
     price_per_hour = Column(Float, nullable=False)
     image_url = Column(String)
+    location = Column(String)                     # thêm địa chỉ
+    rating = Column(Float, default=0.0)           # điểm trung bình
+    reviews_count = Column(Integer, default=0)    # số review
+    amenities = Column(ARRAY(String))             # mảng tiện ích (Postgres hỗ trợ ARRAY)
+    opening_hours = Column(String)                # giờ mở cửa dạng text
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())

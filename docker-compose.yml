@@ -37,7 +37,7 @@ services:
         condition: service_healthy
     volumes:
       - ./backend:/app
-    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    command: sh -c "python seed.py && uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
 
   # Frontend (optional)
   frontend:
@@ -51,9 +51,24 @@ services:
       - ./frontend:/app
       - /app/node_modules
     environment:
+      - CHOKIDAR_USEPOLLING=true   # cần cho hot reload trong Docker
+      - WATCHPACK_POLLING=true
       - REACT_APP_API_URL=http://localhost:8000
+    command: ["npm", "start"]
     depends_on:
       - backend
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: admin123
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
 
 volumes:
   postgres_data:

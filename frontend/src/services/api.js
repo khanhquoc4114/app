@@ -55,4 +55,14 @@ export const authAPI = {
     },
 };
 
+// Facility API
+export const facilityAPI = {
+    // Lấy danh sách cơ sở thể thao
+    getFacilities: async () => {
+        return apiCall('/facilities', {
+            method: 'GET',
+        });
+    },
+};
+
 export default apiCall;

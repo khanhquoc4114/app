@@ -80,7 +80,7 @@ const MyBookingsPage = () => {
             {
                 key: '4',
                 id: 'BK004',
-                facility: 'Sân bóng rổ trong nhà',
+                facility: 'Sân bóng rổ trong nhà gì bạn',
                 sport: 'Bóng rổ',
                 date: '2024-01-08',
                 time: '09:00 - 11:00',

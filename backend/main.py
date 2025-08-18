@@ -6,7 +6,7 @@ import jwt
 import bcrypt
 
 from database import get_db, engine
-from models import User, Base
+from models import User, Facility, Base
 from schemas import UserCreate, UserLogin, UserResponse, Token
 
 # Create tables
@@ -93,6 +93,26 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
             "role": db_user.role
         }
     }
+
+# Endpoint mới để lấy danh sách cơ sở thể thao
+@app.get("/api/facilities")
+def get_facilities(db: Session = Depends(get_db)):
+    """
+    Lấy danh sách tất cả các cơ sở thể thao
+    """
+    facilities = db.query(Facility).filter(Facility.is_active == True).all()
+    return [
+        {
+            "id": facility.id,
+            "name": facility.name,
+            "sport_type": facility.sport_type,
+            "description": facility.description,
+            "price_per_hour": facility.price_per_hour,
+            "image_url": facility.image_url,
+            "is_active": facility.is_active
+        }
+        for facility in facilities
+    ]
 
 @app.get("/")
 def root():
