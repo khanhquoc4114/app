@@ -12,26 +12,91 @@ const { Title, Paragraph } = Typography;
 
 const HomePage = () => {
     const navigate = useNavigate();
+    const [stats, setStats] = React.useState({
+        facilities: 0,
+        bookings: 0,
+        users: 0,
+    });
+    const [popularSports, setPopularSports] = React.useState([]);
 
-    const stats = [
+    React.useEffect(() => {
+        const fetchStats = async () => {
+            try {
+                const res = await fetch(`${process.env.REACT_APP_API_URL}/api/facilities/count`);
+                const data = await res.json();
+                setStats(prev => ({ ...prev, facilities: data.count }));
+            } catch (err) {
+                console.error("Lỗi fetch stats:", err); 
+            }
+        };
+
+        fetchStats();
+    }, []);
+
+    React.useEffect(() => {
+    const fetchPopularSports = async () => {
+        try {
+        const res = await fetch(`${process.env.REACT_APP_API_URL}/api/facilities/popular-sports`);
+        const data = await res.json();
+
+        const merged = data.map(item => ({
+            ...sportMeta[item.sportType],
+            sportType: item.sportType,
+            courts: item.courts
+        }));
+
+        setPopularSports(merged);
+        } catch (err) {
+        console.error("Lỗi fetch popular sports:", err);
+        }
+    };
+
+    fetchPopularSports();
+    }, []);
+
+    const statItems = [
         {
             title: 'Tổng số sân',
-            value: 25,
+            value: stats.facilities,
             icon: <ShopOutlined style={{ color: '#1890ff' }} />,
         },
         {
             title: 'Lượt đặt hôm nay',
-            value: 48,
+            value: stats.bookings,
             icon: <CalendarOutlined style={{ color: '#52c41a' }} />,
         },
         {
             title: 'Người dùng hoạt động',
-            value: 156,
+            value: stats.users,
             icon: <UserOutlined style={{ color: '#faad14' }} />,
         },
     ];
 
-    const popularSports = [
+    const sportMeta = {
+  badminton: {
+    name: "Cầu lông",
+    image: "🏸",
+    description: "Sân cầu lông chất lượng cao với hệ thống chiếu sáng hiện đại"
+  },
+  football: {
+    name: "Bóng đá",
+    image: "⚽",
+    description: "Sân bóng đá cỏ nhân tạo, phù hợp cho các trận đấu 5v5, 7v7"
+  },
+  tennis: {
+    name: "Tennis",
+    image: "🎾",
+    description: "Sân tennis tiêu chuẩn quốc tế với mặt sân chuyên nghiệp"
+  },
+  basketball: {
+    name: "Bóng rổ",
+    image: "🏀",
+    description: "Sân bóng rổ trong nhà và ngoài trời với rổ chuẩn NBA"
+  }
+};
+
+
+    const popularSportsItems = [
         {
             name: 'Cầu lông',
             courts: 8,
@@ -77,7 +142,7 @@ const HomePage = () => {
             </div>
 
             <Row gutter={[16, 16]} style={{ marginBottom: 32 }}>
-                {stats.map((stat, index) => (
+                {statItems.map((stat, index) => (
                     <Col xs={24} sm={8} key={index}>
                         <Card>
                             <Statistic

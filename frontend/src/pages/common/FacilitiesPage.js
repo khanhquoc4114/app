@@ -46,6 +46,7 @@ const FacilitiesPage = () => {
     const [selectedTimeSlots, setSelectedTimeSlots] = useState([]);
     const [bookedSlots, setBookedSlots] = useState({});
     const [facilities, setFacilities] = useState([]);
+    const API_URL = process.env.REACT_APP_API_URL;
 
     // Handle URL query parameters
     useEffect(() => {
@@ -73,70 +74,11 @@ const FacilitiesPage = () => {
         return slots;
     };
 
-    // Mock data
-    // const facilities = [
-    //     {
-    //         id: 1,
-    //         name: 'Sân cầu lông VIP 1',
-    //         sport_type: 'badminton',
-    //         description: 'Sân cầu lông chất lượng cao với sàn gỗ chuyên nghiệp, hệ thống chiếu sáng LED hiện đại',
-    //         price_per_hour: 80000,
-    //         image_url: '/images/badminton-1.jpg',
-    //         location: 'Quận 1, TP.HCM',
-    //         rating: 4.8,
-    //         reviews_count: 124,
-    //         amenities: ['Điều hòa', 'Wifi', 'Bãi đỗ xe', 'Phòng thay đồ'],
-    //         opening_hours: '06:00 - 22:00'
-    //     },
-    //     {
-    //         id: 2,
-    //         name: 'Sân bóng đá mini A',
-    //         sport_type: 'football',
-    //         description: 'Sân bóng đá mini 5v5 với cỏ nhân tạo cao cấp, hệ thống tưới nước tự động',
-    //         price_per_hour: 200000,
-    //         image_url: '/images/football-1.jpg',
-    //         location: 'Quận 7, TP.HCM',
-    //         rating: 4.6,
-    //         reviews_count: 89,
-    //         amenities: ['Điều hòa phòng chờ', 'Bãi đỗ xe', 'Phòng thay đồ', 'Căng tin'],
-    //         opening_hours: '05:00 - 23:00'
-    //     },
-    //     {
-    //         id: 3,
-    //         name: 'Sân tennis cao cấp',
-    //         sport_type: 'tennis',
-    //         description: 'Sân tennis tiêu chuẩn quốc tế với mặt sân hard court, lưới chuyên nghiệp',
-    //         price_per_hour: 150000,
-    //         image_url: '/images/tennis-1.jpg',
-    //         location: 'Quận 3, TP.HCM',
-    //         rating: 4.9,
-    //         reviews_count: 156,
-    //         amenities: ['Điều hòa', 'Wifi', 'Bãi đỗ xe', 'Phòng thay đồ', 'Thuê vợt'],
-    //         opening_hours: '06:00 - 21:00'
-    //     },
-    //     {
-    //         id: 4,
-    //         name: 'Sân bóng rổ trong nhà',
-    //         sport_type: 'basketball',
-    //         description: 'Sân bóng rổ trong nhà với sàn gỗ chuyên nghiệp, rổ chuẩn NBA',
-    //         price_per_hour: 120000,
-    //         image_url: '/images/basketball-1.jpg',
-    //         location: 'Quận 10, TP.HCM',
-    //         rating: 4.7,
-    //         reviews_count: 78,
-    //         amenities: ['Điều hòa', 'Âm thanh', 'Bãi đỗ xe', 'Phòng thay đồ'],
-    //         opening_hours: '06:00 - 22:00'
-    //     }
-    // ].map(facility => ({
-    //     ...facility,
-    //     available_slots: generateTimeSlots(facility.opening_hours)
-    // }));
-
     // Fetch facilities từ API
     useEffect(() => {
         const fetchFacilities = async () => {
             try {
-                const res = await fetch("http://localhost:8000/api/facilities");
+                const res = await fetch(`${API_URL}/api/facilities`);
                 const data = await res.json();
 
                 const facilitiesWithSlots = data.map(facility => ({

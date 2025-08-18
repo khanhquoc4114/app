@@ -4,12 +4,13 @@ from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 import jwt
 import bcrypt
-
+from sqlalchemy import func
 from database import get_db, engine
 from models import User, Facility, Base
 from schemas import UserCreate, UserLogin, UserResponse, Token
 
 # Create tables
+
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Sports Facility Auth API")
@@ -116,6 +117,24 @@ def get_facilities(db: Session = Depends(get_db)):
             "updated_at": f.updated_at
         }
         for f in facilities
+    ]
+
+@app.get("/api/facilities/count")
+def count_active_facilities(db: Session = Depends(get_db)):
+    count = db.query(Facility).filter(Facility.is_active == True).count()
+    return {"count": count}
+
+@app.get("/api/facilities/popular-sports")
+def get_popular_sports(db: Session = Depends(get_db)):
+    results = (
+        db.query(Facility.sport_type, func.count(Facility.id).label("courts"))
+        .filter(Facility.is_active == True)
+        .group_by(Facility.sport_type)
+        .all()
+    )
+    return [
+        {"sportType": r.sport_type, "courts": r.courts}
+        for r in results
     ]
 
 @app.get("/")
