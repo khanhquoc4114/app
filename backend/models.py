@@ -18,6 +18,11 @@ class User(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     total_bookings = Column(Integer, default=0)   # tổng số lần booking
     total_spent = Column(Integer, default=0)
+    phone = Column(String, nullable=True)
+    address = Column(String, nullable=True)
+    avatar = Column(String, nullable=True)  # link ảnh
+    favorite_sport = Column(String, nullable=True)
+    member_level = Column(String, default="Bronze")
     
     # Relationships
     bookings = relationship("Booking", back_populates="user")

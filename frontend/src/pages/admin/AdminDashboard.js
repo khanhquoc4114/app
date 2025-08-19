@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Row,
     Col,
@@ -96,32 +96,21 @@ const AdminDashboard = () => {
         }
     ];
 
-    const users = [
-        {
-            key: '1',
-            id: 1,
-            username: 'user1',
-            full_name: 'Nguyễn Văn A',
-            email: 'user1@example.com',
-            role: 'user',
-            is_active: true,
-            total_bookings: 15,
-            total_spent: 2400000,
-            created_at: '2024-01-01'
-        },
-        {
-            key: '2',
-            id: 2,
-            username: 'staff1',
-            full_name: 'Trần Thị B',
-            email: 'staff1@example.com',
-            role: 'staff',
-            is_active: true,
-            total_bookings: 0,
-            total_spent: 0,
-            created_at: '2024-01-15'
-        }
-    ];
+    const [users, setUsers] = useState([]);
+
+    useEffect(() => {
+        const fetchUsers = async () => {
+            try {
+                const res = await fetch("http://localhost:8000/api/users/all");
+                const data = await res.json();
+                setUsers(data);
+            } catch (err) {
+                console.error("Lỗi khi fetch users:", err);
+            }
+        };
+
+        fetchUsers();
+    }, []);
 
     const revenueData = [
         { date: '2024-01-15', revenue: 1200000, bookings: 8 },

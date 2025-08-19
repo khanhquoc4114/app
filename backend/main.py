@@ -1,14 +1,15 @@
 from fastapi import FastAPI, HTTPException, Depends, status
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
-from datetime import datetime, timedelta
-import jwt
+from fastapi.security import OAuth2PasswordBearer
+from datetime import datetime
 import bcrypt
 from sqlalchemy import func
 from database import get_db, engine
 from models import *
 from schemas import *
-from pydantic import BaseModel
+from typing import List
+from auth import *
 
 # Create tables
 
@@ -19,7 +20,7 @@ app = FastAPI(title="Sports Facility Auth API")
 # CORS cho React frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -33,11 +34,6 @@ def health_check():
 # JWT config
 SECRET_KEY = "my-secret-key-123"
 ALGORITHM = "HS256"
-
-def create_access_token(username: str, role: str):
-    expire = datetime.utcnow() + timedelta(hours=24)
-    to_encode = {"sub": username, "role": role, "exp": expire}
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 @app.post("/api/auth/register")
 def register(user: UserCreate, db: Session = Depends(get_db)):
@@ -174,10 +170,10 @@ def login(request: LoginRequest, db: Session = Depends(get_db)):
     if not user:# or not check_password_hash(user.hashed_password, request.password):
         raise HTTPException(status_code=401, detail="Sai tài khoản hoặc mật khẩu")
 
-    token = f"fake-jwt-for-{user.username}"
+    access_token = create_access_token(data={"sub": user.username, "role": user.role, "id": user.id})
 
     return {
-        "access_token": token,
+        "access_token": access_token,
         "token_type": "bearer",
         "user": {
             "id": user.id,
@@ -186,3 +182,59 @@ def login(request: LoginRequest, db: Session = Depends(get_db)):
             "role": user.role
         }
     }
+    
+@app.get("/api/users/all", response_model=List[UserOut])
+def get_users(db: Session = Depends(get_db)):
+    users = db.query(User).all()
+    return users
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/login")
+
+@app.get("/api/auth/me")
+def get_me(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    payload = verify_token(token)
+    if not payload:
+        raise HTTPException(status_code=401, detail="Token không hợp lệ")
+
+    user = db.query(User).filter(User.id == payload["id"]).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Không tìm thấy user")
+
+    return {
+        "id": user.id,
+        "username": user.username,
+        "email": user.email,
+        "full_name": user.full_name,
+        "phone": user.phone,
+        "address": user.address,
+        "avatar": user.avatar,
+        "role": user.role,
+        "created_at": user.created_at,
+        "total_bookings": user.total_bookings,
+        "total_spent": user.total_spent,
+        "favorite_sport": user.favorite_sport,
+        "member_level": user.member_level
+    }
+    
+@app.post("/api/auth/change-password")
+def change_password(
+    data: ChangePasswordRequest,
+    token: str = Depends(oauth2_scheme),
+    db: Session = Depends(get_db)
+):
+    payload = verify_token(token)
+    if not payload:
+        raise HTTPException(status_code=401, detail="Token không hợp lệ")
+
+    user = db.query(User).filter(User.id == payload["id"]).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User không tồn tại")
+
+    # if not verify_password(data.old_password, user.hashed_password):
+    #     raise HTTPException(status_code=400, detail="Mật khẩu cũ không đúng")
+    if data.old_password != user.hashed_password:
+        raise HTTPException(status_code=400, detail="Mật khẩu cũ không đúng")
+
+    user.hashed_password = data.new_password # cần hash mật khẩu, để sau 
+    db.commit()
+    return {"message": "Đổi mật khẩu thành công!"}

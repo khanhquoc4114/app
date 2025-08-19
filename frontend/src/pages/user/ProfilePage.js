@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Row,
     Col,
@@ -40,23 +40,30 @@ const ProfilePage = () => {
     const [passwordForm] = Form.useForm();
     const [editing, setEditing] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [userInfo, setUserInfo] = useState(null);
 
-    // Mock user data
-    const [userInfo, setUserInfo] = useState({
-        id: 1,
-        username: 'user1',
-        email: 'user1@example.com',
-        full_name: 'Nguyễn Văn A',
-        phone: '0901234567',
-        address: '123 Nguyễn Huệ, Quận 1, TP.HCM',
-        avatar: null,
-        role: 'user',
-        created_at: '2024-01-01',
-        total_bookings: 15,
-        total_spent: 2400000,
-        favorite_sport: 'Cầu lông',
-        member_level: 'Silver'
-    });
+    useEffect(() => {
+        const fetchUser = async () => {
+            const token = localStorage.getItem("token");
+            if (!token) return;
+
+            const res = await fetch("http://localhost:8000/api/auth/me", {
+                headers: {
+                    "Authorization": `Bearer ${token}`
+                }
+            });
+
+            if (res.ok) {
+                const user = await res.json();
+                setUserInfo(user);
+                console.log("User info:", user);
+            } else {
+                console.error("Token không hợp lệ");
+            }
+        };
+
+        fetchUser();
+    }, []);
 
     const [notifications, setNotifications] = useState({
         email_booking: true,
@@ -68,12 +75,12 @@ const ProfilePage = () => {
     const stats = [
         {
             title: 'Tổng lượt đặt',
-            value: userInfo.total_bookings,
+            value: userInfo?.total_bookings,
             prefix: <CalendarOutlined style={{ color: '#1890ff' }} />
         },
         {
             title: 'Tổng chi tiêu',
-            value: userInfo.total_spent,
+            value: userInfo?.total_spent,
             prefix: <DollarOutlined style={{ color: '#52c41a' }} />,
             formatter: (value) => new Intl.NumberFormat('vi-VN', {
                 style: 'currency',
@@ -82,41 +89,68 @@ const ProfilePage = () => {
         },
         {
             title: 'Môn yêu thích',
-            value: userInfo.favorite_sport,
+            value: userInfo?.favorite_sport,
             prefix: <TrophyOutlined style={{ color: '#faad14' }} />
         }
     ];
 
+    useEffect(() => {
+        if (userInfo) {
+            form.setFieldsValue(userInfo);
+        }
+    }, [userInfo, form]);
+
     const handleUpdateProfile = async (values) => {
-        setLoading(true);
         try {
-            // Simulate API call
-            await new Promise(resolve => setTimeout(resolve, 1000));
-
-            setUserInfo(prev => ({ ...prev, ...values }));
-            message.success('Cập nhật thông tin thành công!');
-            setEditing(false);
+        // Fake API call
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        setUserInfo(values); // cập nhật lại state
+        message.success("Cập nhật thông tin thành công!");
+        setEditing(false);
         } catch (error) {
-            message.error('Có lỗi xảy ra, vui lòng thử lại!');
-        } finally {
-            setLoading(false);
+        message.error("Có lỗi xảy ra, vui lòng thử lại!");
         }
     };
 
-    const handleChangePassword = async (values) => {
-        setLoading(true);
-        try {
-            // Simulate API call
-            await new Promise(resolve => setTimeout(resolve, 1000));
+const handleChangePassword = async (values) => {
+    setLoading(true);
+    try {
+        const token = localStorage.getItem("token");
 
-            message.success('Đổi mật khẩu thành công!');
+        const res = await fetch("http://localhost:8000/api/auth/change-password", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                old_password: values.old_password,
+                new_password: values.new_password
+            })
+        });
+
+        if (res.ok) {
+            message.success("Đổi mật khẩu thành công!");
             passwordForm.resetFields();
-        } catch (error) {
-            message.error('Có lỗi xảy ra, vui lòng thử lại!');
-        } finally {
-            setLoading(false);
+        } else {
+            const errData = await res.json();
+            let errorMsg = "Lỗi khi đổi mật khẩu";
+
+            if (typeof errData.detail === "string") {
+                errorMsg = errData.detail;
+            } else if (Array.isArray(errData) && errData.length > 0) {
+                // Lấy message đầu tiên từ list error
+                errorMsg = errData[0].msg;
+            }
+
+            message.error(errorMsg);
         }
-    };
+    } catch (error) {
+        message.error("Có lỗi xảy ra, vui lòng thử lại!");
+    } finally {
+        setLoading(false);
+    }
+};
 
     const handleAvatarUpload = (info) => {
         if (info.file.status === 'done') {
@@ -159,7 +193,7 @@ const ProfilePage = () => {
                                 <Avatar
                                     size={120}
                                     icon={<UserOutlined />}
-                                    src={userInfo.avatar}
+                                    src={userInfo?.avatar}
                                     style={{ marginBottom: 16 }}
                                 />
                                 <Upload
@@ -186,18 +220,18 @@ const ProfilePage = () => {
                             </div>
 
                             <Title level={4} style={{ margin: '8px 0' }}>
-                                {userInfo.full_name}
+                                {userInfo?.full_name}
                             </Title>
 
                             <Space>
-                                <Tag color="blue">{userInfo.role === 'user' ? 'Khách hàng' : userInfo.role}</Tag>
-                                <Tag color={getMemberLevelColor(userInfo.member_level)}>
-                                    {userInfo.member_level}
+                                <Tag color="blue">{userInfo?.role === 'user' ? 'Khách hàng' : userInfo?.role}</Tag>
+                                <Tag color={getMemberLevelColor(userInfo?.member_level)}>
+                                    {userInfo?.member_level}
                                 </Tag>
                             </Space>
 
                             <Text type="secondary" style={{ display: 'block', marginTop: 8 }}>
-                                Thành viên từ {new Date(userInfo.created_at).getFullYear()}
+                                Thành viên từ {new Date(userInfo?.created_at).getFullYear()}
                             </Text>
                         </div>
 
@@ -267,7 +301,7 @@ const ProfilePage = () => {
                                             >
                                                 <Input
                                                     prefix={<UserOutlined />}
-                                                    disabled={!editing}
+                                                    readOnly={!editing}
                                                 />
                                             </Form.Item>
                                         </Col>
@@ -278,7 +312,7 @@ const ProfilePage = () => {
                                             >
                                                 <Input
                                                     prefix={<UserOutlined />}
-                                                    disabled
+                                                    readOnly
                                                 />
                                             </Form.Item>
                                         </Col>
@@ -296,7 +330,7 @@ const ProfilePage = () => {
                                             >
                                                 <Input
                                                     prefix={<MailOutlined />}
-                                                    disabled={!editing}
+                                                    readOnly={!editing}
                                                 />
                                             </Form.Item>
                                         </Col>
@@ -308,7 +342,7 @@ const ProfilePage = () => {
                                             >
                                                 <Input
                                                     prefix={<PhoneOutlined />}
-                                                    disabled={!editing}
+                                                    readOnly={!editing}
                                                 />
                                             </Form.Item>
                                         </Col>
@@ -320,7 +354,7 @@ const ProfilePage = () => {
                                     >
                                         <Input
                                             prefix={<EnvironmentOutlined />}
-                                            disabled={!editing}
+                                            readOnly={!editing}
                                         />
                                     </Form.Item>
                                 </Form>
@@ -334,7 +368,7 @@ const ProfilePage = () => {
                                     style={{ maxWidth: 400 }}
                                 >
                                     <Form.Item
-                                        name="current_password"
+                                        name="old_password"
                                         label="Mật khẩu hiện tại"
                                         rules={[{ required: true, message: 'Vui lòng nhập mật khẩu hiện tại' }]}
                                     >
