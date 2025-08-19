@@ -1,163 +1,53 @@
+// Trang quản lý lịch sử đặt sân của người dùng
+// 1. Xử lý giao diện của booking page
 import React, { useState, useEffect } from 'react';
 import {
-    Card,
-    Table,
-    Typography,
-    Space,
-    Tag,
-    Button,
-    Modal,
-    Rate,
-    Input,
-    message,
-    Tabs,
-    Empty,
-    Row,
-    Col
+    Card, Table, Typography, Space, Tag, Button, Modal, Rate, Input, message, Tabs, Empty, Row, Col
 } from 'antd';
 import {
-    CalendarOutlined,
-    ClockCircleOutlined,
-    DollarOutlined,
-    StarOutlined,
-    DeleteOutlined,
-    EditOutlined
+    CalendarOutlined, ClockCircleOutlined, DollarOutlined, StarOutlined, DeleteOutlined, EditOutlined
 } from '@ant-design/icons';
+
 import dayjs from 'dayjs';
+import BookingItem from './BookingItem';
+import { handleCancelBooking, formatPrice, getStatusColor, getStatusText, handleReviewBooking, handleSubmitReview } from './bookingLogic';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
 const { TabPane } = Tabs;
 
+// Component chính của trang lịch đặt sân
 const MyBookingsPage = () => {
+    // State quản lý tab đang chọn (sắp tới, đã hoàn thành, đã huỷ)
     const [activeTab, setActiveTab] = useState('upcoming');
+    // State hiển thị modal đánh giá
     const [reviewModalVisible, setReviewModalVisible] = useState(false);
+    // State lưu booking đang chọn để đánh giá
     const [selectedBooking, setSelectedBooking] = useState(null);
+    // State điểm đánh giá
     const [rating, setRating] = useState(5);
+    // State nội dung nhận xét
     const [review, setReview] = useState('');
 
-    // Mock data
+    // object booking gồm 3 mảng
     const bookings = {
         upcoming: [
-            {
-                key: '1',
-                id: 'BK001',
-                facility: 'Sân cầu lông VIP 1',
-                sport: 'Cầu lông',
-                date: '2024-01-20',
-                time: '08:00 - 10:00',
-                amount: 160000,
-                status: 'confirmed',
-                canCancel: true,
-                location: 'Quận 1, TP.HCM'
-            },
-            {
-                key: '2',
-                id: 'BK002',
-                facility: 'Sân tennis cao cấp',
-                sport: 'Tennis',
-                date: '2024-01-22',
-                time: '14:00 - 16:00',
-                amount: 300000,
-                status: 'pending',
-                canCancel: true,
-                location: 'Quận 7, TP.HCM'
-            }
+            new BookingItem('1', 'BK001', 'Sân cầu lông VIP 1', 'Cầu lông', '2024-01-20', '08:00 - 10:00', 160000, 'confirmed', 'Quận 1, TP.HCM', { canCancel: true }),
+            new BookingItem('2', 'BK002', 'Sân tennis cao cấp', 'Tennis', '2024-01-22', '14:00 - 16:00', 300000, 'pending', 'Quận 7, TP.HCM', { canCancel: true })
         ],
         completed: [
-            {
-                key: '3',
-                id: 'BK003',
-                facility: 'Sân bóng đá mini A',
-                sport: 'Bóng đá',
-                date: '2024-01-10',
-                time: '18:00 - 20:00',
-                amount: 400000,
-                status: 'completed',
-                canReview: true,
-                location: 'Quận 3, TP.HCM'
-            },
-            {
-                key: '4',
-                id: 'BK004',
-                facility: 'Sân bóng rổ trong nhà gì bạn',
-                sport: 'Bóng rổ',
-                date: '2024-01-08',
-                time: '09:00 - 11:00',
-                amount: 240000,
-                status: 'completed',
-                canReview: false,
-                reviewed: true,
-                location: 'Quận 10, TP.HCM'
-            }
+            new BookingItem('3', 'BK003', 'Sân bóng đá mini A', 'Bóng đá', '2024-01-10', '18:00 - 20:00', 400000, 'completed', 'Quận 3, TP.HCM', { canReview: true }),
+            new BookingItem('4', 'BK004', 'Sân bóng rổ trong nhà gì bạn', 'Bóng rổ', '2024-01-08', '09:00 - 11:00', 240000, 'completed', 'Quận 10, TP.HCM', { canReview: false, reviewed: true })
         ],
         cancelled: [
-            {
-                key: '5',
-                id: 'BK005',
-                facility: 'Sân cầu lông VIP 2',
-                sport: 'Cầu lông',
-                date: '2024-01-05',
-                time: '16:00 - 18:00',
-                amount: 160000,
-                status: 'cancelled',
-                refunded: true,
-                location: 'Quận 1, TP.HCM'
-            }
+            new BookingItem('5', 'BK005', 'Sân cầu lông VIP 2', 'Cầu lông', '2024-01-05', '16:00 - 18:00', 160000, 'cancelled', 'Quận 1, TP.HCM', { refunded: true })
         ]
     };
 
-    const handleCancelBooking = (record) => {
-        Modal.confirm({
-            title: 'Xác nhận hủy đặt sân',
-            content: `Bạn có chắc muốn hủy đặt sân ${record.id}? Phí hủy có thể được áp dụng.`,
-            okText: 'Hủy đặt sân',
-            cancelText: 'Không',
-            onOk: () => {
-                message.success(`Đã hủy đặt sân ${record.id}`);
-            }
-        });
-    };
 
-    const handleReviewBooking = (record) => {
-        setSelectedBooking(record);
-        setReviewModalVisible(true);
-    };
 
-    const handleSubmitReview = () => {
-        message.success('Cảm ơn bạn đã đánh giá!');
-        setReviewModalVisible(false);
-        setRating(5);
-        setReview('');
-    };
 
-    const formatPrice = (price) => {
-        return new Intl.NumberFormat('vi-VN', {
-            style: 'currency',
-            currency: 'VND'
-        }).format(price);
-    };
-
-    const getStatusColor = (status) => {
-        const colors = {
-            confirmed: 'green',
-            pending: 'orange',
-            completed: 'blue',
-            cancelled: 'red'
-        };
-        return colors[status] || 'default';
-    };
-
-    const getStatusText = (status) => {
-        const texts = {
-            confirmed: 'Đã xác nhận',
-            pending: 'Chờ xác nhận',
-            completed: 'Đã hoàn thành',
-            cancelled: 'Đã hủy'
-        };
-        return texts[status] || status;
-    };
-
+    // Định nghĩa các cột cho bảng Table
     const columns = [
         {
             title: 'Mã đặt',
@@ -244,7 +134,7 @@ const MyBookingsPage = () => {
                             size="small"
                             type="primary"
                             icon={<StarOutlined />}
-                            onClick={() => handleReviewBooking(record)}
+                            onClick={() => handleReviewBooking(record, setSelectedBooking, setReviewModalVisible)}
                         >
                             Đánh giá
                         </Button>
@@ -262,6 +152,7 @@ const MyBookingsPage = () => {
         }
     ];
 
+    // Hiển thị thống kê số lượng booking theo từng trạng thái
     const renderBookingStats = () => {
         const stats = [
             {
@@ -305,6 +196,7 @@ const MyBookingsPage = () => {
         );
     };
 
+    // Render giao diện chính
     return (
         <div>
             <div style={{ marginBottom: 24 }}>
@@ -313,14 +205,14 @@ const MyBookingsPage = () => {
             </div>
 
             {renderBookingStats()}
-
+            {/* Hiển thị bảng booking theo từng tab */}
             <Card>
                 <Tabs activeKey={activeTab} onChange={setActiveTab}>
                     <TabPane tab="Sắp tới" key="upcoming">
                         {bookings.upcoming.length > 0 ? (
                             <Table
                                 columns={columns}
-                                dataSource={bookings.upcoming}
+                                dataSource={bookings.upcoming} // Hiển thị các booking sắp tới
                                 pagination={false}
                                 scroll={{ x: 800 }}
                             />
@@ -333,7 +225,7 @@ const MyBookingsPage = () => {
                         {bookings.completed.length > 0 ? (
                             <Table
                                 columns={columns}
-                                dataSource={bookings.completed}
+                                dataSource={bookings.completed} // Hiển thị các booking đã hoàn thành
                                 pagination={false}
                                 scroll={{ x: 800 }}
                             />
@@ -346,7 +238,7 @@ const MyBookingsPage = () => {
                         {bookings.cancelled.length > 0 ? (
                             <Table
                                 columns={columns}
-                                dataSource={bookings.cancelled}
+                                dataSource={bookings.cancelled} // Hiển thị các booking đã hủy
                                 pagination={false}
                                 scroll={{ x: 800 }}
                             />
@@ -357,11 +249,12 @@ const MyBookingsPage = () => {
                 </Tabs>
             </Card>
 
+            {/* Modal đánh giá sân */}
             <Modal
                 title="Đánh giá sân thể thao"
                 open={reviewModalVisible}
                 onCancel={() => setReviewModalVisible(false)}
-                onOk={handleSubmitReview}
+                onOk={() => handleSubmitReview(setReviewModalVisible, setRating, setReview)}
                 okText="Gửi đánh giá"
                 cancelText="Hủy"
             >
