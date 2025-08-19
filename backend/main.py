@@ -65,33 +65,6 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
     
     return {"message": "Đăng ký thành công", "username": new_user.username}
 
-@app.post("/api/auth/login")
-def login(user: UserLogin, db: Session = Depends(get_db)):
-    # Tìm user
-    db_user = db.query(User).filter(User.username == user.username).first()
-    
-    if not db_user:
-        raise HTTPException(status_code=401, detail="Username không tồn tại")
-    
-    # Kiểm tra password
-    if not bcrypt.checkpw(user.password.encode('utf-8'), db_user.hashed_password.encode('utf-8')):
-        raise HTTPException(status_code=401, detail="Mật khẩu không đúng")
-    
-    # Tạo token
-    access_token = create_access_token(db_user.username, db_user.role)
-    
-    return {
-        "access_token": access_token,
-        "token_type": "bearer",
-        "user": {
-            "id": db_user.id,
-            "username": db_user.username,
-            "email": db_user.email,
-            "full_name": db_user.full_name,
-            "role": db_user.role
-        }
-    }
-
 # Endpoint mới để lấy danh sách cơ sở thể thao
 @app.get("/api/facilities")
 def get_facilities(db: Session = Depends(get_db)):
@@ -238,3 +211,32 @@ def change_password(
     user.hashed_password = data.new_password # cần hash mật khẩu, để sau 
     db.commit()
     return {"message": "Đổi mật khẩu thành công!"}
+
+
+@app.post("/api/auth/register")
+def register(user_data: UserCreate, db: Session = Depends(get_db)):
+    # Kiểm tra user đã tồn tại chưa
+    existing_user = db.query(User).filter(
+        (User.username == user_data.username) | (User.email == user_data.email)
+    ).first()
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Username hoặc Email đã tồn tại")
+
+    # Tạo user mới
+    new_user = User(
+        username=user_data.username,
+        email=user_data.email,
+        full_name=user_data.full_name,
+        hashed_password=user_data.password, # Thêm hashing sau
+        role="user",  # mặc định
+        is_active=True,
+        total_bookings=0,
+        total_spent=0,
+        member_level="Bronze"
+    )
+
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+
+    return {"message": "Đăng ký thành công!", "user_id": new_user.id}

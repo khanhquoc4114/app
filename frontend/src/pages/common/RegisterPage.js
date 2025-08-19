@@ -19,7 +19,7 @@ import {
     FacebookOutlined
 } from '@ant-design/icons';
 import { useNavigate, Link } from 'react-router-dom';
-import { authAPI } from '../services/api';
+import { authAPI } from '../../services/api';
 
 const { Title, Text } = Typography;
 
@@ -34,9 +34,10 @@ const RegisterPage = () => {
         try {
             // Gọi API đăng ký
             await authAPI.register({
-                username: values.email, // Dùng email làm username
+                username: values.username,
                 email: values.email,
-                full_name: values.fullName,
+                full_name: values.full_name,
+                phone: values.phone,
                 password: values.password
             });
 
@@ -80,7 +81,21 @@ const RegisterPage = () => {
                     size="large"
                 >
                     <Form.Item
-                        name="fullName"
+                        name="username"
+                        label="Username"
+                        rules={[
+                            { required: true, message: 'Vui lòng tên đăng nhập' },
+                            { min: 3, message: 'Username phải từ 3 ký tự' }
+                        ]}
+                    >
+                        <Input
+                            prefix={<UserOutlined />}
+                            placeholder="Nhập username của bạn"
+                        />
+                    </Form.Item>
+
+                    <Form.Item
+                        name="full_name"
                         label="Họ và tên"
                         rules={[
                             { required: true, message: 'Vui lòng nhập họ tên' },
