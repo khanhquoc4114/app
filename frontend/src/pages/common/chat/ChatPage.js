@@ -1,152 +1,69 @@
+// Trang chat hỗ trợ khách hàng
 import React, { useState, useEffect, useRef } from 'react';
+import { Card, Input, Button, Typography, Space, Avatar, Divider, Tag, Spin } from 'antd';
+import { SendOutlined, RobotOutlined, UserOutlined, CustomerServiceOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 import {
-    Card,
-    Input,
-    Button,
-    Typography,
-    Space,
-    Avatar,
-    Divider,
-    Tag,
-    Empty,
-    Spin
-} from 'antd';
-import {
-    SendOutlined,
-    RobotOutlined,
-    UserOutlined,
-    CustomerServiceOutlined,
-    QuestionCircleOutlined
-} from '@ant-design/icons';
-import dayjs from 'dayjs';
+    quickQuestions,
+    getWelcomeMessage,
+    generateBotResponse,
+    createUserMessage,
+    createBotMessage,
+    createSystemMessage,
+    createStaffMessage
+} from './chatLogic';
 
 const { Title, Text } = Typography;
-const { TextArea } = Input;
 
 const ChatPage = () => {
+    // State quản lý tin nhắn, input, trạng thái chat
     const [messages, setMessages] = useState([]);
     const [inputMessage, setInputMessage] = useState('');
     const [isTyping, setIsTyping] = useState(false);
-    const [chatMode, setChatMode] = useState('bot'); // 'bot' or 'human'
+    const [chatMode, setChatMode] = useState('bot'); // 'bot' hoặc 'human'
     const messagesEndRef = useRef(null);
 
-    // Quick questions
-    const quickQuestions = [
-        'Giờ mở cửa của sân?',
-        'Cách đặt sân?',
-        'Chính sách hủy đặt?',
-        'Giá thuê sân?',
-        'Liên hệ hỗ trợ'
-    ];
-
-    // Initial bot message
+    // Tin nhắn chào mừng bot
     useEffect(() => {
-        const welcomeMessage = {
-            id: 1,
-            type: 'bot',
-            content: 'Xin chào! Tôi là AI Assistant của hệ thống đặt sân thể thao. Tôi có thể giúp bạn:\n\n• Tìm hiểu về các sân thể thao\n• Hướng dẫn đặt sân\n• Giải đáp thắc mắc\n• Kết nối với nhân viên hỗ trợ\n\nBạn cần hỗ trợ gì?',
-            timestamp: dayjs(),
-            avatar: <RobotOutlined />
-        };
-        setMessages([welcomeMessage]);
+        setMessages([getWelcomeMessage()]);
     }, []);
 
-    // Auto scroll to bottom
+    // Tự động cuộn xuống cuối khi có tin nhắn mới
     useEffect(() => {
-        scrollToBottom();
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages]);
 
-    const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    };
-
+    // Gửi tin nhắn người dùng và phản hồi bot
     const handleSendMessage = () => {
         if (!inputMessage.trim()) return;
-
-        const userMessage = {
-            id: Date.now(),
-            type: 'user',
-            content: inputMessage,
-            timestamp: dayjs(),
-            avatar: <UserOutlined />
-        };
-
-        setMessages(prev => [...prev, userMessage]);
+        setMessages(prev => [...prev, createUserMessage(inputMessage)]);
         setInputMessage('');
         setIsTyping(true);
-
-        // Simulate bot response
         setTimeout(() => {
-            const botResponse = generateBotResponse(inputMessage);
-            const botMessage = {
-                id: Date.now() + 1,
-                type: 'bot',
-                content: botResponse,
-                timestamp: dayjs(),
-                avatar: <RobotOutlined />
-            };
-            setMessages(prev => [...prev, botMessage]);
+            setMessages(prev => [...prev, createBotMessage(generateBotResponse(inputMessage))]);
             setIsTyping(false);
         }, 1500);
     };
 
-    const generateBotResponse = (userInput) => {
-        const input = userInput.toLowerCase();
 
-        if (input.includes('giờ') || input.includes('mở cửa')) {
-            return 'Hệ thống sân thể thao của chúng tôi mở cửa:\n\n🕕 **Giờ hoạt động:** 06:00 - 22:00 hàng ngày\n🏸 **Sân cầu lông:** 06:00 - 22:00\n⚽ **Sân bóng đá:** 05:00 - 23:00\n🎾 **Sân tennis:** 06:00 - 21:00\n\nBạn có thể đặt sân trực tuyến 24/7!';
-        }
-
-        if (input.includes('đặt sân') || input.includes('booking')) {
-            return 'Để đặt sân, bạn có thể:\n\n1️⃣ **Trực tuyến:** Vào trang "Danh sách sân" → Chọn sân → Chọn ngày giờ → Đặt sân\n\n2️⃣ **Quy trình:**\n   • Chọn sân phù hợp\n   • Chọn ngày và khung giờ\n   • Điền thông tin liên hệ\n   • Thanh toán online\n   • Nhận xác nhận qua email/SMS\n\n3️⃣ **Lưu ý:** Đặt trước ít nhất 2 tiếng để đảm bảo có sân!';
-        }
-
-        if (input.includes('hủy') || input.includes('cancel')) {
-            return '**Chính sách hủy đặt sân:**\n\n✅ **Miễn phí hủy:** Trước 24h\n💰 **Phí 50%:** Hủy trong vòng 24h\n❌ **Không hoàn tiền:** Hủy trong vòng 2h\n\n**Cách hủy:**\n• Vào "Lịch đặt của tôi"\n• Chọn lịch cần hủy\n• Nhấn "Hủy đặt"\n• Xác nhận hủy\n\nTiền sẽ được hoàn lại trong 3-5 ngày làm việc!';
-        }
-
-        if (input.includes('giá') || input.includes('price')) {
-            return '**Bảng giá thuê sân:**\n\n🏸 **Cầu lông:**\n   • Sân thường: 60,000đ/giờ\n   • Sân VIP: 80,000đ/giờ\n\n⚽ **Bóng đá mini:**\n   • Sân 5v5: 200,000đ/giờ\n   • Sân 7v7: 300,000đ/giờ\n\n🎾 **Tennis:** 150,000đ/giờ\n🏀 **Bóng rổ:** 120,000đ/giờ\n\n💡 **Ưu đãi:** Giảm 10% khi đặt từ 3 giờ trở lên!';
-        }
-
-        if (input.includes('liên hệ') || input.includes('support')) {
-            return '**Thông tin liên hệ:**\n\n📞 **Hotline:** 1900-xxxx (24/7)\n📧 **Email:** support@sportsfacility.com\n💬 **Chat:** Ngay tại đây!\n\n**Địa chỉ các sân:**\n🏢 Chi nhánh 1: Quận 1, TP.HCM\n🏢 Chi nhánh 2: Quận 7, TP.HCM\n🏢 Chi nhánh 3: Quận 3, TP.HCM\n\nBạn muốn tôi kết nối với nhân viên hỗ trợ không?';
-        }
-
-        return 'Cảm ơn bạn đã liên hệ! Tôi hiểu bạn đang cần hỗ trợ về "' + userInput + '".\n\nTôi có thể giúp bạn về:\n• Thông tin sân thể thao\n• Hướng dẫn đặt sân\n• Chính sách và quy định\n• Giá cả và khuyến mãi\n\nHoặc bạn có thể chọn một trong các câu hỏi phổ biến bên dưới, hoặc gõ "nhân viên" để kết nối với nhân viên hỗ trợ!';
-    };
-
+    // Xử lý chọn câu hỏi nhanh
     const handleQuickQuestion = (question) => {
         setInputMessage(question);
         setTimeout(() => handleSendMessage(), 100);
     };
 
+    // Kết nối với nhân viên hỗ trợ
     const connectToHuman = () => {
         setChatMode('human');
-        const humanMessage = {
-            id: Date.now(),
-            type: 'system',
-            content: 'Đang kết nối với nhân viên hỗ trợ... Vui lòng chờ trong giây lát.',
-            timestamp: dayjs()
-        };
-        setMessages(prev => [...prev, humanMessage]);
-
+        setMessages(prev => [...prev, createSystemMessage('Đang kết nối với nhân viên hỗ trợ... Vui lòng chờ trong giây lát.')]);
         setTimeout(() => {
-            const staffMessage = {
-                id: Date.now() + 1,
-                type: 'staff',
-                content: 'Xin chào! Tôi là Minh - nhân viên hỗ trợ khách hàng. Tôi có thể giúp gì cho bạn?',
-                timestamp: dayjs(),
-                avatar: <CustomerServiceOutlined />
-            };
-            setMessages(prev => [...prev, staffMessage]);
+            setMessages(prev => [...prev, createStaffMessage('Xin chào! Tôi là Minh - nhân viên hỗ trợ khách hàng. Tôi có thể giúp gì cho bạn?')]);
         }, 2000);
     };
 
+    // Hiển thị một tin nhắn chat
     const renderMessage = (message) => {
         const isUser = message.type === 'user';
         const isSystem = message.type === 'system';
-
         return (
             <div
                 key={message.id}
@@ -165,7 +82,6 @@ const ChatPage = () => {
                         }}
                     />
                 )}
-
                 <div
                     style={{
                         maxWidth: '70%',
@@ -175,9 +91,7 @@ const ChatPage = () => {
                         color: isUser ? 'white' : 'black'
                     }}
                 >
-                    <div style={{ whiteSpace: 'pre-line' }}>
-                        {message.content}
-                    </div>
+                    <div style={{ whiteSpace: 'pre-line' }}>{message.content}</div>
                     <div
                         style={{
                             fontSize: '11px',
@@ -189,7 +103,6 @@ const ChatPage = () => {
                         {message.timestamp.format('HH:mm')}
                     </div>
                 </div>
-
                 {isUser && (
                     <Avatar
                         icon={<UserOutlined />}

@@ -1,38 +1,11 @@
+// Trang dashboard quản trị hệ thống
 import React, { useState } from 'react';
-import {
-    Row,
-    Col,
-    Card,
-    Statistic,
-    Table,
-    Typography,
-    Space,
-    Tag,
-    Button,
-    Modal,
-    Form,
-    Input,
-    Select,
-    Switch,
-    message,
-    Tabs,
-    DatePicker,
-    Upload
-} from 'antd';
-import {
-    DollarOutlined,
-    UserOutlined,
-    ShopOutlined,
-    CalendarOutlined,
-    PlusOutlined,
-    EditOutlined,
-    DeleteOutlined,
-    EyeOutlined,
-    UploadOutlined,
-    LockOutlined,
-    UnlockOutlined
-} from '@ant-design/icons';
+import { Row, Col, Card, Statistic, Table, Typography, Space, Tag, Button, Modal, Form, Input, Select, Tabs, DatePicker, Upload, message } from 'antd';
+import { DollarOutlined, UserOutlined, ShopOutlined, CalendarOutlined, PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined, UploadOutlined, LockOutlined, UnlockOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
+import AdminFacility from './AdminFacility';
+import AdminUser from './AdminUser';
+import { handleAddFacility, handleEditFacility, handleDeleteFacility, handleToggleUserStatus } from './adminDashboardLogic';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -71,56 +44,17 @@ const AdminDashboard = () => {
         }
     ];
 
+    // Danh sách sân mẫu
     const facilities = [
-        {
-            key: '1',
-            id: 1,
-            name: 'Sân cầu lông VIP 1',
-            sport_type: 'Cầu lông',
-            price_per_hour: 80000,
-            status: 'active',
-            bookings_count: 45,
-            revenue: 3600000,
-            owner: 'Nguyễn Văn A'
-        },
-        {
-            key: '2',
-            id: 2,
-            name: 'Sân bóng đá mini A',
-            sport_type: 'Bóng đá',
-            price_per_hour: 200000,
-            status: 'maintenance',
-            bookings_count: 23,
-            revenue: 4600000,
-            owner: 'Trần Thị B'
-        }
+        new AdminFacility(1, 'Sân cầu lông VIP 1', 'Cầu lông', 80000, 'active', 45, 3600000, 'Nguyễn Văn A'),
+        new AdminFacility(2, 'Sân bóng đá mini A', 'Bóng đá', 200000, 'maintenance', 23, 4600000, 'Trần Thị B')
     ];
 
+
+    // Danh sách user mẫu
     const users = [
-        {
-            key: '1',
-            id: 1,
-            username: 'user1',
-            full_name: 'Nguyễn Văn A',
-            email: 'user1@example.com',
-            role: 'user',
-            is_active: true,
-            total_bookings: 15,
-            total_spent: 2400000,
-            created_at: '2024-01-01'
-        },
-        {
-            key: '2',
-            id: 2,
-            username: 'staff1',
-            full_name: 'Trần Thị B',
-            email: 'staff1@example.com',
-            role: 'staff',
-            is_active: true,
-            total_bookings: 0,
-            total_spent: 0,
-            created_at: '2024-01-15'
-        }
+        new AdminUser(1, 'user1', 'Nguyễn Văn A', 'user1@example.com', 'user', true, 15, 2400000, '2024-01-01'),
+        new AdminUser(2, 'staff1', 'Trần Thị B', 'staff1@example.com', 'staff', true, 0, 0, '2024-01-15')
     ];
 
     const revenueData = [
