@@ -18,12 +18,15 @@ import {
     EnvironmentOutlined,
     ClockCircleOutlined,
     CalendarOutlined,
-    HomeOutlined
+    HomeOutlined,
+    HeartOutlined,
+    HeartFilled
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useLocation } from 'react-router-dom';
 import AdvancedSearch from '../../components/AdvancedSearch/AdvancedSearch';
 import axios from 'axios';
+import FacilityStats from '../../components/FacilityStats/FacilityStats';
 
 const { Title, Text, Paragraph } = Typography;
 const { Meta } = Card;
@@ -46,8 +49,11 @@ const FacilitiesPage = () => {
     const [selectedTimeSlots, setSelectedTimeSlots] = useState([]);
     const [bookedSlots, setBookedSlots] = useState({});
     const [facilities, setFacilities] = useState([]);
+    const [favorites, setFavorites] = useState([]);
+    const [userLocation, setUserLocation] = useState(null);
+    const [favoritesLoaded, setFavoritesLoaded] = useState(false);
     const API_URL = process.env.REACT_APP_API_URL;
-
+    const facilitiesWithDistance = facilities;
     // Handle URL query parameters
     useEffect(() => {
         const searchParams = new URLSearchParams(location.search);
@@ -60,6 +66,50 @@ const FacilitiesPage = () => {
             }));
         }
     }, [location.search]);
+
+    // Load favorites from localStorage
+    useEffect(() => {
+        const savedFavorites = localStorage.getItem('facilityFavorites');
+        if (savedFavorites) {
+            try {
+                const parsedFavorites = JSON.parse(savedFavorites);
+                console.log('Loaded favorites from localStorage:', parsedFavorites);
+                setFavorites(parsedFavorites);
+            } catch (error) {
+                console.error('Error parsing favorites from localStorage:', error);
+                localStorage.removeItem('facilityFavorites');
+            }
+        }
+        setFavoritesLoaded(true);
+    }, []);
+
+
+    // Save favorites to localStorage whenever favorites change (but only after initial load)
+    useEffect(() => {
+        if (favoritesLoaded) {
+            localStorage.setItem('facilityFavorites', JSON.stringify(favorites));
+            console.log('Saved favorites to localStorage:', favorites);
+        }
+    }, [favorites, favoritesLoaded]);
+
+    // Open Google Maps with directions from user location to facility
+    const openGoogleMaps = (facility) => {
+        console.log('Opening Google Maps for:', facility.name); // Debug log
+        const destination = encodeURIComponent(facility.location);
+        let url;
+        
+        if (userLocation) {
+            // If we have user location, show directions
+            url = `https://www.google.com/maps/dir/${userLocation.lat},${userLocation.lng}/${destination}`;
+            console.log('With user location:', url);
+        } else {
+            // If no user location, just show the facility on map
+            url = `https://www.google.com/maps/search/${destination}`;
+            console.log('Without user location:', url);
+        }
+        
+        window.open(url, '_blank');
+    };
 
     // Generate time slots based on opening hours
     const generateTimeSlots = (openingHours) => {
@@ -108,12 +158,22 @@ const FacilitiesPage = () => {
         '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00'
     ];
 
-    const filteredFacilities = facilities.filter(facility => {
+    const filteredFacilities = facilitiesWithDistance.filter(facility => {
+        const searchText = filters.searchText.toLowerCase();
         const matchesSearch = filters.searchText === '' ||
-            facility.name.toLowerCase().includes(filters.searchText.toLowerCase()) ||
-            facility.description.toLowerCase().includes(filters.searchText.toLowerCase());
+            facility.name.toLowerCase().includes(searchText) ||
+            facility.description.toLowerCase().includes(searchText) ||
+            facility.location.toLowerCase().includes(searchText) ||
+            facility.address.toLowerCase().includes(searchText) ||
+            facility.district.toLowerCase().includes(searchText) ||
+            facility.ward.toLowerCase().includes(searchText) ||
+            facility.city.toLowerCase().includes(searchText);
 
         const matchesSport = filters.sport === 'all' || facility.sport_type === filters.sport;
+
+        const matchesLocation = filters.location === 'all' || 
+            facility.district.toLowerCase().includes(filters.location.toLowerCase()) ||
+            facility.location.toLowerCase().includes(filters.location.toLowerCase());
 
         const matchesPrice = facility.price_per_hour >= filters.priceRange[0] &&
             facility.price_per_hour <= filters.priceRange[1];
@@ -133,8 +193,16 @@ const FacilitiesPage = () => {
                 return facility.amenities?.includes(amenityMap[amenity]);
             });
 
-        return matchesSearch && matchesSport && matchesPrice && matchesRating && matchesAmenities;
+        return matchesSearch && matchesSport && matchesLocation && matchesPrice && matchesRating && matchesAmenities;
     }).sort((a, b) => {
+        // Priority 1: Favorites always first (regardless of sort option)
+        const aIsFavorite = favorites.includes(a.id);
+        const bIsFavorite = favorites.includes(b.id);
+
+        if (aIsFavorite && !bIsFavorite) return -1;
+        if (!aIsFavorite && bIsFavorite) return 1;
+
+        // Priority 2: Sort by selected criteria
         switch (filters.sortBy) {
             case 'price_asc':
                 return a.price_per_hour - b.price_per_hour;
@@ -147,6 +215,10 @@ const FacilitiesPage = () => {
                 return a.name.localeCompare(b.name);
         }
     });
+
+    // Separate favorites for display (remove nearby logic)
+    const favoriteFacilities = filteredFacilities.filter(f => favorites.includes(f.id));
+    const allFacilitiesForDisplay = filteredFacilities;
 
     const getSportIcon = (sportType) => {
         const icons = {
@@ -218,6 +290,26 @@ const FacilitiesPage = () => {
         }
     };
 
+    const handleToggleFavorite = (facilityId, e) => {
+        e.stopPropagation(); // Prevent card click
+
+        setFavorites(prev => {
+            const isFavorited = prev.includes(facilityId);
+            let newFavorites;
+
+            if (isFavorited) {
+                newFavorites = prev.filter(id => id !== facilityId);
+                message.success('Đã bỏ khỏi danh sách yêu thích');
+            } else {
+                newFavorites = [...prev, facilityId];
+                message.success('Đã thêm vào danh sách yêu thích');
+            }
+
+            console.log('Updated favorites:', newFavorites);
+            return newFavorites;
+        });
+    };
+
     const handleBookingSubmit = () => {
         if (selectedTimeSlots.length === 0) {
             message.error('Vui lòng chọn ít nhất một khung giờ');
@@ -257,6 +349,240 @@ const FacilitiesPage = () => {
         return shortNames[amenity] || amenity;
     };
 
+    const renderFacilityCard = (facility, showDistance = false, isFavoriteSection = false) => (
+        <Card
+            hoverable
+            onClick={() => handleBookFacility(facility)}
+            style={{
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                border: favorites.includes(facility.id) ? '2px solid #ff4d4f' : '2px solid transparent',
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column'
+            }}
+            bodyStyle={{
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                padding: '12px'
+            }}
+            onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = favorites.includes(facility.id) ? '#ff4d4f' : '#1890ff';
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 8px 24px rgba(24, 144, 255, 0.2)';
+            }}
+            onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = favorites.includes(facility.id) ? '#ff4d4f' : 'transparent';
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
+            }}
+            cover={
+                <div style={{
+                    height: 140,
+                    background: 'linear-gradient(45deg, #f0f2f5, #d9d9d9)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '32px',
+                    position: 'relative'
+                }}>
+                    {getSportIcon(facility.sport_type)}
+
+                    {/* Distance badge */}
+                    {showDistance && facility.distance && (
+                        <div style={{
+                            position: 'absolute',
+                            top: 8,
+                            left: 8,
+                            background: 'rgba(24, 144, 255, 0.9)',
+                            color: 'white',
+                            padding: '2px 6px',
+                            borderRadius: '10px',
+                            fontSize: '10px',
+                            fontWeight: 'bold'
+                        }}>
+                            Xem trên bản đồ
+                        </div>
+                    )}
+
+                    {/* Favorite badge */}
+                    {isFavoriteSection && (
+                        <div style={{
+                            position: 'absolute',
+                            top: 8,
+                            left: showDistance && facility.distance ? 60 : 8,
+                            background: 'rgba(255, 77, 79, 0.9)',
+                            color: 'white',
+                            padding: '2px 6px',
+                            borderRadius: '10px',
+                            fontSize: '10px',
+                            fontWeight: 'bold'
+                        }}>
+                            ⭐ Yêu thích
+                        </div>
+                    )}
+
+                    {/* Heart Icon */}
+                    <Button
+                        type="text"
+                        shape="circle"
+                        size="small"
+                        icon={favorites.includes(facility.id) ?
+                            <HeartFilled style={{ color: '#ff4d4f', fontSize: '18px' }} /> :
+                            <HeartOutlined style={{ color: '#fff', fontSize: '18px' }} />
+                        }
+                        onClick={(e) => handleToggleFavorite(facility.id, e)}
+                        style={{
+                            position: 'absolute',
+                            top: 8,
+                            right: 8,
+                            backgroundColor: 'rgba(0, 0, 0, 0.3)',
+                            border: 'none',
+                            backdropFilter: 'blur(4px)',
+                            transition: 'all 0.3s ease',
+                            zIndex: 2
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.transform = 'scale(1.1)';
+                            e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.transform = 'scale(1)';
+                            e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.3)';
+                        }}
+                    />
+
+                    {/* Google Maps Button */}
+                    <Button
+                        shape="circle"
+                        size="small"
+                        icon={<EnvironmentOutlined style={{ color: '#fff', fontSize: '16px' }} />}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            openGoogleMaps(facility);
+                        }}
+                        style={{
+                            position: 'absolute',
+                            top: 50,
+                            right: 8,
+                            backgroundColor: '#52c41a',
+                            border: '2px solid white',
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                            transition: 'all 0.3s ease',
+                            zIndex: 10
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.transform = 'scale(1.2)';
+                            e.currentTarget.style.backgroundColor = '#389e0d';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.transform = 'scale(1)';
+                            e.currentTarget.style.backgroundColor = '#52c41a';
+                        }}
+                    />
+                </div>
+            }
+        >
+            <Meta
+                title={
+                    <div>
+                        <div style={{ fontSize: '14px', fontWeight: '600', marginBottom: 4 }}>
+                            {facility.name}
+                            {favorites.includes(facility.id) && (
+                                <HeartFilled style={{ color: '#ff4d4f', marginLeft: 4, fontSize: '12px' }} />
+                            )}
+                        </div>
+                        <Tag color="blue" size="small" style={{ fontSize: '10px' }}>
+                            {getSportName(facility.sport_type)}
+                        </Tag>
+                    </div>
+                }
+                description={
+                    <div>
+                        <Paragraph
+                            ellipsis={{ rows: 2 }}
+                            style={{
+                                marginBottom: 6,
+                                minHeight: 32,
+                                fontSize: '12px',
+                                lineHeight: '1.3'
+                            }}
+                        >
+                            {facility.description}
+                        </Paragraph>
+
+                        <div style={{ marginBottom: 4 }}>
+                            <EnvironmentOutlined style={{ marginRight: 4, fontSize: '12px' }} />
+                            <Text type="secondary" style={{ fontSize: '11px' }}>
+                                {facility.location}
+                            </Text>
+                        </div>
+
+                        <div style={{ marginBottom: 4 }}>
+                            <ClockCircleOutlined style={{ marginRight: 4, fontSize: '12px' }} />
+                            <Text type="secondary" style={{ fontSize: '11px' }}>{facility.opening_hours}</Text>
+                        </div>
+
+                        <div style={{ marginBottom: 4 }}>
+                            <Rate disabled defaultValue={facility.rating} style={{ fontSize: '12px' }} />
+                            <Text type="secondary" style={{ marginLeft: 6, fontSize: '11px' }}>
+                                {facility.rating} ({facility.reviews_count})
+                            </Text>
+                        </div>
+
+                        <div style={{ marginBottom: 6 }}>
+                            <Text strong style={{ color: '#1890ff', fontSize: '14px' }}>
+                                {formatPrice(facility.price_per_hour)}/giờ
+                            </Text>
+                        </div>
+
+                        <div style={{
+                            marginTop: 'auto',
+                            paddingTop: 4,
+                            display: 'flex',
+                            flexWrap: 'wrap',
+                            gap: 3,
+                            minHeight: 24
+                        }}>
+                            {facility.amenities.slice(0, 3).map(amenity => (
+                                <Tag
+                                    key={amenity}
+                                    size="small"
+                                    style={{
+                                        fontSize: '10px',
+                                        padding: '1px 4px',
+                                        margin: 0,
+                                        borderRadius: '8px',
+                                        lineHeight: '1.2'
+                                    }}
+                                >
+                                    {getShortAmenityName(amenity)}
+                                </Tag>
+                            ))}
+                            {facility.amenities.length > 3 && (
+                                <Tag
+                                    size="small"
+                                    style={{
+                                        fontSize: '10px',
+                                        padding: '1px 4px',
+                                        margin: 0,
+                                        borderRadius: '8px',
+                                        backgroundColor: '#f0f0f0',
+                                        color: '#666',
+                                        lineHeight: '1.2'
+                                    }}
+                                >
+                                    +{facility.amenities.length - 3}
+                                </Tag>
+                            )}
+                        </div>
+                    </div>
+                }
+            />
+        </Card>
+    );
+
     return (
         <div>
             {/* Breadcrumb */}
@@ -277,7 +603,7 @@ const FacilitiesPage = () => {
                 <Title level={2}>
                     {filters.sport !== 'all' ?
                         `Sân ${getSportName(filters.sport)}` :
-                        'Danh sách sân thể tha'
+                        'Danh sách sân thể thao'
                     }
                 </Title>
                 <Text type="secondary">
@@ -288,10 +614,12 @@ const FacilitiesPage = () => {
                 </Text>
             </div>
 
+
             {/* Advanced Search */}
             <AdvancedSearch
                 key={filters.sport} // Force re-render when sport changes
                 initialFilters={filters}
+                facilities={facilities}
                 onFilterChange={setFilters}
                 onSearch={(searchFilters) => {
                     setFilters(searchFilters);
@@ -299,151 +627,66 @@ const FacilitiesPage = () => {
                 }}
             />
 
-            {/* Results count */}
+            {/* Location Banner - only show when needed and not dismissed */}
+
+
+            {/* Facility Statistics */}
+            <FacilityStats
+                totalCount={allFacilitiesForDisplay.length}
+                favoriteCount={favoriteFacilities.length}
+                hasLocation={!!userLocation}
+                onResetLocation={() => {
+                    // Clear localStorage
+
+                    // Reset states
+                    setUserLocation(null);
+
+                    // Reset sort to default
+                    setFilters(prev => ({
+                        ...prev,
+                        sortBy: 'name'
+                    }));
+                }}
+            />
+
+            {/* All Facilities Section */}
+            {/* Favorite Facilities Section */}
+            {favoriteFacilities.length > 0 && (
+                <>
+                    <div style={{ marginBottom: 16 }}>
+                        <Title level={4} style={{ color: '#ff4d4f' }}>
+                            ⭐ Sân yêu thích của bạn
+                        </Title>
+                        <Text type="secondary">
+                            {favoriteFacilities.length} sân đã lưu • Luôn hiển thị đầu tiên trong danh sách
+                        </Text>
+                    </div>
+                    <Row gutter={[12, 12]} style={{ marginBottom: 32 }}>
+                        {favoriteFacilities.map(facility => (
+                            <Col xs={24} sm={12} md={8} lg={6} key={`favorite-${facility.id}`}>
+                                {renderFacilityCard(facility, userLocation && facility.distance, true)}
+                            </Col>
+                        ))}
+                    </Row>
+                </>
+            )}
+
+            {/* All Facilities Section */}
             <div style={{ marginBottom: 16 }}>
+                <Title level={4}>
+                    🏟️ {filters.sport !== 'all' ? `Tất cả sân ${getSportName(filters.sport).toLowerCase()}` : 'Tất cả sân thể thao'}
+                </Title>
                 <Text type="secondary">
-                    Tìm thấy {filteredFacilities.length} sân phù hợp
+                    {allFacilitiesForDisplay.length} sân có sẵn
+                    {favorites.length > 0 && ' • Sân yêu thích được ưu tiên hiển thị đầu tiên'}
                 </Text>
             </div>
 
             {/* Facilities grid */}
             <Row gutter={[12, 12]}>
-                {filteredFacilities.map(facility => (
+                {allFacilitiesForDisplay.map(facility => (
                     <Col xs={24} sm={12} md={8} lg={6} key={facility.id}>
-                        <Card
-                            hoverable
-                            onClick={() => handleBookFacility(facility)}
-                            style={{
-                                cursor: 'pointer',
-                                transition: 'all 0.3s ease',
-                                border: '2px solid transparent',
-                                height: '100%',
-                                display: 'flex',
-                                flexDirection: 'column'
-                            }}
-                            bodyStyle={{
-                                flex: 1,
-                                display: 'flex',
-                                flexDirection: 'column',
-                                padding: '12px'
-                            }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.borderColor = '#1890ff';
-                                e.currentTarget.style.transform = 'translateY(-2px)';
-                                e.currentTarget.style.boxShadow = '0 8px 24px rgba(24, 144, 255, 0.2)';
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.borderColor = 'transparent';
-                                e.currentTarget.style.transform = 'translateY(0)';
-                                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
-                            }}
-                            cover={
-                                <div style={{
-                                    height: 140,
-                                    background: 'linear-gradient(45deg, #f0f2f5, #d9d9d9)',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    fontSize: '32px'
-                                }}>
-                                    {getSportIcon(facility.sport_type)}
-                                </div>
-                            }
-                        >
-                            <Meta
-                                title={
-                                    <div>
-                                        <div style={{ fontSize: '14px', fontWeight: '600', marginBottom: 4 }}>
-                                            {facility.name}
-                                        </div>
-                                        <Tag color="blue" size="small" style={{ fontSize: '10px' }}>
-                                            {getSportName(facility.sport_type)}
-                                        </Tag>
-                                    </div>
-                                }
-                                description={
-                                    <div>
-                                        <Paragraph
-                                            ellipsis={{ rows: 2 }}
-                                            style={{
-                                                marginBottom: 6,
-                                                minHeight: 32,
-                                                fontSize: '12px',
-                                                lineHeight: '1.3'
-                                            }}
-                                        >
-                                            {facility.description}
-                                        </Paragraph>
-
-                                        <div style={{ marginBottom: 4 }}>
-                                            <EnvironmentOutlined style={{ marginRight: 4, fontSize: '12px' }} />
-                                            <Text type="secondary" style={{ fontSize: '11px' }}>{facility.location}</Text>
-                                        </div>
-
-                                        <div style={{ marginBottom: 4 }}>
-                                            <ClockCircleOutlined style={{ marginRight: 4, fontSize: '12px' }} />
-                                            <Text type="secondary" style={{ fontSize: '11px' }}>{facility.opening_hours}</Text>
-                                        </div>
-
-                                        <div style={{ marginBottom: 4 }}>
-                                            <Rate disabled defaultValue={facility.rating} style={{ fontSize: '12px' }} />
-                                            <Text type="secondary" style={{ marginLeft: 6, fontSize: '11px' }}>
-                                                {facility.rating} ({facility.reviews_count})
-                                            </Text>
-                                        </div>
-
-                                        <div style={{ marginBottom: 6 }}>
-                                            <Text strong style={{ color: '#1890ff', fontSize: '14px' }}>
-                                                {formatPrice(facility.price_per_hour)}/giờ
-                                            </Text>
-                                        </div>
-
-                                        <div style={{
-                                            marginTop: 'auto',
-                                            paddingTop: 4,
-                                            display: 'flex',
-                                            flexWrap: 'wrap',
-                                            gap: 3,
-                                            minHeight: 24
-                                        }}>
-                                            {facility.amenities.slice(0, 3).map(amenity => (
-                                                <Tag
-                                                    key={amenity}
-                                                    size="small"
-                                                    style={{
-                                                        fontSize: '10px',
-                                                        padding: '1px 4px',
-                                                        margin: 0,
-                                                        borderRadius: '8px',
-                                                        lineHeight: '1.2'
-                                                    }}
-                                                >
-                                                    {getShortAmenityName(amenity)}
-                                                </Tag>
-                                            ))}
-                                            {facility.amenities.length > 3 && (
-                                                <Tag
-                                                    size="small"
-                                                    style={{
-                                                        fontSize: '10px',
-                                                        padding: '1px 4px',
-                                                        margin: 0,
-                                                        borderRadius: '8px',
-                                                        backgroundColor: '#f0f0f0',
-                                                        color: '#666',
-                                                        lineHeight: '1.2'
-                                                    }}
-                                                >
-                                                    +{facility.amenities.length - 3}
-                                                </Tag>
-                                            )}
-                                        </div>
-
-
-                                    </div>
-                                }
-                            />
-                        </Card>
+                        {renderFacilityCard(facility, userLocation && facility.distance, false)}
                     </Col>
                 ))}
             </Row>
@@ -588,6 +831,19 @@ const FacilitiesPage = () => {
                     </div>
                 )}
             </Modal>
+
+            {/* CSS for heart animation */}
+            <style jsx>{`
+                @keyframes heartBounce {
+                    0% { transform: scale(1); }
+                    50% { transform: scale(1.3); }
+                    100% { transform: scale(1); }
+                }
+                
+                .heart-bounce {
+                    animation: heartBounce 0.3s ease;
+                }
+            `}</style>
         </div>
     );
 };

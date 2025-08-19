@@ -136,48 +136,5 @@ const StatCard = ({
 };
 
 // Predefined stat card variants
-export const RevenueCard = ({ value, trend, trendValue, ...props }) => (
-    <StatCard
-        title="Doanh thu"
-        value={value}
-        prefix="₫"
-        trend={trend}
-        trendValue={trendValue}
-        color="#52c41a"
-        {...props}
-    />
-);
-
-export const BookingCard = ({ value, trend, trendValue, ...props }) => (
-    <StatCard
-        title="Lượt đặt"
-        value={value}
-        trend={trend}
-        trendValue={trendValue}
-        color="#1890ff"
-        {...props}
-    />
-);
-
-export const UserCard = ({ value, trend, trendValue, ...props }) => (
-    <StatCard
-        title="Người dùng"
-        value={value}
-        trend={trend}
-        trendValue={trendValue}
-        color="#722ed1"
-        {...props}
-    />
-);
-
-export const FacilityCard = ({ value, progress, ...props }) => (
-    <StatCard
-        title="Sân hoạt động"
-        value={value}
-        progress={progress}
-        color="#faad14"
-        {...props}
-    />
-);
 
 export default StatCard;

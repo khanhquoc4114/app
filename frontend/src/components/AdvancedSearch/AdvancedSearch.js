@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
     Card,
     Row,
@@ -14,7 +14,8 @@ import {
     Rate,
     TimePicker,
     Tag,
-    Divider
+    Divider,
+    AutoComplete
 } from 'antd';
 import {
     SearchOutlined,
@@ -37,7 +38,8 @@ const AdvancedSearch = ({
     onSearch,
     onFilterChange,
     initialFilters = {},
-    showAdvanced = false
+    showAdvanced = false,
+    facilities = []
 }) => {
     const [filters, setFilters] = useState({
         searchText: '',
@@ -63,6 +65,86 @@ const AdvancedSearch = ({
     const [isAdvancedVisible, setIsAdvancedVisible] = useState(showAdvanced);
     const [activeFiltersCount, setActiveFiltersCount] = useState(0);
 
+    // Generate autocomplete options from facilities
+    const facilityNameOptions = useMemo(() => {
+        if (!facilities || facilities.length === 0) return [];
+        const names = facilities.map(facility => ({
+            value: facility.name,
+            label: facility.name,
+            type: 'name'
+        }));
+        return [...new Set(names.map(item => item.value))].map(name => ({
+            value: name,
+            label: name,
+            type: 'name'
+        }));
+    }, [facilities]);
+
+    const facilityLocationOptions = useMemo(() => {
+        if (!facilities || facilities.length === 0) return [];
+        const locations = [];
+        
+        facilities.forEach(facility => {
+            // Add district
+            if (facility.district) {
+                locations.push({
+                    value: facility.district,
+                    label: facility.district,
+                    type: 'district'
+                });
+            }
+            
+            // Add address/street
+            if (facility.address) {
+                locations.push({
+                    value: facility.address,
+                    label: facility.address,
+                    type: 'address'
+                });
+            }
+            
+            // Add full location
+            if (facility.location) {
+                locations.push({
+                    value: facility.location,
+                    label: facility.location,
+                    type: 'full'
+                });
+            }
+        });
+        
+        // Remove duplicates
+        const uniqueLocations = locations.filter((location, index, self) => 
+            index === self.findIndex(l => l.value === location.value)
+        );
+        
+        return uniqueLocations;
+    }, [facilities]);
+
+    const searchOptions = useMemo(() => {
+        const options = [
+            ...facilityNameOptions.map(option => ({
+                ...option,
+                label: (
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                        <SearchOutlined style={{ marginRight: 8, color: '#1890ff' }} />
+                        <span>Tên sân: <strong>{option.value}</strong></span>
+                    </div>
+                )
+            })),
+            ...facilityLocationOptions.map(option => ({
+                ...option,
+                label: (
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                        <EnvironmentOutlined style={{ marginRight: 8, color: '#52c41a' }} />
+                        <span>Địa điểm: <strong>{option.value}</strong></span>
+                    </div>
+                )
+            }))
+        ];
+        return options;
+    }, [facilityNameOptions, facilityLocationOptions]);
+
     const sportOptions = [
         { value: 'all', label: 'Tất cả môn', icon: '🏃' },
         { value: 'badminton', label: 'Cầu lông', icon: '🏸' },
@@ -71,15 +153,20 @@ const AdvancedSearch = ({
         { value: 'basketball', label: 'Bóng rổ', icon: '🏀' }
     ];
 
-    const locationOptions = [
-        { value: 'all', label: 'Tất cả khu vực' },
-        { value: 'quan1', label: 'Quận 1' },
-        { value: 'quan3', label: 'Quận 3' },
-        { value: 'quan7', label: 'Quận 7' },
-        { value: 'quan10', label: 'Quận 10' },
-        { value: 'binhtan', label: 'Bình Tân' },
-        { value: 'tanbinh', label: 'Tân Bình' }
-    ];
+    const locationOptions = useMemo(() => {
+        if (!facilities || facilities.length === 0) {
+            return [{ value: 'all', label: 'Tất cả khu vực' }];
+        }
+        
+        const districts = [...new Set(facilities.map(f => f.district).filter(Boolean))];
+        return [
+            { value: 'all', label: 'Tất cả khu vực' },
+            ...districts.map(district => ({
+                value: district,
+                label: district
+            }))
+        ];
+    }, [facilities]);
 
     const amenityOptions = [
         { value: 'parking', label: 'Bãi đỗ xe', icon: '🚗' },
@@ -97,7 +184,6 @@ const AdvancedSearch = ({
         { value: 'price_asc', label: 'Giá thấp đến cao' },
         { value: 'price_desc', label: 'Giá cao đến thấp' },
         { value: 'rating', label: 'Đánh giá cao nhất' },
-        { value: 'distance', label: 'Khoảng cách gần nhất' },
         { value: 'popular', label: 'Phổ biến nhất' }
     ];
 
@@ -168,14 +254,24 @@ const AdvancedSearch = ({
             {/* Basic Search */}
             <Row gutter={[16, 16]} align="middle">
                 <Col xs={24} sm={8} md={10}>
-                    <Input
+                    <AutoComplete
                         size="large"
-                        placeholder="Tìm kiếm sân thể thao..."
-                        prefix={<SearchOutlined />}
+                        style={{ width: '100%' }}
+                        options={searchOptions}
                         value={filters.searchText}
-                        onChange={(e) => handleFilterChange('searchText', e.target.value)}
-                        onPressEnter={handleSearch}
-                    />
+                        onChange={(value) => handleFilterChange('searchText', value)}
+                        onSelect={(value) => handleFilterChange('searchText', value)}
+                        placeholder="Tìm kiếm theo tên sân hoặc địa điểm..."
+                        allowClear
+                        filterOption={(inputValue, option) =>
+                            option.value.toLowerCase().includes(inputValue.toLowerCase())
+                        }
+                    >
+                        <Input
+                            prefix={<SearchOutlined />}
+                            onPressEnter={handleSearch}
+                        />
+                    </AutoComplete>
                 </Col>
 
                 <Col xs={24} sm={6} md={4}>

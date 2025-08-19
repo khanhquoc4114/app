@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ConfigProvider, Spin } from 'antd';
 import viVN from 'antd/locale/vi_VN';
@@ -193,6 +193,19 @@ const AppRoutes = () => {
 };
 
 function App() {
+    useEffect(() => {
+        // Chỉ hỏi quyền nếu chưa từng granted
+        const locationStatus = localStorage.getItem('hasRequestedLocation');
+        if (locationStatus !== 'granted' && 'geolocation' in navigator) {
+            navigator.geolocation.getCurrentPosition(
+                () => {
+                    localStorage.setItem('hasRequestedLocation', 'granted');
+                }
+                // Nếu từ chối thì không lưu gì, để lần sau hỏi lại
+            );
+        }
+    }, []);
+
     return (
         <ConfigProvider
             locale={viVN}

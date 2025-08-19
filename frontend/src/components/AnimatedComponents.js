@@ -13,7 +13,7 @@ export const PulseCard = ({ children, ...props }) => (
         {children}
     </Card>
 );
-
+ 
 export const ShakeButton = ({ children, ...props }) => (
     <Button {...props} className={`shake-button ${props.className || ''}`}>
         {children}
@@ -41,7 +41,7 @@ export const SlideInFromLeft = ({ children, delay = 0 }) => (
         {children}
     </div>
 );
-
+ 
 export const SlideInFromRight = ({ children, delay = 0 }) => (
     <div
         className="slide-in-right"
