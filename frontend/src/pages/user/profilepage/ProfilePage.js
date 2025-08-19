@@ -1,71 +1,57 @@
-<<<<<<< HEAD
-import React, { useState, useEffect } from 'react';
+// Trang thông tin cá nhân người dùng
+// - Hiển thị và chỉnh sửa thông tin cá nhân
+// - Đổi mật khẩu
+// - Thống kê lượt đặt, chi tiêu, môn yêu thích
+// - Cài đặt thông báo
+// - Upload avatar
+
+// Import các thư viện và component cần thiết
+import React, { useState } from 'react';
 import {
-    Row,
-    Col,
-    Card,
-    Form,
-    Input,
-    Button,
-    Avatar,
-    Typography,
-    Space,
-    Divider,
-    Upload,
-    message,
-    Tabs,
-    Statistic,
-    Tag,
-    Switch
+    handleUpdateProfile,
+    handleChangePassword,
+    handleAvatarUpload,
+    handleNotificationChange,
+    getMemberLevelColor
+} from './profileLogic';
+import {
+    Row, Col, Card, Form, Input, Button, Avatar, Typography, Space, Divider, Upload, Tabs, Statistic, Tag, Switch
 } from 'antd';
 import {
-    UserOutlined,
-    MailOutlined,
-    PhoneOutlined,
-    EnvironmentOutlined,
-    CameraOutlined,
-    EditOutlined,
-    SaveOutlined,
-    LockOutlined,
-    BellOutlined,
-    CalendarOutlined,
-    DollarOutlined,
-    TrophyOutlined
+    UserOutlined, MailOutlined, PhoneOutlined, EnvironmentOutlined, CameraOutlined,
+    EditOutlined, SaveOutlined, LockOutlined, BellOutlined, CalendarOutlined,
+    DollarOutlined, TrophyOutlined
 } from '@ant-design/icons';
 
 const { Title, Text } = Typography;
 const { TabPane } = Tabs;
 
 const ProfilePage = () => {
+    // Khởi tạo form cho thông tin cá nhân và đổi mật khẩu
+    // State quản lý trạng thái chỉnh sửa, loading
     const [form] = Form.useForm();
     const [passwordForm] = Form.useForm();
     const [editing, setEditing] = useState(false);
     const [loading, setLoading] = useState(false);
-    const [userInfo, setUserInfo] = useState(null);
 
-    useEffect(() => {
-        const fetchUser = async () => {
-            const token = localStorage.getItem("token");
-            if (!token) return;
+    // Dữ liệu user mẫu (mock), cần thay bằng API thực tế khi kết nối backend
+    const [userInfo, setUserInfo] = useState({
+        id: 1,
+        username: 'user1',
+        email: 'user1@example.com',
+        full_name: 'Nguyễn Văn A',
+        phone: '0901234567',
+        address: '123 Nguyễn Huệ, Quận 1, TP.HCM',
+        avatar: null,
+        role: 'user',
+        created_at: '2024-01-01',
+        total_bookings: 15,
+        total_spent: 2400000,
+        favorite_sport: 'Cầu lông',
+        member_level: 'Silver'
+    });
 
-            const res = await fetch("http://localhost:8000/api/auth/me", {
-                headers: {
-                    "Authorization": `Bearer ${token}`
-                }
-            });
-
-            if (res.ok) {
-                const user = await res.json();
-                setUserInfo(user);
-                console.log("User info:", user);
-            } else {
-                console.error("Token không hợp lệ");
-            }
-        };
-
-        fetchUser();
-    }, []);
-
+    // State quản lý cài đặt thông báo
     const [notifications, setNotifications] = useState({
         email_booking: true,
         sms_booking: false,
@@ -73,15 +59,16 @@ const ProfilePage = () => {
         push_notification: true
     });
 
+    // Mảng thống kê cho user (tổng lượt đặt, chi tiêu, môn yêu thích)
     const stats = [
         {
             title: 'Tổng lượt đặt',
-            value: userInfo?.total_bookings,
+            value: userInfo.total_bookings,
             prefix: <CalendarOutlined style={{ color: '#1890ff' }} />
         },
         {
             title: 'Tổng chi tiêu',
-            value: userInfo?.total_spent,
+            value: userInfo.total_spent,
             prefix: <DollarOutlined style={{ color: '#52c41a' }} />,
             formatter: (value) => new Intl.NumberFormat('vi-VN', {
                 style: 'currency',
@@ -90,94 +77,12 @@ const ProfilePage = () => {
         },
         {
             title: 'Môn yêu thích',
-            value: userInfo?.favorite_sport,
+            value: userInfo.favorite_sport,
             prefix: <TrophyOutlined style={{ color: '#faad14' }} />
         }
     ];
 
-    useEffect(() => {
-        if (userInfo) {
-            form.setFieldsValue(userInfo);
-        }
-    }, [userInfo, form]);
 
-    const handleUpdateProfile = async (values) => {
-        try {
-        // Fake API call
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        setUserInfo(values); // cập nhật lại state
-        message.success("Cập nhật thông tin thành công!");
-        setEditing(false);
-        } catch (error) {
-        message.error("Có lỗi xảy ra, vui lòng thử lại!");
-        }
-    };
-
-const handleChangePassword = async (values) => {
-    setLoading(true);
-    try {
-        const token = localStorage.getItem("token");
-
-        const res = await fetch("http://localhost:8000/api/auth/change-password", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`
-            },
-            body: JSON.stringify({
-                old_password: values.old_password,
-                new_password: values.new_password
-            })
-        });
-
-        if (res.ok) {
-            message.success("Đổi mật khẩu thành công!");
-            passwordForm.resetFields();
-        } else {
-            const errData = await res.json();
-            let errorMsg = "Lỗi khi đổi mật khẩu";
-
-            if (typeof errData.detail === "string") {
-                errorMsg = errData.detail;
-            } else if (Array.isArray(errData) && errData.length > 0) {
-                // Lấy message đầu tiên từ list error
-                errorMsg = errData[0].msg;
-            }
-
-            message.error(errorMsg);
-        }
-    } catch (error) {
-        message.error("Có lỗi xảy ra, vui lòng thử lại!");
-    } finally {
-        setLoading(false);
-    }
-};
-
-    const handleAvatarUpload = (info) => {
-        if (info.file.status === 'done') {
-            message.success('Cập nhật ảnh đại diện thành công!');
-        } else if (info.file.status === 'error') {
-            message.error('Tải ảnh thất bại!');
-        }
-    };
-
-    const handleNotificationChange = (key, value) => {
-        setNotifications(prev => ({
-            ...prev,
-            [key]: value
-        }));
-        message.success('Cập nhật cài đặt thông báo thành công!');
-    };
-
-    const getMemberLevelColor = (level) => {
-        const colors = {
-            Bronze: '#cd7f32',
-            Silver: '#c0c0c0',
-            Gold: '#ffd700',
-            Platinum: '#e5e4e2'
-        };
-        return colors[level] || '#1890ff';
-    };
 
     return (
         <div>
@@ -194,7 +99,7 @@ const handleChangePassword = async (values) => {
                                 <Avatar
                                     size={120}
                                     icon={<UserOutlined />}
-                                    src={userInfo?.avatar}
+                                    src={userInfo.avatar}
                                     style={{ marginBottom: 16 }}
                                 />
                                 <Upload
@@ -221,18 +126,18 @@ const handleChangePassword = async (values) => {
                             </div>
 
                             <Title level={4} style={{ margin: '8px 0' }}>
-                                {userInfo?.full_name}
+                                {userInfo.full_name}
                             </Title>
 
                             <Space>
-                                <Tag color="blue">{userInfo?.role === 'user' ? 'Khách hàng' : userInfo?.role}</Tag>
-                                <Tag color={getMemberLevelColor(userInfo?.member_level)}>
-                                    {userInfo?.member_level}
+                                <Tag color="blue">{userInfo.role === 'user' ? 'Khách hàng' : userInfo.role}</Tag>
+                                <Tag color={getMemberLevelColor(userInfo.member_level)}>
+                                    {userInfo.member_level}
                                 </Tag>
                             </Space>
 
                             <Text type="secondary" style={{ display: 'block', marginTop: 8 }}>
-                                Thành viên từ {new Date(userInfo?.created_at).getFullYear()}
+                                Thành viên từ {new Date(userInfo.created_at).getFullYear()}
                             </Text>
                         </div>
 
@@ -290,7 +195,7 @@ const handleChangePassword = async (values) => {
                                 <Form
                                     form={form}
                                     layout="vertical"
-                                    onFinish={handleUpdateProfile}
+                                    onFinish={(values) => handleUpdateProfile(values, setLoading, setUserInfo, setEditing)}
                                     initialValues={userInfo}
                                 >
                                     <Row gutter={16}>
@@ -302,7 +207,7 @@ const handleChangePassword = async (values) => {
                                             >
                                                 <Input
                                                     prefix={<UserOutlined />}
-                                                    readOnly={!editing}
+                                                    disabled={!editing}
                                                 />
                                             </Form.Item>
                                         </Col>
@@ -313,7 +218,7 @@ const handleChangePassword = async (values) => {
                                             >
                                                 <Input
                                                     prefix={<UserOutlined />}
-                                                    readOnly
+                                                    disabled
                                                 />
                                             </Form.Item>
                                         </Col>
@@ -331,7 +236,7 @@ const handleChangePassword = async (values) => {
                                             >
                                                 <Input
                                                     prefix={<MailOutlined />}
-                                                    readOnly={!editing}
+                                                    disabled={!editing}
                                                 />
                                             </Form.Item>
                                         </Col>
@@ -343,7 +248,7 @@ const handleChangePassword = async (values) => {
                                             >
                                                 <Input
                                                     prefix={<PhoneOutlined />}
-                                                    readOnly={!editing}
+                                                    disabled={!editing}
                                                 />
                                             </Form.Item>
                                         </Col>
@@ -355,7 +260,7 @@ const handleChangePassword = async (values) => {
                                     >
                                         <Input
                                             prefix={<EnvironmentOutlined />}
-                                            readOnly={!editing}
+                                            disabled={!editing}
                                         />
                                     </Form.Item>
                                 </Form>
@@ -365,11 +270,11 @@ const handleChangePassword = async (values) => {
                                 <Form
                                     form={passwordForm}
                                     layout="vertical"
-                                    onFinish={handleChangePassword}
+                                    onFinish={(values) => handleChangePassword(values, setLoading, passwordForm)}
                                     style={{ maxWidth: 400 }}
                                 >
                                     <Form.Item
-                                        name="old_password"
+                                        name="current_password"
                                         label="Mật khẩu hiện tại"
                                         rules={[{ required: true, message: 'Vui lòng nhập mật khẩu hiện tại' }]}
                                     >
@@ -425,7 +330,7 @@ const handleChangePassword = async (values) => {
                                             <Space>
                                                 <Switch
                                                     checked={notifications.email_booking}
-                                                    onChange={(checked) => handleNotificationChange('email_booking', checked)}
+                                                    onChange={(checked) => handleNotificationChange('email_booking', checked, setNotifications)}
                                                 />
                                                 <Text>Gửi email xác nhận đặt sân</Text>
                                             </Space>
@@ -435,7 +340,7 @@ const handleChangePassword = async (values) => {
                                             <Space>
                                                 <Switch
                                                     checked={notifications.sms_booking}
-                                                    onChange={(checked) => handleNotificationChange('sms_booking', checked)}
+                                                    onChange={(checked) => handleNotificationChange('sms_booking', checked, setNotifications)}
                                                 />
                                                 <Text>Gửi SMS xác nhận đặt sân</Text>
                                             </Space>
@@ -451,7 +356,7 @@ const handleChangePassword = async (values) => {
                                             <Space>
                                                 <Switch
                                                     checked={notifications.email_promotion}
-                                                    onChange={(checked) => handleNotificationChange('email_promotion', checked)}
+                                                    onChange={(checked) => handleNotificationChange('email_promotion', checked, setNotifications)}
                                                 />
                                                 <Text>Nhận email khuyến mãi</Text>
                                             </Space>
@@ -461,7 +366,7 @@ const handleChangePassword = async (values) => {
                                             <Space>
                                                 <Switch
                                                     checked={notifications.push_notification}
-                                                    onChange={(checked) => handleNotificationChange('push_notification', checked)}
+                                                    onChange={(checked) => handleNotificationChange('push_notification', checked, setNotifications)}
                                                 />
                                                 <Text>Thông báo đẩy trên trình duyệt</Text>
                                             </Space>
@@ -478,5 +383,3 @@ const handleChangePassword = async (values) => {
 };
 
 export default ProfilePage;
-=======
->>>>>>> main

@@ -15,21 +15,21 @@ import MainLayout from './components/Layout/MainLayout';
 import LoginPage from './pages/common/LoginPage';
 import HomePage from './pages/common/HomePage';
 import FacilitiesPage from './pages/common/FacilitiesPage';
-import ChatPage from './pages/common/ChatPage';
+import ChatPage from './pages/common/chat/ChatPage';
 import NotificationsPage from './pages/common/NotificationsPage';
 import RegisterPage from './pages/common/RegisterPage';
 import ForgotPasswordPage from './pages/common/ForgotPasswordPage';
 
 // User Pages
 import MyBookingsPage from './pages/user/bookingpage/MyBookingsPage';
-import ProfilePage from './pages/user/ProfilePage';
+import ProfilePage from './pages/user/profilepage/ProfilePage';
 
 // Staff Pages
-import StaffDashboard from './pages/staff/StaffDashboard';
-import MyFacilitiesPage from './pages/staff/MyFacilitiesPage';
+import StaffDashboard from './pages/staff/StaffDashboard/StaffDashboard';
+import MyFacilitiesPage from './pages/staff/MyFacilitiesPage/MyFacilitiesPage';
 
 // Admin Pages
-import AdminDashboard from './pages/admin/AdminDashboard';
+import AdminDashboard from './pages/admin/admindashboard/AdminDashboard';
 
 // Set Vietnamese locale for dayjs
 dayjs.locale('vi');

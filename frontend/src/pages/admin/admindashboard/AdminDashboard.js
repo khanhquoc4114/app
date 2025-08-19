@@ -1,38 +1,11 @@
+// Trang dashboard quản trị hệ thống
 import React, { useState, useEffect } from 'react';
-import {
-    Row,
-    Col,
-    Card,
-    Statistic,
-    Table,
-    Typography,
-    Space,
-    Tag,
-    Button,
-    Modal,
-    Form,
-    Input,
-    Select,
-    Switch,
-    message,
-    Tabs,
-    DatePicker,
-    Upload
-} from 'antd';
-import {
-    DollarOutlined,
-    UserOutlined,
-    ShopOutlined,
-    CalendarOutlined,
-    PlusOutlined,
-    EditOutlined,
-    DeleteOutlined,
-    EyeOutlined,
-    UploadOutlined,
-    LockOutlined,
-    UnlockOutlined
-} from '@ant-design/icons';
+import { Row, Col, Card, Statistic, Table, Typography, Space, Tag, Button, Modal, Form, Input, Select, Tabs, DatePicker, Upload, message } from 'antd';
+import { DollarOutlined, UserOutlined, ShopOutlined, CalendarOutlined, PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined, UploadOutlined, LockOutlined, UnlockOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
+import AdminFacility from './AdminFacility';
+import AdminUser from './AdminUser';
+import { handleAddFacility, handleEditFacility, handleDeleteFacility, handleToggleUserStatus } from './adminDashboardLogic';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -71,29 +44,10 @@ const AdminDashboard = () => {
         }
     ];
 
+    // Danh sách sân mẫu
     const facilities = [
-        {
-            key: '1',
-            id: 1,
-            name: 'Sân cầu lông VIP 1',
-            sport_type: 'Cầu lông',
-            price_per_hour: 80000,
-            status: 'active',
-            bookings_count: 45,
-            revenue: 3600000,
-            owner: 'Nguyễn Văn A'
-        },
-        {
-            key: '2',
-            id: 2,
-            name: 'Sân bóng đá mini A',
-            sport_type: 'Bóng đá',
-            price_per_hour: 200000,
-            status: 'maintenance',
-            bookings_count: 23,
-            revenue: 4600000,
-            owner: 'Trần Thị B'
-        }
+        new AdminFacility(1, 'Sân cầu lông VIP 1', 'Cầu lông', 80000, 'active', 45, 3600000, 'Nguyễn Văn A'),
+        new AdminFacility(2, 'Sân bóng đá mini A', 'Bóng đá', 200000, 'maintenance', 23, 4600000, 'Trần Thị B')
     ];
 
     const [users, setUsers] = useState([]);
