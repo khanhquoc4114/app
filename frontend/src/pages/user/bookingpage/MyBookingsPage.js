@@ -1,5 +1,5 @@
 // Trang quản lý lịch sử đặt sân của người dùng
-// 1. Xử lý giao diện của booking page
+// 1. Xử lý giao diện của page
 import React, { useState, useEffect } from 'react';
 import {
     Card, Table, Typography, Space, Tag, Button, Modal, Rate, Input, message, Tabs, Empty, Row, Col
