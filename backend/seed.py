@@ -1,8 +1,7 @@
 from sqlalchemy.orm import Session
-from models import Base, Facility, Notification
+from models import *
 from database import engine, SessionLocal
 from datetime import datetime, timedelta
-
 
 def seed_facilities(db: Session):
     if db.query(Facility).count() == 0:
@@ -117,6 +116,52 @@ def seed_notifications(db: Session):
     else:
         print("ℹ️ Notifications already exist")
 
+def seed_users(db: Session):
+    if db.query(User).count() == 0:
+        sample_users = [
+            User(
+                username="nguyenvana",
+                email="nguyenvana@example.com",
+                full_name="Nguyễn Văn A",
+                hashed_password="password123",
+                role="user",
+                total_bookings=5,
+                total_spent=800000
+            ),
+            User(
+                username="tranthib",
+                email="tranthib@example.com",
+                full_name="Trần Thị B",
+                hashed_password="password123",
+                role="user",
+                total_bookings=3,
+                total_spent=450000
+            ),
+            User(
+                username="admin1",
+                email="admin@example.com",
+                full_name="Admin User",
+                hashed_password="adminpass",
+                role="admin",
+                total_bookings=10,
+                total_spent=2000000
+            ),
+            User(
+                username="leminhc",
+                email="leminhc@example.com",
+                full_name="Lê Minh C",
+                hashed_password="password123",
+                role="staff",
+                total_bookings=0,
+                total_spent=0
+            )
+        ]        
+        db.add_all(sample_users)
+        db.commit()
+        print("✅ Seeded user data")
+    else:
+        print("ℹ️ User already exist")    
+
 def init_db():
     # Tạo bảng nếu chưa có
     Base.metadata.create_all(bind=engine)
@@ -125,6 +170,7 @@ def init_db():
     try:
         seed_facilities(db)
         seed_notifications(db)
+        seed_users(db)
     finally:
         db.close()
 
