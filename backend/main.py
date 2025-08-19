@@ -7,7 +7,8 @@ import bcrypt
 from sqlalchemy import func
 from database import get_db, engine
 from models import *
-from schemas import UserCreate, UserLogin, UserResponse, Token
+from schemas import *
+from pydantic import BaseModel
 
 # Create tables
 
@@ -166,3 +167,22 @@ def mark_all_as_read(db: Session = Depends(get_db)):
 
     db.commit()
     return {"message": f"{len(notifications)} notifications marked as read"}
+    
+@app.post("/api/login")
+def login(request: LoginRequest, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.username == request.username).first()
+    if not user:# or not check_password_hash(user.hashed_password, request.password):
+        raise HTTPException(status_code=401, detail="Sai tài khoản hoặc mật khẩu")
+
+    token = f"fake-jwt-for-{user.username}"
+
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+        "user": {
+            "id": user.id,
+            "username": user.username,
+            "email": user.email,
+            "role": user.role
+        }
+    }

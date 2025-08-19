@@ -49,3 +49,23 @@ class FacilityResponse(FacilityBase):
 
     class Config:
         from_attributes = True
+        
+        
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+    
+    
+class UserOut(BaseModel):
+    id: int
+    username: str
+    full_name: str
+    email: str
+    role: str
+    is_active: bool
+    total_bookings: int
+    total_spent: float
+    created_at: datetime
+
+    class Config:
+        orm_mode = True

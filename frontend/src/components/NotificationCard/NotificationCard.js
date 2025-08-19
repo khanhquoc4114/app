@@ -143,7 +143,6 @@ const NotificationCard = ({
         }
     };
 
-
     const handleMarkAllAsRead = async () => {
         try {
             const res = await fetch(

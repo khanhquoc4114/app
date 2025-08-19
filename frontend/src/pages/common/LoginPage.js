@@ -35,35 +35,38 @@ const LoginPage = () => {
     const handleSubmit = async (values) => {
         setLoading(true);
         try {
-            // Simulate API call
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            const res = await fetch("http://localhost:8000/api/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    username: values.username,
+                    password: values.password
+                })
+            });
 
-            if (isLogin) {
-                message.success('Đăng nhập thành công!');
-                // Mock user role check
-                let userRole = 'user';
-                if (values.username === 'admin') {
-                    userRole = 'admin';
-                } else if (values.username === 'staff') {
-                    userRole = 'staff';
-                }
-
-                login(userRole);
-
-                // Navigate based on role
-                if (userRole === 'admin') {
-                    navigate('/admin');
-                } else if (userRole === 'staff') {
-                    navigate('/staff');
-                } else {
-                    navigate('/');
-                }
-            } else {
-                message.success('Đăng ký thành công! Vui lòng đăng nhập.');
-                setIsLogin(true);
+            if (!res.ok) {
+                throw new Error("Sai tài khoản hoặc mật khẩu");
             }
-        } catch (error) {
-            message.error('Có lỗi xảy ra, vui lòng thử lại!');
+
+            const data = await res.json();
+
+            message.success("Đăng nhập thành công!");
+
+            // Lưu token + role
+            localStorage.setItem("token", data.access_token);
+            login(data.user.role);
+
+            // Navigate theo role
+            if (data.user.role === "admin") {
+                navigate("/admin");
+            } else if (data.user.role === "staff") {
+                navigate("/staff");
+            } else {
+                navigate("/");
+            }
+
+        } catch (err) {
+            message.error(err.message || "Có lỗi xảy ra, vui lòng thử lại!");
         } finally {
             setLoading(false);
         }

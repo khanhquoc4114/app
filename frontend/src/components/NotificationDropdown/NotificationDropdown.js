@@ -32,7 +32,9 @@ dayjs.extend(relativeTime);
 
 const { Text } = Typography;
 
-const NotificationDropdown = ({ children }) => {
+const NotificationDropdown = ({ children,
+        onMarkAsRead
+ }) => {
   const navigate = useNavigate();
   const [visible, setVisible] = useState(false);
   const [notificationList, setNotificationList] = useState([]);
@@ -91,10 +93,27 @@ const NotificationDropdown = ({ children }) => {
         navigate('/notifications');
     };
 
-    const handleMarkAsRead = (notificationId, e) => {
-        e.stopPropagation();
-        // Handle mark as read logic here
-        console.log('Mark as read:', notificationId);
+    const handleMarkAsRead = async (notificationId) => {
+        try {
+            const res = await fetch(
+            `${process.env.REACT_APP_API_URL}/api/notifications/${notificationId}/read`,
+            { method: "PATCH" }
+            );
+
+            if (!res.ok) throw new Error("Failed to mark notification as read");
+
+            setNotificationList((prev) =>
+            prev.map((n) =>
+                n.id === notificationId ? { ...n, read: true } : n
+            )
+            );
+
+            if (onMarkAsRead) {
+            onMarkAsRead(notificationId);
+            }
+        } catch (err) {
+            console.error("Lỗi khi mark as read:", err);
+        }
     };
 
     const handleDelete = (notificationId, e) => {
