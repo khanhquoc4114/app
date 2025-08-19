@@ -19,7 +19,7 @@ import ChatPage from './pages/common/ChatPage';
 import NotificationsPage from './pages/common/NotificationsPage';
 
 // User Pages
-import MyBookingsPage from './pages/user/MyBookingsPage';
+import MyBookingsPage from './pages/user/bookingpage/MyBookingsPage';
 import ProfilePage from './pages/user/ProfilePage';
 
 // Staff Pages
