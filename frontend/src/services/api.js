@@ -43,10 +43,18 @@ export const authAPI = {
 
     // Đăng ký
     register: async (userData) => {
-        return apiCall('/auth/register', {
-            method: 'POST',
+        const res = await fetch(`http://localhost:8000/api/auth/register`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify(userData),
         });
+
+        if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.detail || "Đăng ký thất bại");
+        }
+
+        return res.json();
     },
 
     // Lấy thông tin user hiện tại

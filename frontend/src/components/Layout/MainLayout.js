@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Layout,
     Menu,
@@ -36,14 +36,30 @@ const MainLayout = ({ children, userRole = 'user' }) => {
     const navigate = useNavigate();
     const location = useLocation();
     const { logout } = useAuth();
+    const [currentUser, setUserInfo] = useState(null);
 
-    // Mock user data
-    const currentUser = {
-        name: 'Nguyễn Văn A',
-        email: 'user@example.com',
-        avatar: null,
-        role: userRole
-    };
+    useEffect(() => {
+        const fetchUser = async () => {
+            const token = localStorage.getItem("token");
+            if (!token) return;
+
+            const res = await fetch("http://localhost:8000/api/auth/me", {
+                headers: {
+                    "Authorization": `Bearer ${token}`
+                }
+            });
+
+            if (res.ok) {
+                const user = await res.json();
+                setUserInfo(user);
+                console.log("User info:", user);
+            } else {
+                console.error("Token không hợp lệ");
+            }
+        };
+
+        fetchUser();
+    }, []);
 
     const getMenuItems = () => {
         const commonItems = [
@@ -220,7 +236,7 @@ const MainLayout = ({ children, userRole = 'user' }) => {
                             trigger={['click']}
                         >
                             <Space style={{ cursor: 'pointer' }} align="center">
-                                <Avatar icon={<UserOutlined />} src={currentUser.avatar} />
+                                <Avatar icon={<UserOutlined />} src={currentUser?.avatar} />
                                 <div style={{
                                     textAlign: 'left',
                                     lineHeight: '1.2',
@@ -234,7 +250,7 @@ const MainLayout = ({ children, userRole = 'user' }) => {
                                         marginBottom: '2px',
                                         whiteSpace: 'nowrap'
                                     }}>
-                                        {currentUser.name}
+                                        {currentUser?.full_name}
                                     </div>
                                     <Text type="secondary" style={{
                                         fontSize: '12px',

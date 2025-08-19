@@ -17,6 +17,8 @@ import HomePage from './pages/common/HomePage';
 import FacilitiesPage from './pages/common/FacilitiesPage';
 import ChatPage from './pages/common/chat/ChatPage';
 import NotificationsPage from './pages/common/NotificationsPage';
+import RegisterPage from './pages/common/RegisterPage';
+import ForgotPasswordPage from './pages/common/ForgotPasswordPage';
 
 // User Pages
 import MyBookingsPage from './pages/user/bookingpage/MyBookingsPage';
@@ -77,9 +79,22 @@ const AppRoutes = () => {
         <Routes>
             {/* Public Routes */}
             <Route
+                path="/register"
+                element={
+                    isAuthenticated ? <Navigate to="/" replace /> : <RegisterPage />
+                }
+            />
+
+            <Route
                 path="/login"
                 element={
                     isAuthenticated ? <Navigate to="/" replace /> : <LoginPage />
+                }
+            />
+            <Route
+                path="/forgot"
+                element={
+                    isAuthenticated ? <Navigate to="/" replace /> : <ForgotPasswordPage />
                 }
             />
 

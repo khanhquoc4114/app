@@ -15,7 +15,6 @@ import {
 import {
     UserOutlined,
     LockOutlined,
-    MailOutlined,
     GoogleOutlined,
     FacebookOutlined,
     EyeInvisibleOutlined,
@@ -27,7 +26,6 @@ import { useAuth } from '../../contexts/AuthContext';
 const { Title, Text, Link } = Typography;
 
 const LoginPage = () => {
-    const [isLogin, setIsLogin] = useState(true);
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
     const { login } = useAuth();
@@ -76,6 +74,14 @@ const LoginPage = () => {
         message.info(`Đăng nhập bằng ${provider} (Tính năng đang phát triển)`);
     };
 
+    const handleRegisterClick = () => {
+        navigate('/register');
+    };
+
+    const handleForgotClick = () => {
+        navigate('/forgot');
+    }
+
     return (
         <div style={{
             minHeight: '100vh',
@@ -105,42 +111,19 @@ const LoginPage = () => {
                     <Card style={{ width: '100%', maxWidth: '400px', borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,0.1)' }}>
                         <div style={{ textAlign: 'center', marginBottom: '24px' }}>
                             <Title level={2} style={{ marginBottom: '8px' }}>
-                                {isLogin ? 'Đăng nhập' : 'Đăng ký'}
+                                Đăng nhập
                             </Title>
                             <Text type="secondary">
-                                {isLogin ? 'Chào mừng bạn quay trở lại!' : 'Tạo tài khoản mới'}
+                                Chào mừng bạn quay trở lại!
                             </Text>
                         </div>
 
                         <Form
-                            name={isLogin ? 'login' : 'register'}
+                            name="login"
                             onFinish={handleSubmit}
                             layout="vertical"
                             size="large"
                         >
-                            {!isLogin && (
-                                <>
-                                    <Form.Item
-                                        name="full_name"
-                                        label="Họ và tên"
-                                        rules={[{ required: true, message: 'Vui lòng nhập họ tên!' }]}
-                                    >
-                                        <Input prefix={<UserOutlined />} placeholder="Nhập họ và tên" />
-                                    </Form.Item>
-
-                                    <Form.Item
-                                        name="email"
-                                        label="Email"
-                                        rules={[
-                                            { required: true, message: 'Vui lòng nhập email!' },
-                                            { type: 'email', message: 'Email không hợp lệ!' }
-                                        ]}
-                                    >
-                                        <Input prefix={<MailOutlined />} placeholder="Nhập email" />
-                                    </Form.Item>
-                                </>
-                            )}
-
                             <Form.Item
                                 name="username"
                                 label="Tên đăng nhập"
@@ -164,43 +147,16 @@ const LoginPage = () => {
                                 />
                             </Form.Item>
 
-                            {!isLogin && (
-                                <Form.Item
-                                    name="confirm_password"
-                                    label="Xác nhận mật khẩu"
-                                    dependencies={['password']}
-                                    rules={[
-                                        { required: true, message: 'Vui lòng xác nhận mật khẩu!' },
-                                        ({ getFieldValue }) => ({
-                                            validator(_, value) {
-                                                if (!value || getFieldValue('password') === value) {
-                                                    return Promise.resolve();
-                                                }
-                                                return Promise.reject(new Error('Mật khẩu xác nhận không khớp!'));
-                                            },
-                                        }),
-                                    ]}
-                                >
-                                    <Input.Password
-                                        prefix={<LockOutlined />}
-                                        placeholder="Xác nhận mật khẩu"
-                                        iconRender={(visible) => (visible ? <EyeTwoTone /> : <EyeInvisibleOutlined />)}
-                                    />
-                                </Form.Item>
-                            )}
-
-                            {isLogin && (
-                                <Form.Item>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <Checkbox>Ghi nhớ đăng nhập</Checkbox>
-                                        <Link>Quên mật khẩu?</Link>
-                                    </div>
-                                </Form.Item>
-                            )}
+                            <Form.Item>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <Checkbox>Ghi nhớ đăng nhập</Checkbox>
+                                    <Link onClick={handleForgotClick}>Quên mật khẩu?</Link>
+                                </div>
+                            </Form.Item>
 
                             <Form.Item>
                                 <Button type="primary" htmlType="submit" block loading={loading}>
-                                    {isLogin ? 'Đăng nhập' : 'Đăng ký'}
+                                    Đăng nhập
                                 </Button>
                             </Form.Item>
                         </Form>
@@ -228,9 +184,9 @@ const LoginPage = () => {
 
                         <div style={{ textAlign: 'center', marginTop: '24px' }}>
                             <Text>
-                                {isLogin ? 'Chưa có tài khoản? ' : 'Đã có tài khoản? '}
-                                <Link onClick={() => setIsLogin(!isLogin)}>
-                                    {isLogin ? 'Đăng ký ngay' : 'Đăng nhập'}
+                                Chưa có tài khoản? 
+                                <Link onClick={handleRegisterClick}>
+                                    Đăng ký ngay
                                 </Link>
                             </Text>
                         </div>

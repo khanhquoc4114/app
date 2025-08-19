@@ -1,5 +1,5 @@
 // Trang dashboard quản trị hệ thống
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Row, Col, Card, Statistic, Table, Typography, Space, Tag, Button, Modal, Form, Input, Select, Tabs, DatePicker, Upload, message } from 'antd';
 import { DollarOutlined, UserOutlined, ShopOutlined, CalendarOutlined, PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined, UploadOutlined, LockOutlined, UnlockOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
@@ -50,12 +50,21 @@ const AdminDashboard = () => {
         new AdminFacility(2, 'Sân bóng đá mini A', 'Bóng đá', 200000, 'maintenance', 23, 4600000, 'Trần Thị B')
     ];
 
+    const [users, setUsers] = useState([]);
 
-    // Danh sách user mẫu
-    const users = [
-        new AdminUser(1, 'user1', 'Nguyễn Văn A', 'user1@example.com', 'user', true, 15, 2400000, '2024-01-01'),
-        new AdminUser(2, 'staff1', 'Trần Thị B', 'staff1@example.com', 'staff', true, 0, 0, '2024-01-15')
-    ];
+    useEffect(() => {
+        const fetchUsers = async () => {
+            try {
+                const res = await fetch("http://localhost:8000/api/users/all");
+                const data = await res.json();
+                setUsers(data);
+            } catch (err) {
+                console.error("Lỗi khi fetch users:", err);
+            }
+        };
+
+        fetchUsers();
+    }, []);
 
     const revenueData = [
         { date: '2024-01-15', revenue: 1200000, bookings: 8 },
