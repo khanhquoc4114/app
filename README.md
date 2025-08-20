@@ -6,7 +6,7 @@
 
 - 🏟️ Quản lý sân thể thao (cầu lông, bóng đá, tennis...)
 - �  Đăng ký, đăng nhập người dùng
-- � Đặt sân ttrực tuyến (sắp có)
+- � Đặt sân trực tuyến (sắp có)
 - 💳 Thanh toán online (sắp có)
 - 🤖 Chatbot hỗ trợ (sắp có)
 
@@ -27,28 +27,31 @@ cd sports-facility-management
 docker-compose up -d
 
 # Tạo database và dữ liệu mẫu
-docker-compose exec backend python init_db.py
+docker-compose exec backend python seed.py
 ```
 
 Xong! Truy cập:
+
 - **Trang web**: http://localhost:3000
 - **API**: http://localhost:8000/docs
 
 ## Tài khoản mẫu
 
-Sau khi chạy `init_db.py`:
+Sau khi chạy `seed.py`:
 
 - **Admin**: `admin` / `admin123`
-- **User**: `user1` / `user123`
+- **User**: `user` / `user123`
+- **Staff**: `staff` / `staff123`
 
 ## Cấu trúc dự án
 
-```
+``` bash
 ├── backend/           # API server (FastAPI)
 ├── frontend/          # Giao diện web (React)
 ├── docker-compose.yml # Cấu hình Docker
 
 ```
+
 ## Cấu hình
 
 Copy file `backend/.env.example` thành `backend/.env` và sửa:
@@ -58,14 +61,13 @@ DB_USER=sports_user
 DB_PASSWORD=sports_password
 DB_HOST=localhost
 DB_NAME=sports_facility_db
-SECRET_KEY=your-secret-key
+SECRET_KEY=my-secret-key-123
 ```
-
 
 ## 🔌 API Endpoints
 
 ### Authentication
+
 - `POST /api/auth/register` - User registration
 - `POST /api/auth/login` - User login
 - `GET /api/auth/me` - Get current user info
-

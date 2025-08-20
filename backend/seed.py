@@ -135,28 +135,28 @@ def seed_users(db: Session):
                 total_spent=800000
             ),
             User(
-                username="tranthib",
+                username="user",
                 email="tranthib@example.com",
                 full_name="Trần Thị B",
-                hashed_password="password123",
+                hashed_password="user123",
                 role="user",
                 total_bookings=3,
                 total_spent=450000
             ),
             User(
-                username="admin1",
+                username="admin",
                 email="admin@example.com",
                 full_name="Admin User",
-                hashed_password="adminpass",
+                hashed_password="admin123",
                 role="admin",
                 total_bookings=10,
                 total_spent=2000000
             ),
             User(
-                username="leminhc",
+                username="staff",
                 email="leminhc@example.com",
                 full_name="Lê Minh C",
-                hashed_password="password123",
+                hashed_password="staff123",
                 role="staff",
                 total_bookings=0,
                 total_spent=0
