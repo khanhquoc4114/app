@@ -30,22 +30,37 @@ const MyBookingsPage = () => {
     const [review, setReview] = useState('');
 
     // object booking gồm 3 mảng
-    const bookings = {
-        upcoming: [
-            new BookingItem('1', 'BK001', 'Sân cầu lông VIP 1', 'Cầu lông', '2024-01-20', '08:00 - 10:00', 160000, 'confirmed', 'Quận 1, TP.HCM', { canCancel: true }),
-            new BookingItem('2', 'BK002', 'Sân tennis cao cấp', 'Tennis', '2024-01-22', '14:00 - 16:00', 300000, 'pending', 'Quận 7, TP.HCM', { canCancel: true })
-        ],
-        completed: [
-            new BookingItem('3', 'BK003', 'Sân bóng đá mini A', 'Bóng đá', '2024-01-10', '18:00 - 20:00', 400000, 'completed', 'Quận 3, TP.HCM', { canReview: true }),
-            new BookingItem('4', 'BK004', 'Sân bóng rổ trong nhà gì bạn', 'Bóng rổ', '2024-01-08', '09:00 - 11:00', 240000, 'completed', 'Quận 10, TP.HCM', { canReview: false, reviewed: true })
-        ],
-        cancelled: [
-            new BookingItem('5', 'BK005', 'Sân cầu lông VIP 2', 'Cầu lông', '2024-01-05', '16:00 - 18:00', 160000, 'cancelled', 'Quận 1, TP.HCM', { refunded: true })
-        ]
-    };
+    const [bookings, setBookings] = useState({
+        upcoming: [],
+        completed: [],
+        cancelled: []
+    });
 
+    useEffect(() => {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            console.error('No token found');
+            return;
+        }
 
-
+        fetch('http://localhost:8000/api/bookings', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        })
+            .then(res => res.json())
+            .then(data => {
+                console.log('Received booking data:', data);
+                // Phân loại booking theo status
+                const upcoming = data.filter(b => b.status === 'pending');
+                const completed = data.filter(b => b.status === 'confirmed');
+                const cancelled = data.filter(b => b.status === 'cancelled');
+                setBookings({ upcoming, completed, cancelled });
+            })
+            .catch(err => {
+                console.error('Error fetching bookings:', err);
+            });
+    }, []);
 
     // Định nghĩa các cột cho bảng Table
     const columns = [
@@ -77,22 +92,22 @@ const MyBookingsPage = () => {
                 <div>
                     <div>
                         <CalendarOutlined style={{ marginRight: 4 }} />
-                        {dayjs(record.date).format('DD/MM/YYYY')}
+                        {dayjs(record.start_time).format('DD/MM/YYYY')}
                     </div>
                     <div>
                         <ClockCircleOutlined style={{ marginRight: 4 }} />
-                        {record.time}
+                        {dayjs(record.start_time).format('HH:mm')} - {dayjs(record.end_time).format('HH:mm')}
                     </div>
                 </div>
             )
         },
         {
             title: 'Số tiền',
-            dataIndex: 'amount',
-            key: 'amount',
-            render: (amount) => (
+            dataIndex: 'total_price',
+            key: 'total_price',
+            render: (total_price) => (
                 <Text strong style={{ color: '#1890ff' }}>
-                    {formatPrice(amount)}
+                    {formatPrice(total_price)}
                 </Text>
             )
         },

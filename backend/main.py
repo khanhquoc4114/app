@@ -10,6 +10,7 @@ from models import *
 from schemas import *
 from typing import List
 from auth import *
+from fastapi import Request
 
 # Create tables
 
@@ -240,3 +241,31 @@ def register(user_data: UserCreate, db: Session = Depends(get_db)):
     db.refresh(new_user)
 
     return {"message": "Đăng ký thành công!", "user_id": new_user.id}
+
+@app.get("/api/bookings")
+def get_bookings(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    payload = verify_token(token)
+    if not payload:
+        raise HTTPException(status_code=401, detail="Token không hợp lệ")
+
+    user_id = payload["id"]
+    bookings = db.query(Booking).filter(Booking.user_id == user_id).all()
+    return [
+        {
+            "id": b.id,
+            "facility_id": b.facility_id,
+            "facility": b.facility.name if b.facility else None,
+            "sport": b.facility.sport_type if b.facility else None,
+            "location": b.facility.location if b.facility else None,
+            "user_id": b.user_id,
+            "start_time": b.start_time,
+            "end_time": b.end_time,
+            "status": b.status,
+            "total_price": b.total_price,
+            "created_at": b.created_at,
+            "payment_status": b.payment_status,
+            "payment_method": b.payment_method,
+            "notes": b.notes
+        }
+        for b in bookings
+    ]

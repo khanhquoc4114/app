@@ -24,9 +24,9 @@ import {
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useLocation } from 'react-router-dom';
-import AdvancedSearch from '../../components/AdvancedSearch/AdvancedSearch';
+import AdvancedSearch from '../../../components/AdvancedSearch/AdvancedSearch';
 import axios from 'axios';
-import FacilityStats from '../../components/FacilityStats/FacilityStats';
+import FacilityStats from '../../../components/FacilityStats/FacilityStats';
 
 const { Title, Text, Paragraph } = Typography;
 const { Meta } = Card;

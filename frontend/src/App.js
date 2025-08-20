@@ -14,7 +14,7 @@ import MainLayout from './components/Layout/MainLayout';
 // Common Pages
 import LoginPage from './pages/common/LoginPage';
 import HomePage from './pages/common/HomePage';
-import FacilitiesPage from './pages/common/FacilitiesPage';
+import FacilitiesPage from './pages/common/facilitipage/FacilitiesPage';
 import ChatPage from './pages/common/chat/ChatPage';
 import NotificationsPage from './pages/common/NotificationsPage';
 import RegisterPage from './pages/common/RegisterPage';
