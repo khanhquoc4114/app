@@ -269,3 +269,43 @@ def get_bookings(token: str = Depends(oauth2_scheme), db: Session = Depends(get_
         }
         for b in bookings
     ]
+
+@app.post("/api/bookings")
+def create_booking(booking_data: BookingCreate, token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    payload = verify_token(token)
+    if not payload:
+        raise HTTPException(status_code=401, detail="Token không hợp lệ")
+    
+    user_id = payload["id"]
+    
+    # Kiểm tra facility có tồn tại không
+    facility = db.query(Facility).filter(Facility.id == booking_data.facility_id).first()
+    if not facility:
+        raise HTTPException(status_code=404, detail="Không tìm thấy sân")
+    
+    # Tạo booking mới
+    new_booking = Booking(
+        user_id=user_id,
+        facility_id=booking_data.facility_id,
+        booking_date=booking_data.booking_date,
+        start_time=booking_data.start_time,
+        end_time=booking_data.end_time,
+        total_price=booking_data.total_price,
+        status="pending",
+        payment_status="unpaid",
+        payment_method="pending",
+        notes=booking_data.notes or f"Đặt sân {', '.join(booking_data.time_slots)}"
+    )
+    
+    db.add(new_booking)
+    db.commit()
+    db.refresh(new_booking)
+    
+    return {
+        "message": "Đặt sân thành công!",
+        "booking_id": new_booking.id,
+        "facility_name": facility.name,
+        "total_price": new_booking.total_price,
+        "booking_date": new_booking.booking_date.isoformat(),
+        "time_slots": booking_data.time_slots
+    }

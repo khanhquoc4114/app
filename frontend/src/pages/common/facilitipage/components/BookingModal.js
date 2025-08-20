@@ -145,7 +145,18 @@ const BookingModal = ({
 
                     <Form.Item>
                         <Space>
-                            <Button type="primary" onClick={onBookingSubmit}>
+                            <Button 
+                                type="primary" 
+                                onClick={() => {
+                                    console.log('BookingModal: Button clicked!');
+                                    console.log('onBookingSubmit function:', onBookingSubmit);
+                                    if (onBookingSubmit) {
+                                        onBookingSubmit();
+                                    } else {
+                                        console.error('onBookingSubmit is not defined!');
+                                    }
+                                }}
+                            >
                                 Xác nhận đặt sân
                             </Button>
                             <Button onClick={onCancel}>
