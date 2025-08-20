@@ -5,9 +5,12 @@ from datetime import datetime, timedelta
 
 def seed_facilities(db: Session):
     if db.query(Facility).count() == 0:
+        # Lấy id user theo username
+        user_map = {u.username: u.id for u in db.query(User).all()}
         facilities = [
             Facility(
                 name="Sân cầu lông 54",
+                owner_user_id=user_map.get("nguyenvana"),
                 sport_type="badminton",
                 description="Sân cầu lông chất lượng cao với sàn gỗ chuyên nghiệp, hệ thống chiếu sáng LED hiện đại",
                 price_per_hour=80000,
@@ -20,6 +23,7 @@ def seed_facilities(db: Session):
             ),
             Facility(
                 name="Sân bóng đá 2",
+                owner_user_id=user_map.get("tranthib"),
                 sport_type="football",
                 description="Sân bóng đá mini 5v5 với cỏ nhân tạo cao cấp, hệ thống tưới nước tự động",
                 price_per_hour=200000,
@@ -32,6 +36,7 @@ def seed_facilities(db: Session):
             ),
             Facility(
                 name="Sân tennis 1",
+                owner_user_id=user_map.get("leminhc"),
                 sport_type="tennis",
                 description="Sân tennis tiêu chuẩn quốc tế với mặt sân hard court, lưới chuyên nghiệp",
                 price_per_hour=150000,
@@ -44,6 +49,7 @@ def seed_facilities(db: Session):
             ),
             Facility(
                 name="Sân bóng rổ",
+                owner_user_id=user_map.get("admin1"),
                 sport_type="basketball",
                 description="Sân bóng rổ trong nhà với sàn gỗ chuyên nghiệp, rổ chuẩn NBA",
                 price_per_hour=120000,
@@ -155,22 +161,70 @@ def seed_users(db: Session):
                 total_bookings=0,
                 total_spent=0
             )
-        ]        
+        ]
         db.add_all(sample_users)
         db.commit()
         print("✅ Seeded user data")
     else:
-        print("ℹ️ User already exist")    
+        print("ℹ️ User already exist")
 
+def seed_bookings(db: Session):
+    if db.query(Booking).count() == 0:
+        user_map = {u.username: u.id for u in db.query(User).all()}
+        facility_map = {f.name: f.id for f in db.query(Facility).all()}
+        bookings = [
+            Booking(
+                user_id=user_map.get("nguyenvana"),
+                facility_id=facility_map.get("Sân cầu lông 54"),
+                booking_date=datetime(2025, 8, 21, 8, 0, 0),
+                start_time=datetime(2025, 8, 21, 8, 0, 0),
+                end_time=datetime(2025, 8, 21, 10, 0, 0),
+                total_price=160000,
+                status="confirmed",
+                payment_status="paid",
+                payment_method="momo",
+                notes="Đặt sân sáng"
+            ),
+            Booking(
+                user_id=user_map.get("tranthib"),
+                facility_id=facility_map.get("Sân bóng đá 2"),
+                booking_date=datetime(2025, 8, 22, 18, 0, 0),
+                start_time=datetime(2025, 8, 22, 18, 0, 0),
+                end_time=datetime(2025, 8, 22, 20, 0, 0),
+                total_price=400000,
+                status="pending",
+                payment_status="unpaid",
+                payment_method="cash",
+                notes="Đặt sân chiều"
+            ),
+            Booking(
+                user_id=user_map.get("leminhc"),
+                facility_id=facility_map.get("Sân tennis 1"),
+                booking_date=datetime(2025, 8, 23, 14, 0, 0),
+                start_time=datetime(2025, 8, 23, 14, 0, 0),
+                end_time=datetime(2025, 8, 23, 16, 0, 0),
+                total_price=300000,
+                status="cancelled",
+                payment_status="refunded",
+                payment_method="momo",
+                notes="Khách hủy"
+            )
+        ]
+        db.add_all(bookings)
+        db.commit()
+        print("✅ Seeded booking data")
+    else:
+        print("ℹ️ Bookings already exist")
 def init_db():
     # Tạo bảng nếu chưa có
     Base.metadata.create_all(bind=engine)
 
     db: Session = SessionLocal()
     try:
-        seed_facilities(db)
-        seed_notifications(db)
         seed_users(db)
+        seed_facilities(db)
+        seed_bookings(db)
+        seed_notifications(db)
     finally:
         db.close()
 

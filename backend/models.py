@@ -32,6 +32,7 @@ class Facility(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
+    owner_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # id user chủ sân
     sport_type = Column(String, nullable=False)  # badminton, football, tennis, etc.
     description = Column(Text)
     price_per_hour = Column(Float, nullable=False)
@@ -47,6 +48,7 @@ class Facility(Base):
     
     # Relationships
     bookings = relationship("Booking", back_populates="facility")
+    owner = relationship("User", foreign_keys=[owner_user_id])
 
 class Booking(Base):
     __tablename__ = "bookings"
@@ -63,7 +65,6 @@ class Booking(Base):
     payment_method = Column(String)  # momo, cash, etc.
     notes = Column(Text)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     
     # Relationships
     user = relationship("User", back_populates="bookings")
