@@ -1,6 +1,15 @@
 from pydantic import BaseModel, EmailStr
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
+
+class BookingCreate(BaseModel):
+    facility_id: int
+    booking_date: datetime
+    start_time: datetime
+    end_time: datetime
+    time_slots: List[str]
+    total_price: float
+    notes: Optional[str] = None
 
 class UserCreate(BaseModel):
     username: str

@@ -20,12 +20,11 @@ import {
     CalendarOutlined,
     HomeOutlined,
     HeartOutlined,
-    HeartFilled
+    HeartFilled,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useLocation } from 'react-router-dom';
 import AdvancedSearch from '../../../components/AdvancedSearch/AdvancedSearch';
-import axios from 'axios';
 import FacilityStats from '../../../components/FacilityStats/FacilityStats';
 
 const { Title, Text, Paragraph } = Typography;
@@ -109,6 +108,43 @@ const FacilitiesPage = () => {
         }
         
         window.open(url, '_blank');
+    };
+
+    // Fetch booked slots from database for specific facility and date
+    const fetchBookedSlots = async (facilityId, date) => {
+        try {
+            const token = localStorage.getItem('token');
+            if (!token) return {};
+
+            const dateString = date.format('YYYY-MM-DD');
+            const res = await fetch(`${API_URL}/api/bookings`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            if (!res.ok) return {};
+            const bookings = await res.json();
+
+            // Filter bookings for this facility and date (so sánh theo ngày của start_time)
+            const facilityBookings = bookings.filter(booking => {
+                const bookingDate = booking.start_time ? booking.start_time.split('T')[0] : '';
+                return booking.facility_id === facilityId && bookingDate === dateString;
+            });
+
+            // Đánh dấu các timeslot đã được đặt dựa vào start_time và end_time
+            const booked = {};
+            facilityBookings.forEach(booking => {
+                const startTime = new Date(booking.start_time);
+                const endTime = new Date(booking.end_time);
+                for (let hour = startTime.getHours(); hour < endTime.getHours(); hour++) {
+                    const timeSlot = `${hour.toString().padStart(2, '0')}:00`;
+                    booked[timeSlot] = true;
+                }
+            });
+            return booked;
+        } catch (error) {
+            return {};
+        }
     };
 
     // Generate time slots based on opening hours
@@ -240,21 +276,17 @@ const FacilitiesPage = () => {
         return names[sportType] || sportType;
     };
 
-    const handleBookFacility = (facility) => {
+    const handleBookFacility = async (facility) => {
         setSelectedFacility(facility);
         setBookingModalVisible(true);
 
-        // Generate fixed booked slots for this facility and date (mock data)
+        // Fetch real booked slots from database
         const facilityDateKey = `${facility.id}_${selectedDate.format('YYYY-MM-DD')}`;
         if (!bookedSlots[facilityDateKey]) {
-            const newBookedSlots = {};
-            facility.available_slots.forEach(slot => {
-                // Mock: randomly mark some slots as booked (but fixed for this session)
-                newBookedSlots[slot] = Math.random() < 0.3; // 30% chance
-            });
+            const bookedSlotsFromDB = await fetchBookedSlots(facility.id, selectedDate);
             setBookedSlots(prev => ({
                 ...prev,
-                [facilityDateKey]: newBookedSlots
+                [facilityDateKey]: bookedSlotsFromDB
             }));
         }
     };
@@ -269,22 +301,18 @@ const FacilitiesPage = () => {
         });
     };
 
-    const handleDateChange = (date) => {
+    const handleDateChange = async (date) => {
         setSelectedDate(date);
         setSelectedTimeSlots([]); // Clear selected slots when date changes
 
-        // Generate booked slots for new date if not exists
+        // Fetch real booked slots for new date if not exists
         if (selectedFacility) {
             const facilityDateKey = `${selectedFacility.id}_${date.format('YYYY-MM-DD')}`;
             if (!bookedSlots[facilityDateKey]) {
-                const newBookedSlots = {};
-                selectedFacility.available_slots.forEach(slot => {
-                    // Mock: randomly mark some slots as booked (but fixed for this session)
-                    newBookedSlots[slot] = Math.random() < 0.3; // 30% chance
-                });
+                const bookedSlotsFromDB = await fetchBookedSlots(selectedFacility.id, date);
                 setBookedSlots(prev => ({
                     ...prev,
-                    [facilityDateKey]: newBookedSlots
+                    [facilityDateKey]: bookedSlotsFromDB
                 }));
             }
         }
@@ -310,21 +338,61 @@ const FacilitiesPage = () => {
         });
     };
 
-    const handleBookingSubmit = () => {
-        if (selectedTimeSlots.length === 0) {
-            message.error('Vui lòng chọn ít nhất một khung giờ');
-            return;
+const handleBookingSubmit = async () => {
+    if (!selectedTimeSlots.length) {
+        message.error('Vui lòng chọn ít nhất một khung giờ');
+        return;
+    }
+
+    const token = localStorage.getItem('token');
+    if (!token) {
+        message.error('Vui lòng đăng nhập để đặt sân');
+        return;
+    }
+
+    // Xác định thời gian bắt đầu / kết thúc
+    const sortedSlots = selectedTimeSlots.sort();
+    const startHour = parseInt(sortedSlots[0].split(':')[0]);
+    const endHour = parseInt(sortedSlots[sortedSlots.length - 1].split(':')[0]) + 1;
+
+    const startTime = selectedDate.clone().hour(startHour).minute(0).second(0).millisecond(0);
+    const endTime = selectedDate.clone().hour(endHour).minute(0).second(0).millisecond(0);
+
+    // Dữ liệu gửi lên backend (định dạng ISO 8601 cho datetime)
+    const bookingData = {
+        facility_id: selectedFacility.id,
+        booking_date: selectedDate.format('YYYY-MM-DDT00:00:00'),
+        start_time: startTime.format('YYYY-MM-DDTHH:mm:ss'),
+        end_time: endTime.format('YYYY-MM-DDTHH:mm:ss'),
+        time_slots: selectedTimeSlots,
+        total_price: selectedTimeSlots.length * selectedFacility.price_per_hour,
+        notes: `Đặt sân ${selectedFacility.name} - ${sortedSlots.join(', ')}`
+    };
+
+    try {
+        const response = await fetch(`http://localhost:8000/api/bookings`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(bookingData)
+        });
+
+        if (!response.ok) {
+            throw new Error('Có lỗi xảy ra khi đặt sân');
         }
 
-        const totalAmount = selectedTimeSlots.length * selectedFacility.price_per_hour;
-        message.success(`Đặt sân thành công! Tổng tiền: ${new Intl.NumberFormat('vi-VN', {
-            style: 'currency',
-            currency: 'VND'
-        }).format(totalAmount)}`);
-
+        const result = await response.json();
+        message.success(`Đặt sân thành công! Mã đặt: ${result.booking_id}`);
         setBookingModalVisible(false);
         setSelectedTimeSlots([]);
-    };
+
+    } catch (err) {
+        message.error(err.message || 'Có lỗi xảy ra');
+    }
+};
+
 
     const formatPrice = (price) => {
         return new Intl.NumberFormat('vi-VN', {
