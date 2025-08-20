@@ -186,7 +186,7 @@ def seed_bookings(db: Session):
                 notes="Đặt sân sáng"
             ),
             Booking(
-                user_id=user_map.get("tranthib"),
+                user_id=user_map.get("user"),
                 facility_id=facility_map.get("Sân bóng đá 2"),
                 booking_date=datetime(2025, 8, 22, 18, 0, 0),
                 start_time=datetime(2025, 8, 22, 18, 0, 0),
@@ -198,7 +198,7 @@ def seed_bookings(db: Session):
                 notes="Đặt sân chiều"
             ),
             Booking(
-                user_id=user_map.get("leminhc"),
+                user_id=user_map.get("staff"),
                 facility_id=facility_map.get("Sân tennis 1"),
                 booking_date=datetime(2025, 8, 23, 14, 0, 0),
                 start_time=datetime(2025, 8, 23, 14, 0, 0),
