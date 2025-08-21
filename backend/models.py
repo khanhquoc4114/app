@@ -26,6 +26,11 @@ class User(Base):
     
     # Relationships
     bookings = relationship("Booking", back_populates="user")
+    notifications = relationship(
+        "Notification",
+        back_populates="user",
+        cascade="all, delete-orphan"
+    )
 
 class Facility(Base):
     __tablename__ = "facilities"
@@ -74,10 +79,22 @@ class Notification(Base):
     __tablename__ = "notifications"
 
     id = Column(Integer, primary_key=True, index=True)
-    type = Column(String, nullable=False)             # booking_confirmed, payment_success, ...
+
+    # Liên kết với user (ai là người nhận notification này)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+
+    type = Column(String, nullable=False) # loại notification (booking, payment, system, etc.)
+
+    # Nội dung
     title = Column(String, nullable=False)
     message = Column(Text, nullable=False)
+
+    # Metadata
     timestamp = Column(DateTime(timezone=True), server_default=func.now())
     read = Column(Boolean, default=False)
-    priority = Column(String, default="medium")       # low, medium, high
-    data = Column(JSON) 
+    priority = Column(String, default="medium")   # low, medium, high
+
+    # Dữ liệu bổ sung (vd: booking_id, payment_id)
+    data = Column(JSON)
+
+    user = relationship("User", back_populates="notifications")

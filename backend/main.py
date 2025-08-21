@@ -1,10 +1,8 @@
 from fastapi import FastAPI, HTTPException, Depends, BackgroundTasks
-from fastapi import Request
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from fastapi.security import OAuth2PasswordBearer
 from datetime import datetime
-import bcrypt
 from sqlalchemy import func
 from database import get_db, engine
 from models import *
@@ -70,11 +68,13 @@ def get_facilities(db: Session = Depends(get_db)):
         for f in facilities
     ]
 
+# Endpoint count active facilities
 @app.get("/api/facilities/count")
 def count_active_facilities(db: Session = Depends(get_db)):
     count = db.query(Facility).filter(Facility.is_active == True).count()
     return {"count": count}
 
+# Endpoint get popular sports
 @app.get("/api/facilities/popular-sports")
 def get_popular_sports(db: Session = Depends(get_db)):
     results = (
@@ -92,33 +92,7 @@ def get_popular_sports(db: Session = Depends(get_db)):
 def root():
     return {"message": "Auth API đang chạy"}
 
-@app.get("/api/notifications")
-def get_notifications(db: Session = Depends(get_db)):
-    notifications = db.query(Notification).filter(Facility.is_active == True).all()
-    return notifications
-
-@app.patch("/api/notifications/{notification_id}/read")
-def mark_as_read(notification_id: int, db: Session = Depends(get_db)):
-    notification = db.query(Notification).filter(Notification.id == notification_id).first()
-    if not notification:
-        raise HTTPException(status_code=404, detail="Notification not found")
-
-    notification.read = True
-    db.commit()
-    db.refresh(notification)
-    return notification
-
-@app.patch("/api/notifications/mark-all-read")
-def mark_all_as_read(db: Session = Depends(get_db)):
-    notifications = db.query(Notification).filter(Notification.read == False).all()
-
-    for n in notifications:
-        n.read = True
-
-    db.commit()
-    return {"message": f"{len(notifications)} notifications marked as read"}
-    
-@app.post("/api/login")
+@app.post("/api/auth/login")
 def login(request: LoginRequest, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.username == request.username).first()
     if not user or not verify_password(request.password, user.hashed_password):
@@ -142,7 +116,7 @@ def get_users(db: Session = Depends(get_db)):
     users = db.query(User).all()
     return users
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
 @app.get("/api/auth/me")
 def get_me(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
@@ -426,3 +400,72 @@ async def reset_password(request: ResetPasswordRequest, db: Session = Depends(ge
             detail="Có lỗi xảy ra, vui lòng thử lại"
         )
 
+@app.get("/api/notifications")
+def get_notifications(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    payload = verify_token(token)
+    if not payload:
+        raise HTTPException(status_code=401, detail="Token không hợp lệ")
+
+    user_id = payload["id"]
+    notifications = db.query(Notification).filter(Notification.user_id == user_id).all()
+    return notifications
+
+@app.patch("/api/notifications/{notification_id}/read")
+def mark_as_read(notification_id: int, db: Session = Depends(get_db)):
+    notification = db.query(Notification).filter(Notification.id == notification_id).first()
+    if not notification:
+        raise HTTPException(status_code=404, detail="Notification not found")
+
+    notification.read = True
+    db.commit()
+    db.refresh(notification)
+    return notification
+
+@app.patch("/api/notifications/mark-all-read")
+def mark_all_as_read(
+    token: str = Depends(oauth2_scheme),
+    db: Session = Depends(get_db)
+):
+    payload = verify_token(token)
+    if not payload:
+        raise HTTPException(status_code=401, detail="Token không hợp lệ")
+
+    user_id = payload["id"]
+
+    notifications = db.query(Notification).filter(
+        Notification.user_id == user_id,
+        Notification.read == False
+    ).all()
+
+    for n in notifications:
+        n.read = True
+
+    db.commit()
+
+    return {"message": f"{len(notifications)} notifications marked as read"}
+
+@app.delete("/api/notifications/{notification_id}")
+def delete_notification(
+    notification_id: int,
+    token: str = Depends(oauth2_scheme),
+    db: Session = Depends(get_db)
+):
+    payload = verify_token(token)
+    if not payload:
+        raise HTTPException(status_code=401, detail="Token không hợp lệ")
+
+    user_id = payload["id"]
+
+    # Chỉ lấy notification của user hiện tại
+    notification = db.query(Notification).filter(
+        Notification.id == notification_id,
+        Notification.user_id == user_id
+    ).first()
+
+    if not notification:
+        raise HTTPException(status_code=404, detail="Notification not found")
+
+    db.delete(notification)
+    db.commit()
+
+    return {"message": f"Notification {notification_id} deleted successfully"}

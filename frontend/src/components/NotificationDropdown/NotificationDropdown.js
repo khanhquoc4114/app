@@ -27,6 +27,8 @@ import {
 import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
+import { getToken } from '../../utils/auth';
+import { useNotifications } from "../../contexts/NotificationContext";
 
 dayjs.extend(relativeTime);
 
@@ -37,39 +39,31 @@ const NotificationDropdown = ({ children,
  }) => {
   const navigate = useNavigate();
   const [visible, setVisible] = useState(false);
-  const [notificationList, setNotificationList] = useState([]);
+  const [notificationList, setNotificationList] = useNotifications();
     
-  useEffect(() => {
-    const fetchNotifications = async () => {
-      try {
-        const res = await fetch(`${process.env.REACT_APP_API_URL}/api/notifications`);
-        const data = await res.json();
-        const parsed = data.map(n => ({
-          ...n,
-          timestamp: dayjs(n.timestamp)
-        }));
+    useEffect(() => {
+        const fetchNotifications = async () => {
+            const token = getToken();
+            if (!token) return;
 
-        setNotificationList(parsed);
-      } catch (err) {
-        console.error("Lỗi fetch notifications:", err);
-      }
-    };
+            const res = await fetch("http://localhost:8000/api/notifications", {
+            headers: {
+                "Authorization": `Bearer ${token}`
+            }
+            });
 
-    fetchNotifications();
-  }, []);
+            if (res.ok) {
+                const data = await res.json();
+                setNotificationList(data.map(n => ({
+                    ...n,
+                    timestamp: dayjs(n.timestamp)
+                })));
+                console.log("Notifications:", data);
+            }
+        };
 
-    // Mock notifications data
-    const notifications = [
-        {
-            id: 1,
-            type: 'booking_confirmed',
-            title: 'Mock title',
-            message: 'Mock message',
-            timestamp: dayjs().subtract(5, 'minute'),
-            read: false,
-            priority: 'high'
-        }
-    ];
+        fetchNotifications();
+    }, []);
 
     const unreadCount = notificationList.filter(n => !n.read).length;
     const recentNotifications = notificationList.slice(0, 4); // Chỉ hiển thị 4 thông báo gần nhất
@@ -116,10 +110,18 @@ const NotificationDropdown = ({ children,
         }
     };
 
-    const handleDelete = (notificationId, e) => {
-        e.stopPropagation();
-        // Handle delete logic here
-        console.log('Delete notification:', notificationId);
+    const handleDelete = async (notificationId) => {
+        const token = getToken();
+        const res = await fetch(`http://localhost:8000/api/notifications/${notificationId}`, {
+            method: "DELETE",
+            headers: {
+                "Authorization": `Bearer ${token}`
+            }
+        });
+
+        if (res.ok) {
+            setNotificationList(prev => prev.filter(n => n.id !== notificationId));
+        }
     };
 
     const dropdownContent = (

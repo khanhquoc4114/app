@@ -72,42 +72,47 @@ def seed_notifications(db: Session):
     if db.query(Notification).count() == 0:
         sample_notifications = [
             Notification(
+                user_id=1,
                 type="booking_confirmed",
                 title="Đặt sân thành công",
-                message="Đặt sân cầu lông VIP 1 vào ngày 20/01/2024 lúc 08:00-10:00 đã được xác nhận.",
+                message="Bạn đã đặt thành công sân cầu lông VIP 1 vào ngày 20/01/2024 lúc 08:00-10:00.",
                 timestamp=datetime.utcnow() - timedelta(minutes=5),
                 read=False,
                 priority="high",
                 data={"bookingId": "BK001", "facilityName": "Sân cầu lông VIP 1"}
             ),
             Notification(
+                user_id=1,
                 type="payment_success",
-                title="Thanh toán thành công ok chưa",
+                title="Thanh toán thành công",
                 message="Thanh toán 160,000 VNĐ cho đặt sân BK001 đã được xử lý thành công.",
-                timestamp=datetime.utcnow() - timedelta(minutes=10),
+                timestamp=datetime.utcnow() - timedelta(minutes=15),
                 read=False,
                 priority="medium",
                 data={"amount": 160000, "bookingId": "BK001"}
             ),
             Notification(
+                user_id=1,
                 type="booking_reminder",
-                title="Nhắc nhở đặt sân",
-                message="Bạn có lịch đặt sân tennis vào 14:00 hôm nay. Vui lòng đến đúng giờ.",
-                timestamp=datetime.utcnow() - timedelta(hours=1),
+                title="Nhắc nhở lịch đặt sân",
+                message="Bạn có lịch đặt sân tennis lúc 14:00 hôm nay. Vui lòng đến đúng giờ.",
+                timestamp=datetime.utcnow() - timedelta(hours=2),
                 read=True,
                 priority="medium",
                 data={"facilityName": "Sân tennis cao cấp", "time": "14:00"}
             ),
             Notification(
+                user_id=2,
                 type="promotion",
-                title="Khuyến mãi đặc biệt",
-                message="Giảm 20% cho tất cả sân cầu lông vào cuối tuần. Áp dụng từ 22-23/01/2024.",
-                timestamp=datetime.utcnow() - timedelta(hours=2),
-                read=True,
+                title="Ưu đãi cuối tuần",
+                message="Giảm 20% cho tất cả sân cầu lông vào cuối tuần này (22-23/01/2024).",
+                timestamp=datetime.utcnow() - timedelta(hours=4),
+                read=False,
                 priority="low",
                 data={"discount": 20, "validUntil": "23/01/2024"}
             ),
             Notification(
+                user_id=2,
                 type="system",
                 title="Bảo trì hệ thống",
                 message="Hệ thống sẽ bảo trì từ 02:00-04:00 ngày 21/01/2024. Vui lòng hoàn tất giao dịch trước thời gian này.",
@@ -115,14 +120,35 @@ def seed_notifications(db: Session):
                 read=False,
                 priority="high",
                 data={"maintenanceTime": "02:00-04:00", "date": "21/01/2024"}
+            ),
+            Notification(
+                user_id=2,
+                type="booking_cancelled",
+                title="Hủy đặt sân",
+                message="Đặt sân BK002 đã bị hủy theo yêu cầu của bạn.",
+                timestamp=datetime.utcnow() - timedelta(days=2),
+                read=True,
+                priority="medium",
+                data={"bookingId": "BK002", "reason": "Người dùng hủy"}
+            ),
+            Notification(
+                user_id=1,
+                type="friend_invite",
+                title="Lời mời tham gia trận đấu",
+                message="Người dùng Nam Trần mời bạn tham gia trận cầu lông vào 18:00 ngày 22/01/2024.",
+                timestamp=datetime.utcnow() - timedelta(minutes=30),
+                read=False,
+                priority="low",
+                data={"inviter": "Nam Trần", "time": "18:00", "date": "22/01/2024"}
             )
         ]
+
         db.add_all(sample_notifications)
         db.commit()
-        print("✅ Seeded notifications data")
+        print("✅ Seeded 7 notifications")
     else:
         print("ℹ️ Notifications already exist")
-
+        
 def seed_users(db: Session):
     if db.query(User).count() == 0:
         sample_users = [
@@ -216,6 +242,7 @@ def seed_bookings(db: Session):
         print("✅ Seeded booking data")
     else:
         print("ℹ️ Bookings already exist")
+
 def init_db():
     # Tạo bảng nếu chưa có
     Base.metadata.create_all(bind=engine)
