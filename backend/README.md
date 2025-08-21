@@ -22,9 +22,9 @@ sudo -u postgres psql
 
 Trong PostgreSQL:
 ```sql
-CREATE USER sports_user WITH PASSWORD 'sports_password';
-CREATE DATABASE sports_facility_db OWNER sports_user;
-GRANT ALL PRIVILEGES ON DATABASE sports_facility_db TO sports_user;
+CREATE USER db_user WITH PASSWORD 'db_password';
+CREATE DATABASE sports_db OWNER db_user;
+GRANT ALL PRIVILEGES ON DATABASE sports_db TO db_user;
 \q
 ```
 
@@ -56,9 +56,9 @@ uvicorn main:app --reload --port 8000
 ## Cấu hình
 Tạo file `.env`:
 ```
-DB_USER=sports_user
-DB_PASSWORD=sports_password
+DB_USER=db_user
+DB_PASSWORD=db_password
 DB_HOST=localhost
-DB_NAME=sports_facility_db
+DB_NAME=sports_db
 SECRET_KEY=your-secret-key
 ```

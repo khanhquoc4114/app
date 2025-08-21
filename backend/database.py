@@ -10,10 +10,10 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Lấy thông tin cấu hình database từ biến môi trường hoặc dùng giá trị mặc định
-DB_USER = os.getenv("DB_USER", "sports_user")  # Tên user của database
-DB_PASSWORD = os.getenv("DB_PASSWORD", "sports_password")  # Mật khẩu database
+DB_USER = os.getenv("DB_USER", "db_user")  # Tên user của database
+DB_PASSWORD = os.getenv("DB_PASSWORD", "db_password")  # Mật khẩu database
 DB_HOST = os.getenv("DB_HOST", "postgres")  # Địa chỉ host của database
-DB_NAME = os.getenv("DB_NAME", "sports_facility_db")  # Tên database
+DB_NAME = os.getenv("DB_NAME", "sports_db")  # Tên database
 
 # Tạo chuỗi kết nối tới PostgreSQL
 DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}/{DB_NAME}"

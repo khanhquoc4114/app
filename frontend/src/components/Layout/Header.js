@@ -49,7 +49,7 @@ const Header = ({ onMenuToggle }) => {
     ];
 
     const mobileMenuItems = [
-        { key: '/', label: 'Trang chủ' },
+        { key: '/home', label: 'Trang chủ' },
         { key: '/facilities', label: 'Danh sách sân' },
         { key: '/my-bookings', label: 'Lịch đặt của tôi' },
         { key: '/chat', label: 'Hỗ trợ AI' },

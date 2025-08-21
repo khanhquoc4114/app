@@ -2,17 +2,17 @@ services:
   # PostgreSQL Database
   postgres:
     image: postgres:14
-    container_name: sports_facility_db
+    container_name: sports_db
     environment:
-      POSTGRES_USER: sports_user
-      POSTGRES_PASSWORD: sports_password
-      POSTGRES_DB: sports_facility_db
+      POSTGRES_USER: db_user
+      POSTGRES_PASSWORD: db_password
+      POSTGRES_DB: sports_db
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U sports_user -d sports_facility_db"]
+      test: ["CMD-SHELL", "pg_isready -U db_user -d sports_db"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -26,10 +26,10 @@ services:
     ports:
       - "8000:8000"
     environment:
-      DB_USER: sports_user
-      DB_PASSWORD: sports_password
+      DB_USER: db_user
+      DB_PASSWORD: db_password
       DB_HOST: postgres
-      DB_NAME: sports_facility_db
+      DB_NAME: sports_db
     depends_on:
       postgres:
         condition: service_healthy

@@ -655,7 +655,7 @@ const handleBookingSubmit = async () => {
         <div>
             {/* Breadcrumb */}
             <Breadcrumb style={{ marginBottom: 16 }}>
-                <Breadcrumb.Item href="/">
+                <Breadcrumb.Item href="/home">
                     <HomeOutlined />
                     <span>Trang chủ</span>
                 </Breadcrumb.Item>

@@ -18,7 +18,7 @@ const Sidebar = ({ collapsed = false }) => {
 
     const menuItems = [
         {
-            key: '/',
+            key: '/home',
             icon: <HomeOutlined />,
             label: 'Trang chủ',
         },

@@ -64,7 +64,7 @@ const MainLayout = ({ children, userRole = 'user' }) => {
     const getMenuItems = () => {
         const commonItems = [
             {
-                key: '/',
+                key: '/home',
                 icon: <HomeOutlined />,
                 label: 'Trang chủ'
             },

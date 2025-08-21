@@ -57,10 +57,10 @@ Sau khi chạy `seed.py`:
 Copy file `backend/.env.example` thành `backend/.env` và sửa:
 
 ```env
-DB_USER=sports_user
-DB_PASSWORD=sports_password
+DB_USER=db_user
+DB_PASSWORD=db_password
 DB_HOST=localhost
-DB_NAME=sports_facility_db
+DB_NAME=sports_db
 SECRET_KEY=my-secret-key-123
 ```
 

@@ -56,7 +56,7 @@ const ProtectedRoute = ({ children, requiredRole = null }) => {
     }
 
     if (requiredRole && userRole !== requiredRole) {
-        return <Navigate to="/" replace />;
+        return <Navigate to="/home" replace />;
     }
 
     return children;
@@ -81,26 +81,35 @@ const AppRoutes = () => {
             <Route
                 path="/register"
                 element={
-                    isAuthenticated ? <Navigate to="/" replace /> : <RegisterPage />
+                    isAuthenticated ? <Navigate to="/home" replace /> : <RegisterPage />
                 }
             />
 
             <Route
                 path="/login"
                 element={
-                    isAuthenticated ? <Navigate to="/" replace /> : <LoginPage />
+                    isAuthenticated ? <Navigate to="/home" replace /> : <LoginPage />
                 }
             />
             <Route
                 path="/forgot"
                 element={
-                    isAuthenticated ? <Navigate to="/" replace /> : <ForgotPasswordPage />
+                    isAuthenticated ? <Navigate to="/home" replace /> : <ForgotPasswordPage />
                 }
             />
 
             {/* Protected Routes */}
             <Route
                 path="/"
+                element={
+                    <ProtectedRoute>
+                        <Navigate to="/home" replace />
+                    </ProtectedRoute>
+                }
+            />
+
+            <Route
+                path="/home"
                 element={
                     <ProtectedRoute>
                         <LayoutWrapper userRole={userRole}>
