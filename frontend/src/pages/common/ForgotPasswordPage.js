@@ -27,6 +27,7 @@ const ForgotPasswordPage = () => {
     const handleSubmit = async (values) => {
         setLoading(true);
         try {
+            message.success("Email khôi phục mật khẩu đã được gửi!" + values.email);
             // Giả lập API call để gửi email reset password
             const res = await fetch("http://localhost:8000/api/forgot-password", {
                 method: "POST",
@@ -35,6 +36,7 @@ const ForgotPasswordPage = () => {
                     email: values.email
                 })
             });
+
 
             if (!res.ok) {
                 throw new Error("Email không tồn tại trong hệ thống");

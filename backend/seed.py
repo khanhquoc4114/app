@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 from models import *
 from database import engine, SessionLocal
 from datetime import datetime, timedelta
+from auth import hash_password
 
 def seed_facilities(db: Session):
     if db.query(Facility).count() == 0:
@@ -129,7 +130,7 @@ def seed_users(db: Session):
                 username="nguyenvana",
                 email="nguyenvana@example.com",
                 full_name="Nguyễn Văn A",
-                hashed_password="password123",
+                hashed_password=hash_password("password123"),
                 role="user",
                 total_bookings=5,
                 total_spent=800000
@@ -138,7 +139,7 @@ def seed_users(db: Session):
                 username="user",
                 email="tranthib@example.com",
                 full_name="Trần Thị B",
-                hashed_password="user123",
+                hashed_password=hash_password("user123"),
                 role="user",
                 total_bookings=3,
                 total_spent=450000
@@ -147,7 +148,7 @@ def seed_users(db: Session):
                 username="admin",
                 email="admin@example.com",
                 full_name="Admin User",
-                hashed_password="admin123",
+                hashed_password=hash_password("admin123"),
                 role="admin",
                 total_bookings=10,
                 total_spent=2000000
@@ -156,7 +157,7 @@ def seed_users(db: Session):
                 username="staff",
                 email="leminhc@example.com",
                 full_name="Lê Minh C",
-                hashed_password="staff123",
+                hashed_password=hash_password("staff123"),
                 role="staff",
                 total_bookings=0,
                 total_spent=0

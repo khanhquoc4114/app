@@ -10,3 +10,4 @@ pydantic[email]==2.5.0
 python-dotenv==1.0.0
 python-jose[cryptography]
 passlib[bcrypt]
+slowapi==0.1.9

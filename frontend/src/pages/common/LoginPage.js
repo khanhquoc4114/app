@@ -203,7 +203,7 @@ const LoginPage = () => {
                                 Staff: staff / staff123
                             </Text>
                             <Text style={{ fontSize: '12px', display: 'block' }}>
-                                User: user1 / user123
+                                User: user / user123
                             </Text>
                         </div>
                     </Card>

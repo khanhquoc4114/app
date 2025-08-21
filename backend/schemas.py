@@ -87,3 +87,16 @@ class UserCreate(BaseModel):
     email: EmailStr
     full_name: str
     password: str
+    
+    
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
+    
+class VerifyTokenResponse(BaseModel):
+    valid: bool
+    message: str
+    user_id: Optional[int] = None

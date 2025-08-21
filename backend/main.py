@@ -1,4 +1,5 @@
-from fastapi import FastAPI, HTTPException, Depends, status
+from fastapi import FastAPI, HTTPException, Depends, BackgroundTasks
+from fastapi import Request
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from fastapi.security import OAuth2PasswordBearer
@@ -10,7 +11,10 @@ from models import *
 from schemas import *
 from typing import List
 from auth import *
-from fastapi import Request
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 
 # Create tables
 
@@ -27,44 +31,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Rate limiting
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
+
 # Health check endpoint
-@app.get("/health")
-def health_check():
-    return {"status": "healthy", "timestamp": datetime.now()}
+@app.get("/api/health")
+async def health_check():
+    return {"status": "healthy", "timestamp": datetime.utcnow()}
 
 # JWT config
 SECRET_KEY = "my-secret-key-123"
 ALGORITHM = "HS256"
-
-@app.post("/api/auth/register")
-def register(user: UserCreate, db: Session = Depends(get_db)):
-    # Kiểm tra username đã tồn tại chưa
-    existing_user = db.query(User).filter(User.username == user.username).first()
-    if existing_user:
-        raise HTTPException(status_code=400, detail="Username đã tồn tại")
-    
-    # Kiểm tra email đã tồn tại chưa
-    existing_email = db.query(User).filter(User.email == user.email).first()
-    if existing_email:
-        raise HTTPException(status_code=400, detail="Email đã tồn tại")
-    
-    # Mã hóa password
-    hashed_password = bcrypt.hashpw(user.password.encode('utf-8'), bcrypt.gensalt())
-    
-    # Tạo user mới
-    new_user = User(
-        username=user.username,
-        email=user.email,
-        full_name=user.full_name,
-        hashed_password=hashed_password.decode('utf-8'),
-        role="user"
-    )
-    
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
-    
-    return {"message": "Đăng ký thành công", "username": new_user.username}
 
 # Endpoint mới để lấy danh sách cơ sở thể thao
 @app.get("/api/facilities")
@@ -141,7 +121,7 @@ def mark_all_as_read(db: Session = Depends(get_db)):
 @app.post("/api/login")
 def login(request: LoginRequest, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.username == request.username).first()
-    if not user:# or not check_password_hash(user.hashed_password, request.password):
+    if not user or not verify_password(request.password, user.hashed_password):
         raise HTTPException(status_code=401, detail="Sai tài khoản hoặc mật khẩu")
 
     access_token = create_access_token(data={"sub": user.username, "role": user.role, "id": user.id})
@@ -204,9 +184,9 @@ def change_password(
     if not user:
         raise HTTPException(status_code=404, detail="User không tồn tại")
 
-    # if not verify_password(data.old_password, user.hashed_password):
+    if not verify_password(data.old_password, user.hashed_password):
     #     raise HTTPException(status_code=400, detail="Mật khẩu cũ không đúng")
-    if data.old_password != user.hashed_password:
+    #if data.old_password != user.hashed_password:
         raise HTTPException(status_code=400, detail="Mật khẩu cũ không đúng")
 
     user.hashed_password = data.new_password # cần hash mật khẩu, để sau 
@@ -228,8 +208,8 @@ def register(user_data: UserCreate, db: Session = Depends(get_db)):
         username=user_data.username,
         email=user_data.email,
         full_name=user_data.full_name,
-        hashed_password=user_data.password, # Thêm hashing sau
-        role="user",  # mặc định
+        hashed_password=hash_password(user_data.password),
+        role="user",
         is_active=True,
         total_bookings=0,
         total_spent=0,
@@ -309,3 +289,142 @@ def create_booking(booking_data: BookingCreate, token: str = Depends(oauth2_sche
         "booking_date": new_booking.booking_date.isoformat(),
         "time_slots": booking_data.time_slots
     }
+
+@app.post("/api/forgot-password")
+async def forgot_password(
+    request: ForgotPasswordRequest, 
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db)
+):
+    """API gửi email forgot password"""
+    try:
+        # Kiểm tra email có tồn tại trong database
+        user = db.query(User).filter(User.email == request.email).first()
+        if not user:
+            # Không tiết lộ thông tin user có tồn tại hay không (security best practice)
+            return {
+                "message": "Nếu email tồn tại trong hệ thống, bạn sẽ nhận được email hướng dẫn đặt lại mật khẩu trong vài phút."
+            }
+        
+        # Tạo reset token
+        reset_token = create_reset_token(
+            data={"id": user.id, "email": user.email, "purpose": "password_reset"},
+            expires_minutes=15
+        )
+        
+        # Gửi email trong background để không làm chậm response
+        background_tasks.add_task(
+            send_reset_password_email, 
+            request.email, 
+            reset_token,
+            getattr(user, 'name', None)
+        )
+        
+        return {
+            "message": "Nếu email tồn tại trong hệ thống, bạn sẽ nhận được email hướng dẫn đặt lại mật khẩu trong vài phút."
+        }
+        
+    except Exception as e:
+        print(f"Forgot password error: {str(e)}")
+        raise HTTPException(
+            status_code=500, 
+            detail="Có lỗi xảy ra, vui lòng thử lại sau"
+        )
+
+@app.get("/api/verify-reset-token/{token}")
+async def verify_reset_token_endpoint(token: str, db: Session = Depends(get_db)):
+    """API verify reset token"""
+    try:
+        payload = verify_reset_token(token)
+        if not payload:
+            raise HTTPException(
+                status_code=400,
+                detail="Token không hợp lệ hoặc đã hết hạn"
+            )
+        
+        # Kiểm tra purpose
+        if payload.get("purpose") != "password_reset":
+            raise HTTPException(
+                status_code=400,
+                detail="Token không hợp lệ"
+            )
+        
+        # Kiểm tra user vẫn tồn tại
+        user = db.query(User).filter(User.id == payload["id"]).first()
+        if not user:
+            raise HTTPException(
+                status_code=400,
+                detail="User không tồn tại"
+            )
+        
+        # Kiểm tra token đã được sử dụng chưa (tùy chọn)
+        # if user.reset_token_used_at and user.reset_token_used_at > datetime.utcnow() - timedelta(minutes=15):
+        #     raise HTTPException(status_code=400, detail="Token đã được sử dụng")
+        
+        return {
+            "valid": True,
+            "message": "Token hợp lệ",
+            "user_id": payload["id"]
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Verify token error: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="Có lỗi xảy ra khi xác thực token"
+        )
+
+@app.post("/api/reset-password")
+async def reset_password(request: ResetPasswordRequest, db: Session = Depends(get_db)):
+    """API reset password (từ code gốc của bạn, đã được mở rộng)"""
+    try:
+        payload = verify_reset_token(request.token)
+        if not payload:
+            raise HTTPException(
+                status_code=400, 
+                detail="Token không hợp lệ hoặc đã hết hạn"
+            )
+        
+        # Kiểm tra purpose
+        if payload.get("purpose") != "password_reset":
+            raise HTTPException(
+                status_code=400,
+                detail="Token không hợp lệ"
+            )
+
+        user = db.query(User).filter(User.id == payload["id"]).first()
+        if not user:
+            raise HTTPException(
+                status_code=404, 
+                detail="User không tồn tại"
+            )
+
+        # Kiểm tra token đã được sử dụng chưa (one-time use)
+        # if user.reset_token_used_at and user.reset_token_used_at > datetime.utcnow() - timedelta(minutes=15):
+        #     raise HTTPException(status_code=400, detail="Token đã được sử dụng")
+
+        # Hash password mới
+        user.hashed_password = hash_password(request.new_password)
+        
+        # Mark token as used (tùy chọn)
+        # user.reset_token_used_at = datetime.utcnow()
+        
+        db.commit()
+        
+        # Log security event
+        print(f"Password reset successfully for user ID: {user.id}, email: {user.email} at {datetime.utcnow()}")
+        
+        return {"message": "Đặt lại mật khẩu thành công!"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Reset password error: {str(e)}")
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail="Có lỗi xảy ra, vui lòng thử lại"
+        )
+

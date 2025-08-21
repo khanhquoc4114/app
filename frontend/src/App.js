@@ -19,6 +19,7 @@ import ChatPage from './pages/common/chat/ChatPage';
 import NotificationsPage from './pages/common/NotificationsPage';
 import RegisterPage from './pages/common/RegisterPage';
 import ForgotPasswordPage from './pages/common/ForgotPasswordPage';
+import ResetPasswordPage from './pages/common/ResetPasswordPage';
 
 // User Pages
 import MyBookingsPage from './pages/user/bookingpage/MyBookingsPage';
@@ -95,6 +96,13 @@ const AppRoutes = () => {
                 path="/forgot"
                 element={
                     isAuthenticated ? <Navigate to="/home" replace /> : <ForgotPasswordPage />
+                }
+            />
+
+            <Route
+                path="/reset-password/:token"
+                element={
+                    isAuthenticated ? <Navigate to="/login" replace /> : <ResetPasswordPage />
                 }
             />
 
