@@ -133,14 +133,14 @@ const ChatInterface = ({ onClose }) => {
         setMessages(prev => [...prev, humanMessage]);
 
         setTimeout(() => {
-            const staffMessage = {
+            const hostMessage = {
                 id: Date.now() + 1,
-                type: 'staff',
+                type: 'host',
                 content: 'Xin chào! Tôi là Minh - nhân viên hỗ trợ khách hàng. Tôi có thể giúp gì cho bạn?',
                 timestamp: dayjs(),
                 avatar: <CustomerServiceOutlined />
             };
-            setMessages(prev => [...prev, staffMessage]);
+            setMessages(prev => [...prev, hostMessage]);
         }, 2000);
     };
 
@@ -169,7 +169,7 @@ const ChatInterface = ({ onClose }) => {
                     <Avatar
                         icon={message.avatar}
                         style={{
-                            backgroundColor: message.type === 'staff' ? '#52c41a' : '#1890ff',
+                            backgroundColor: message.type === 'host' ? '#52c41a' : '#1890ff',
                             marginRight: 8,
                             flexShrink: 0
                         }}

@@ -247,7 +247,7 @@ const FacilityCard = ({
                                     </div>
                                 )}
 
-                                {/* Booking stats for staff/admin view */}
+                                {/* Booking stats for host/admin view */}
                                 {facility.bookings_count !== undefined && (
                                     <div style={{ marginTop: 8 }}>
                                         <Text style={{ fontSize: '12px', color: '#1890ff' }}>

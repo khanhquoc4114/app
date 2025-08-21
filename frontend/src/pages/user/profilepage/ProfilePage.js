@@ -39,7 +39,7 @@ const ProfilePage = () => {
         id: 1,
         username: 'user1',
         email: 'user1@example.com',
-        full_name: 'Nguyễn Văn A',
+        full_name: 'Mock name',
         phone: '0901234567',
         address: '123 Nguyễn Huệ, Quận 1, TP.HCM',
         avatar: null,
@@ -81,8 +81,6 @@ const ProfilePage = () => {
             prefix: <TrophyOutlined style={{ color: '#faad14' }} />
         }
     ];
-
-
 
     return (
         <div>

@@ -19,11 +19,11 @@ import {
     CloseCircleOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import { handleCheckIn, handleCancelBooking, formatPrice } from './StaffDashboardLogic';
+import { handleCheckIn, handleCancelBooking, formatPrice } from './HostDashboardLogic';
 
 const { Title, Text } = Typography;
 
-const StaffDashboard = () => {
+const HostDashboard = () => {
     const [selectedDate, setSelectedDate] = useState(dayjs());
     const [todayBookings, setTodayBookings] = useState([
         {
@@ -62,7 +62,7 @@ const StaffDashboard = () => {
     ]);
 
     // Mock data cho chủ sân
-    const staffStats = [
+    const hostStats = [
         {
             title: 'Doanh thu hôm nay',
             value: 2400000,
@@ -161,7 +161,7 @@ const StaffDashboard = () => {
                 <Text type="secondary">Quản lý đặt sân, doanh thu và check-in</Text>
             </div>
             <Row gutter={16} style={{ marginBottom: 24 }}>
-                {staffStats.map((stat, idx) => (
+                {hostStats.map((stat, idx) => (
                     <Col xs={12} md={6} key={idx}>
                         <Card>
                             <Statistic
@@ -183,4 +183,4 @@ const StaffDashboard = () => {
     );
 };
 
-export default StaffDashboard;
+export default HostDashboard;

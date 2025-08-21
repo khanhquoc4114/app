@@ -1,4 +1,4 @@
-// StaffDashboardLogic.js - Chứa các hàm xử lý logic cho StaffDashboard
+// hostDashboardLogic.js - Chứa các hàm xử lý logic cho hostDashboard
 import { message } from 'antd';
 
 // Hàm xử lý xác nhận check-in

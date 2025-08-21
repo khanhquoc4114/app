@@ -2,7 +2,7 @@
 export default class ChatMessage {
     constructor(id, type, content, timestamp, avatar = null) {
         this.id = id;
-        this.type = type; // 'user', 'bot', 'staff', 'system'
+        this.type = type; // 'user', 'bot', 'host', 'system'
         this.content = content;
         this.timestamp = timestamp;
         this.avatar = avatar;

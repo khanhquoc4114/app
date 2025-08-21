@@ -154,11 +154,11 @@ def seed_users(db: Session):
                 total_spent=2000000
             ),
             User(
-                username="staff",
+                username="host",
                 email="leminhc@example.com",
                 full_name="Lê Minh C",
-                hashed_password=hash_password("staff123"),
-                role="staff",
+                hashed_password=hash_password("host123"),
+                role="host",
                 total_bookings=0,
                 total_spent=0
             )
@@ -199,7 +199,7 @@ def seed_bookings(db: Session):
                 notes="Đặt sân chiều"
             ),
             Booking(
-                user_id=user_map.get("staff"),
+                user_id=user_map.get("host"),
                 facility_id=facility_map.get("Sân tennis 1"),
                 booking_date=datetime(2025, 8, 23, 14, 0, 0),
                 start_time=datetime(2025, 8, 23, 14, 0, 0),

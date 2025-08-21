@@ -201,7 +201,7 @@ const AdminDashboard = () => {
             render: (role) => {
                 const config = {
                     admin: { color: 'red', text: 'Admin' },
-                    staff: { color: 'orange', text: 'Nhân viên' },
+                    host: { color: 'orange', text: 'Nhân viên' },
                     user: { color: 'blue', text: 'Khách hàng' }
                 };
                 return <Tag color={config[role].color}>{config[role].text}</Tag>;

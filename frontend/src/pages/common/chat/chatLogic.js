@@ -63,6 +63,6 @@ export function createSystemMessage(content) {
 }
 
 // Tạo tin nhắn nhân viên
-export function createStaffMessage(content) {
-    return new ChatMessage(Date.now() + 1, 'staff', content, dayjs(), <CustomerServiceOutlined />);
+export function createhostMessage(content) {
+    return new ChatMessage(Date.now() + 1, 'host', content, dayjs(), <CustomerServiceOutlined />);
 }

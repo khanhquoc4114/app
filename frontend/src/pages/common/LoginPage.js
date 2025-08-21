@@ -57,8 +57,8 @@ const LoginPage = () => {
             // Navigate theo role
             if (data.user.role === "admin") {
                 navigate("/admin");
-            } else if (data.user.role === "staff") {
-                navigate("/staff");
+            } else if (data.user.role === "host") {
+                navigate("/host");
             } else {
                 navigate("/");
             }
@@ -200,7 +200,7 @@ const LoginPage = () => {
                                 Admin: admin / admin123
                             </Text>
                             <Text style={{ fontSize: '12px', display: 'block' }}>
-                                Staff: staff / staff123
+                                host: host / host123
                             </Text>
                             <Text style={{ fontSize: '12px', display: 'block' }}>
                                 User: user / user123

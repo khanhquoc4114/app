@@ -83,9 +83,9 @@ const MainLayout = ({ children, userRole = 'user' }) => {
             }
         ];
 
-        const staffItems = [
+        const hostItems = [
             {
-                key: '/staff',
+                key: '/host',
                 icon: <DashboardOutlined />,
                 label: 'Dashboard'
             },
@@ -106,8 +106,8 @@ const MainLayout = ({ children, userRole = 'user' }) => {
 
         if (userRole === 'admin') {
             return [...commonItems, ...adminItems];
-        } else if (userRole === 'staff') {
-            return [...commonItems, ...staffItems];
+        } else if (userRole === 'host') {
+            return [...commonItems, ...hostItems];
         } else {
             return [...commonItems, ...userItems];
         }
@@ -258,7 +258,7 @@ const MainLayout = ({ children, userRole = 'user' }) => {
                                         whiteSpace: 'nowrap'
                                     }}>
                                         {userRole === 'admin' ? 'Quản trị viên' :
-                                            userRole === 'staff' ? 'Nhân viên' : 'Khách hàng'}
+                                            userRole === 'host' ? 'Nhân viên' : 'Khách hàng'}
                                     </Text>
                                 </div>
                             </Space>
@@ -318,7 +318,7 @@ const MainLayout = ({ children, userRole = 'user' }) => {
                 }
             `}</style>
 
-            {/* Chat Bubble - only show for users, not staff/admin */}
+            {/* Chat Bubble - only show for users, not host/admin */}
             {userRole === 'user' && <ChatBubble />}
         </Layout >
     );

@@ -25,9 +25,9 @@ import ResetPasswordPage from './pages/common/ResetPasswordPage';
 import MyBookingsPage from './pages/user/bookingpage/MyBookingsPage';
 import ProfilePage from './pages/user/profilepage/ProfilePage';
 
-// Staff Pages
-import StaffDashboard from './pages/staff/StaffDashboard/StaffDashboard';
-import MyFacilitiesPage from './pages/staff/MyFacilitiesPage/MyFacilitiesPage';
+// host Pages
+import HostDashboard from './pages/host/HostDashboard/HostDashboard';
+import MyFacilitiesPage from './pages/host/MyFacilitiesPage/MyFacilitiesPage';
 
 // Admin Pages
 import AdminDashboard from './pages/admin/admindashboard/AdminDashboard';
@@ -183,13 +183,13 @@ const AppRoutes = () => {
                 }
             />
 
-            {/* Staff Routes */}
+            {/* host Routes */}
             <Route
-                path="/staff"
+                path="/host"
                 element={
-                    <ProtectedRoute requiredRole="staff">
+                    <ProtectedRoute requiredRole="host">
                         <LayoutWrapper userRole={userRole}>
-                            <StaffDashboard />
+                            <HostDashboard />
                         </LayoutWrapper>
                     </ProtectedRoute>
                 }
@@ -198,7 +198,7 @@ const AppRoutes = () => {
             <Route
                 path="/my-facilities"
                 element={
-                    <ProtectedRoute requiredRole="staff">
+                    <ProtectedRoute requiredRole="host">
                         <LayoutWrapper userRole={userRole}>
                             <MyFacilitiesPage />
                         </LayoutWrapper>

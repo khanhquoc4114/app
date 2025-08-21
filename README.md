@@ -41,7 +41,7 @@ Sau khi chạy `seed.py`:
 
 - **Admin**: `admin` / `admin123`
 - **User**: `user` / `user123`
-- **Staff**: `staff` / `staff123`
+- **host**: `host` / `host123`
 
 ## Cấu trúc dự án
 

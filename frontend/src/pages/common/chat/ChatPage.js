@@ -9,7 +9,7 @@ import {
     createUserMessage,
     createBotMessage,
     createSystemMessage,
-    createStaffMessage
+    createhostMessage
 } from './chatLogic';
 
 const { Title, Text } = Typography;
@@ -56,7 +56,7 @@ const ChatPage = () => {
         setChatMode('human');
         setMessages(prev => [...prev, createSystemMessage('Đang kết nối với nhân viên hỗ trợ... Vui lòng chờ trong giây lát.')]);
         setTimeout(() => {
-            setMessages(prev => [...prev, createStaffMessage('Xin chào! Tôi là Minh - nhân viên hỗ trợ khách hàng. Tôi có thể giúp gì cho bạn?')]);
+            setMessages(prev => [...prev, createhostMessage('Xin chào! Tôi là Minh - nhân viên hỗ trợ khách hàng. Tôi có thể giúp gì cho bạn?')]);
         }, 2000);
     };
 
@@ -77,7 +77,7 @@ const ChatPage = () => {
                     <Avatar
                         icon={message.avatar}
                         style={{
-                            backgroundColor: message.type === 'staff' ? '#52c41a' : '#1890ff',
+                            backgroundColor: message.type === 'host' ? '#52c41a' : '#1890ff',
                             marginRight: 8
                         }}
                     />
