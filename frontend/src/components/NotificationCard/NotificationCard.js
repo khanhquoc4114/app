@@ -10,7 +10,8 @@ import {
     Badge,
     Dropdown,
     Empty,
-    Divider
+    Divider,
+    message
 } from 'antd';
 import {
     BellOutlined,
@@ -26,42 +27,50 @@ import {
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
+import { getToken } from '../../utils/auth';
+import { useNotifications } from "../../contexts/NotificationContext";
 
 dayjs.extend(relativeTime);
 
 const { Text, Title } = Typography;
 
-const NotificationCard = ({
-    notifications: initialNotifications = [],
-    onMarkAsRead,
-    onMarkAllAsRead,
-    onDelete,
-    maxHeight = 400,
-    showActions = true
-}) => {
+    const NotificationCard = ({
+        notifications: initialNotifications = [],
+        onMarkAsRead,
+        onMarkAllAsRead,
+        onDelete,
+        maxHeight = 400,
+        showActions = true
+    }) => {
     const [filter, setFilter] = useState('all');
-    const [notificationList, setNotificationList] = useState(initialNotifications);
+    const [notificationList, setNotificationList] = useNotifications();
+    const [userInfo, setUserInfo] = useState(null);
 
-    React.useEffect(() => {
+
+    useEffect(() => {
         const fetchNotifications = async () => {
-            try {
-                const res = await fetch(`${process.env.REACT_APP_API_URL}/api/notifications`);
+            const token = getToken();
+            if (!token) return;
+
+            const res = await fetch("http://localhost:8000/api/notifications", {
+            headers: {
+                "Authorization": `Bearer ${token}`
+            }
+            });
+
+            if (res.ok) {
                 const data = await res.json();
-                const parsed = data.map(n => ({
+                setNotificationList(data.map(n => ({
                     ...n,
                     timestamp: dayjs(n.timestamp)
-                }));
-
-                setNotificationList(parsed);
-            } catch (err) {
-                console.error("Lỗi fetch notifications:", err);
+                })));
+                console.log("Notifications:", data);
             }
         };
 
         fetchNotifications();
     }, []);
 
-    // Mock notifications data
     const mockNotifications = [
         {
             id: 1,
@@ -78,7 +87,7 @@ const NotificationCard = ({
         }
     ];
 
-    const allNotifications = notificationList.length > 0 ? notificationList : mockNotifications;
+    const allNotifications = notificationList.length >= 0 ? notificationList : mockNotifications;
 
     const getNotificationIcon = (type) => {
         const icons = {
@@ -165,9 +174,20 @@ const NotificationCard = ({
         }
     };
 
-    const handleDelete = (notificationId) => {
-        if (onDelete) {
-            onDelete(notificationId);
+    const handleDelete = async (notificationId) => {
+        const token = getToken();
+        const res = await fetch(`http://localhost:8000/api/notifications/${notificationId}`, {
+            method: "DELETE",
+            headers: {
+                "Authorization": `Bearer ${token}`
+            }
+        });
+
+        if (res.ok) {
+            message.success("Xoá thông báo thành công!");
+            setNotificationList(prev => prev.filter(n => n.id !== notificationId));
+        } else {
+            message.error("Không thể xoá thông báo");
         }
     };
 

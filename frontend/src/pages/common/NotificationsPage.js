@@ -3,11 +3,13 @@ import { Row, Col, Typography, message, Button, Space } from 'antd';
 import { BellOutlined, PlusOutlined } from '@ant-design/icons';
 import NotificationCard from '../../components/NotificationCard/NotificationCard';
 import dayjs from 'dayjs';
+import { useNotifications } from "../../contexts/NotificationContext";
 
 const { Title, Text } = Typography;
 
 const NotificationsPage = () => {
-    const [notifications, setNotifications] = useState([]);
+    const [notifications, setNotifications] = useNotifications();
+    const [userInfo, setUserInfo] = useState(null);
 
     const handleMarkAsRead = (notificationId) => {
         setNotifications(prev =>
