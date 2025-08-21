@@ -6,7 +6,7 @@
 // - Upload avatar
 
 // Import các thư viện và component cần thiết
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     handleUpdateProfile,
     handleChangePassword,
@@ -33,23 +33,36 @@ const ProfilePage = () => {
     const [passwordForm] = Form.useForm();
     const [editing, setEditing] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [userInfo, setUserInfo] = useState(null);
 
-    // Dữ liệu user mẫu (mock), cần thay bằng API thực tế khi kết nối backend
-    const [userInfo, setUserInfo] = useState({
-        id: 1,
-        username: 'user1',
-        email: 'user1@example.com',
-        full_name: 'Mock name',
-        phone: '0901234567',
-        address: '123 Nguyễn Huệ, Quận 1, TP.HCM',
-        avatar: null,
-        role: 'user',
-        created_at: '2024-01-01',
-        total_bookings: 15,
-        total_spent: 2400000,
-        favorite_sport: 'Cầu lông',
-        member_level: 'Silver'
-    });
+    useEffect(() => {
+        const fetchUser = async () => {
+            const token = localStorage.getItem("token");
+            if (!token) return;
+
+            const res = await fetch("http://localhost:8000/api/auth/me", {
+                headers: {
+                    "Authorization": `Bearer ${token}`
+                }
+            });
+
+            if (res.ok) {
+                const user = await res.json();
+                setUserInfo(user);
+                console.log("User info:", user);
+            } else {
+                console.error("Token không hợp lệ");
+            }
+        };
+
+        fetchUser();
+    }, []);
+
+    useEffect(() => {
+        if (userInfo) {
+            form.setFieldsValue(userInfo);
+        }
+    }, [userInfo, form]);
 
     // State quản lý cài đặt thông báo
     const [notifications, setNotifications] = useState({
@@ -63,12 +76,12 @@ const ProfilePage = () => {
     const stats = [
         {
             title: 'Tổng lượt đặt',
-            value: userInfo.total_bookings,
+            value: userInfo?.total_bookings,
             prefix: <CalendarOutlined style={{ color: '#1890ff' }} />
         },
         {
             title: 'Tổng chi tiêu',
-            value: userInfo.total_spent,
+            value: userInfo?.total_spent,
             prefix: <DollarOutlined style={{ color: '#52c41a' }} />,
             formatter: (value) => new Intl.NumberFormat('vi-VN', {
                 style: 'currency',
@@ -77,7 +90,7 @@ const ProfilePage = () => {
         },
         {
             title: 'Môn yêu thích',
-            value: userInfo.favorite_sport,
+            value: userInfo?.favorite_sport,
             prefix: <TrophyOutlined style={{ color: '#faad14' }} />
         }
     ];
@@ -97,7 +110,7 @@ const ProfilePage = () => {
                                 <Avatar
                                     size={120}
                                     icon={<UserOutlined />}
-                                    src={userInfo.avatar}
+                                    src={userInfo?.avatar}
                                     style={{ marginBottom: 16 }}
                                 />
                                 <Upload
@@ -124,18 +137,18 @@ const ProfilePage = () => {
                             </div>
 
                             <Title level={4} style={{ margin: '8px 0' }}>
-                                {userInfo.full_name}
+                                {userInfo?.full_name}
                             </Title>
 
                             <Space>
-                                <Tag color="blue">{userInfo.role === 'user' ? 'Khách hàng' : userInfo.role}</Tag>
-                                <Tag color={getMemberLevelColor(userInfo.member_level)}>
-                                    {userInfo.member_level}
+                                <Tag color="blue">{userInfo?.role === 'user' ? 'Khách hàng' : userInfo?.role}</Tag>
+                                <Tag color={getMemberLevelColor(userInfo?.member_level)}>
+                                    {userInfo?.member_level}
                                 </Tag>
                             </Space>
 
                             <Text type="secondary" style={{ display: 'block', marginTop: 8 }}>
-                                Thành viên từ {new Date(userInfo.created_at).getFullYear()}
+                                Thành viên từ {new Date(userInfo?.created_at).getFullYear()}
                             </Text>
                         </div>
 
@@ -272,7 +285,7 @@ const ProfilePage = () => {
                                     style={{ maxWidth: 400 }}
                                 >
                                     <Form.Item
-                                        name="current_password"
+                                        name="old_password"
                                         label="Mật khẩu hiện tại"
                                         rules={[{ required: true, message: 'Vui lòng nhập mật khẩu hiện tại' }]}
                                     >

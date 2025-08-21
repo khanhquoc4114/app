@@ -185,11 +185,9 @@ def change_password(
         raise HTTPException(status_code=404, detail="User không tồn tại")
 
     if not verify_password(data.old_password, user.hashed_password):
-    #     raise HTTPException(status_code=400, detail="Mật khẩu cũ không đúng")
-    #if data.old_password != user.hashed_password:
         raise HTTPException(status_code=400, detail="Mật khẩu cũ không đúng")
 
-    user.hashed_password = data.new_password # cần hash mật khẩu, để sau 
+    user.hashed_password = hash_password(data.new_password)
     db.commit()
     return {"message": "Đổi mật khẩu thành công!"}
 

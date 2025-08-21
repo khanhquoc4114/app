@@ -21,12 +21,38 @@ export const handleUpdateProfile = async (values, setLoading, setUserInfo, setEd
 export const handleChangePassword = async (values, setLoading, passwordForm) => {
     setLoading(true);
     try {
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        message.success('Đổi mật khẩu thành công!');
-        passwordForm.resetFields();
+        const token = localStorage.getItem("token");
+
+        const res = await fetch("http://localhost:8000/api/auth/change-password", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                old_password: values.old_password,
+                new_password: values.new_password
+            })
+        });
+
+        if (res.ok) {
+            message.success("Đổi mật khẩu thành công!");
+            passwordForm.resetFields();
+        } else {
+            const errData = await res.json();
+            let errorMsg = "Lỗi khi đổi mật khẩu";
+
+            if (typeof errData.detail === "string") {
+                errorMsg = errData.detail;
+            } else if (Array.isArray(errData) && errData.length > 0) {
+                // Lấy message đầu tiên từ list error
+                errorMsg = errData[0].msg;
+            }
+
+            message.error(errorMsg);
+        }
     } catch (error) {
-        message.error('Có lỗi xảy ra, vui lòng thử lại!');
+        message.error("Có lỗi xảy ra, vui lòng thử lại!");
     } finally {
         setLoading(false);
     }
