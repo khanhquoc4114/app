@@ -1,9 +1,7 @@
-from fastapi import FastAPI, HTTPException, Depends, BackgroundTasks
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
-from fastapi.security import OAuth2PasswordBearer
 from datetime import datetime
-from sqlalchemy import func
 from database import get_db, engine
 from models import *
 from schemas import *
@@ -13,14 +11,14 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
+from routes import facilities, notifications, auth, booking
 
 # Create tables
-
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Sports Facility Auth API")
 
-# CORS cho React frontend
+# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -35,6 +33,12 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
 
+# Register routers
+app.include_router(facilities.router)
+app.include_router(notifications.router)
+app.include_router(auth.router) 
+app.include_router(booking.router)
+
 # Health check endpoint
 @app.get("/api/health")
 async def health_check():
@@ -44,428 +48,11 @@ async def health_check():
 SECRET_KEY = "my-secret-key-123"
 ALGORITHM = "HS256"
 
-# Endpoint mới để lấy danh sách cơ sở thể thao
-@app.get("/api/facilities")
-def get_facilities(db: Session = Depends(get_db)):
-    facilities = db.query(Facility).filter(Facility.is_active == True).all()
-    return [
-        {
-            "id": f.id,
-            "name": f.name,
-            "sport_type": f.sport_type,
-            "description": f.description,
-            "price_per_hour": f.price_per_hour,
-            "image_url": f.image_url,
-            "location": f.location,
-            "rating": f.rating,
-            "reviews_count": f.reviews_count,
-            "amenities": f.amenities,
-            "opening_hours": f.opening_hours,
-            "is_active": f.is_active,
-            "created_at": f.created_at,
-            "updated_at": f.updated_at
-        }
-        for f in facilities
-    ]
-
-# Endpoint count active facilities
-@app.get("/api/facilities/count")
-def count_active_facilities(db: Session = Depends(get_db)):
-    count = db.query(Facility).filter(Facility.is_active == True).count()
-    return {"count": count}
-
-# Endpoint get popular sports
-@app.get("/api/facilities/popular-sports")
-def get_popular_sports(db: Session = Depends(get_db)):
-    results = (
-        db.query(Facility.sport_type, func.count(Facility.id).label("courts"))
-        .filter(Facility.is_active == True)
-        .group_by(Facility.sport_type)
-        .all()
-    )
-    return [
-        {"sportType": r.sport_type, "courts": r.courts}
-        for r in results
-    ]
-
 @app.get("/")
 def root():
     return {"message": "Auth API đang chạy"}
-
-@app.post("/api/auth/login")
-def login(request: LoginRequest, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.username == request.username).first()
-    if not user or not verify_password(request.password, user.hashed_password):
-        raise HTTPException(status_code=401, detail="Sai tài khoản hoặc mật khẩu")
-
-    access_token = create_access_token(data={"sub": user.username, "role": user.role, "id": user.id})
-
-    return {
-        "access_token": access_token,
-        "token_type": "bearer",
-        "user": {
-            "id": user.id,
-            "username": user.username,
-            "email": user.email,
-            "role": user.role
-        }
-    }
-    
+ 
 @app.get("/api/users/all", response_model=List[UserOut])
 def get_users(db: Session = Depends(get_db)):
     users = db.query(User).all()
     return users
-
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
-
-@app.get("/api/auth/me")
-def get_me(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
-    payload = verify_token(token)
-    if not payload:
-        raise HTTPException(status_code=401, detail="Token không hợp lệ")
-
-    user = db.query(User).filter(User.id == payload["id"]).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="Không tìm thấy user")
-
-    return {
-        "id": user.id,
-        "username": user.username,
-        "email": user.email,
-        "full_name": user.full_name,
-        "phone": user.phone,
-        "address": user.address,
-        "avatar": user.avatar,
-        "role": user.role,
-        "created_at": user.created_at,
-        "total_bookings": user.total_bookings,
-        "total_spent": user.total_spent,
-        "favorite_sport": user.favorite_sport,
-        "member_level": user.member_level
-    }
-    
-@app.post("/api/auth/change-password")
-def change_password(
-    data: ChangePasswordRequest,
-    token: str = Depends(oauth2_scheme),
-    db: Session = Depends(get_db)
-):
-    payload = verify_token(token)
-    if not payload:
-        raise HTTPException(status_code=401, detail="Token không hợp lệ")
-
-    user = db.query(User).filter(User.id == payload["id"]).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User không tồn tại")
-
-    if not verify_password(data.old_password, user.hashed_password):
-        raise HTTPException(status_code=400, detail="Mật khẩu cũ không đúng")
-
-    user.hashed_password = hash_password(data.new_password)
-    db.commit()
-    return {"message": "Đổi mật khẩu thành công!"}
-
-
-@app.post("/api/auth/register")
-def register(user_data: UserCreate, db: Session = Depends(get_db)):
-    # Kiểm tra user đã tồn tại chưa
-    existing_user = db.query(User).filter(
-        (User.username == user_data.username) | (User.email == user_data.email)
-    ).first()
-    if existing_user:
-        raise HTTPException(status_code=400, detail="Username hoặc Email đã tồn tại")
-
-    # Tạo user mới
-    new_user = User(
-        username=user_data.username,
-        email=user_data.email,
-        full_name=user_data.full_name,
-        hashed_password=hash_password(user_data.password),
-        role="user",
-        is_active=True,
-        total_bookings=0,
-        total_spent=0,
-        member_level="Bronze"
-    )
-
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
-
-    return {"message": "Đăng ký thành công!", "user_id": new_user.id}
-
-@app.get("/api/bookings")
-def get_bookings(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
-    payload = verify_token(token)
-    if not payload:
-        raise HTTPException(status_code=401, detail="Token không hợp lệ")
-
-    user_id = payload["id"]
-    bookings = db.query(Booking).filter(Booking.user_id == user_id).all()
-    return [
-        {
-            "id": b.id,
-            "facility_id": b.facility_id,
-            "facility": b.facility.name if b.facility else None,
-            "sport": b.facility.sport_type if b.facility else None,
-            "location": b.facility.location if b.facility else None,
-            "user_id": b.user_id,
-            "start_time": b.start_time,
-            "end_time": b.end_time,
-            "status": b.status,
-            "total_price": b.total_price,
-            "created_at": b.created_at,
-            "payment_status": b.payment_status,
-            "payment_method": b.payment_method,
-            "notes": b.notes
-        }
-        for b in bookings
-    ]
-
-@app.post("/api/bookings")
-def create_booking(booking_data: BookingCreate, token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
-    payload = verify_token(token)
-    if not payload:
-        raise HTTPException(status_code=401, detail="Token không hợp lệ")
-    
-    user_id = payload["id"]
-    
-    # Kiểm tra facility có tồn tại không
-    facility = db.query(Facility).filter(Facility.id == booking_data.facility_id).first()
-    if not facility:
-        raise HTTPException(status_code=404, detail="Không tìm thấy sân")
-    
-    # Tạo booking mới
-    new_booking = Booking(
-        user_id=user_id,
-        facility_id=booking_data.facility_id,
-        booking_date=booking_data.booking_date,
-        start_time=booking_data.start_time,
-        end_time=booking_data.end_time,
-        total_price=booking_data.total_price,
-        status="pending",
-        payment_status="unpaid",
-        payment_method="pending",
-        notes=booking_data.notes or f"Đặt sân {', '.join(booking_data.time_slots)}"
-    )
-    
-    db.add(new_booking)
-    db.commit()
-    db.refresh(new_booking)
-    
-    return {
-        "message": "Đặt sân thành công!",
-        "booking_id": new_booking.id,
-        "facility_name": facility.name,
-        "total_price": new_booking.total_price,
-        "booking_date": new_booking.booking_date.isoformat(),
-        "time_slots": booking_data.time_slots
-    }
-
-@app.post("/api/forgot-password")
-async def forgot_password(
-    request: ForgotPasswordRequest, 
-    background_tasks: BackgroundTasks,
-    db: Session = Depends(get_db)
-):
-    """API gửi email forgot password"""
-    try:
-        # Kiểm tra email có tồn tại trong database
-        user = db.query(User).filter(User.email == request.email).first()
-        if not user:
-            # Không tiết lộ thông tin user có tồn tại hay không (security best practice)
-            return {
-                "message": "Nếu email tồn tại trong hệ thống, bạn sẽ nhận được email hướng dẫn đặt lại mật khẩu trong vài phút."
-            }
-        
-        # Tạo reset token
-        reset_token = create_reset_token(
-            data={"id": user.id, "email": user.email, "purpose": "password_reset"},
-            expires_minutes=15
-        )
-        
-        # Gửi email trong background để không làm chậm response
-        background_tasks.add_task(
-            send_reset_password_email, 
-            request.email, 
-            reset_token,
-            getattr(user, 'name', None)
-        )
-        
-        return {
-            "message": "Nếu email tồn tại trong hệ thống, bạn sẽ nhận được email hướng dẫn đặt lại mật khẩu trong vài phút."
-        }
-        
-    except Exception as e:
-        print(f"Forgot password error: {str(e)}")
-        raise HTTPException(
-            status_code=500, 
-            detail="Có lỗi xảy ra, vui lòng thử lại sau"
-        )
-
-@app.get("/api/verify-reset-token/{token}")
-async def verify_reset_token_endpoint(token: str, db: Session = Depends(get_db)):
-    """API verify reset token"""
-    try:
-        payload = verify_reset_token(token)
-        if not payload:
-            raise HTTPException(
-                status_code=400,
-                detail="Token không hợp lệ hoặc đã hết hạn"
-            )
-        
-        # Kiểm tra purpose
-        if payload.get("purpose") != "password_reset":
-            raise HTTPException(
-                status_code=400,
-                detail="Token không hợp lệ"
-            )
-        
-        # Kiểm tra user vẫn tồn tại
-        user = db.query(User).filter(User.id == payload["id"]).first()
-        if not user:
-            raise HTTPException(
-                status_code=400,
-                detail="User không tồn tại"
-            )
-        
-        # Kiểm tra token đã được sử dụng chưa (tùy chọn)
-        # if user.reset_token_used_at and user.reset_token_used_at > datetime.utcnow() - timedelta(minutes=15):
-        #     raise HTTPException(status_code=400, detail="Token đã được sử dụng")
-        
-        return {
-            "valid": True,
-            "message": "Token hợp lệ",
-            "user_id": payload["id"]
-        }
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        print(f"Verify token error: {str(e)}")
-        raise HTTPException(
-            status_code=500,
-            detail="Có lỗi xảy ra khi xác thực token"
-        )
-
-@app.post("/api/reset-password")
-async def reset_password(request: ResetPasswordRequest, db: Session = Depends(get_db)):
-    """API reset password (từ code gốc của bạn, đã được mở rộng)"""
-    try:
-        payload = verify_reset_token(request.token)
-        if not payload:
-            raise HTTPException(
-                status_code=400, 
-                detail="Token không hợp lệ hoặc đã hết hạn"
-            )
-        
-        # Kiểm tra purpose
-        if payload.get("purpose") != "password_reset":
-            raise HTTPException(
-                status_code=400,
-                detail="Token không hợp lệ"
-            )
-
-        user = db.query(User).filter(User.id == payload["id"]).first()
-        if not user:
-            raise HTTPException(
-                status_code=404, 
-                detail="User không tồn tại"
-            )
-
-        # Kiểm tra token đã được sử dụng chưa (one-time use)
-        # if user.reset_token_used_at and user.reset_token_used_at > datetime.utcnow() - timedelta(minutes=15):
-        #     raise HTTPException(status_code=400, detail="Token đã được sử dụng")
-
-        # Hash password mới
-        user.hashed_password = hash_password(request.new_password)
-        
-        # Mark token as used (tùy chọn)
-        # user.reset_token_used_at = datetime.utcnow()
-        
-        db.commit()
-        
-        # Log security event
-        print(f"Password reset successfully for user ID: {user.id}, email: {user.email} at {datetime.utcnow()}")
-        
-        return {"message": "Đặt lại mật khẩu thành công!"}
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        print(f"Reset password error: {str(e)}")
-        db.rollback()
-        raise HTTPException(
-            status_code=500,
-            detail="Có lỗi xảy ra, vui lòng thử lại"
-        )
-
-@app.get("/api/notifications")
-def get_notifications(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
-    payload = verify_token(token)
-    if not payload:
-        raise HTTPException(status_code=401, detail="Token không hợp lệ")
-
-    user_id = payload["id"]
-    notifications = db.query(Notification).filter(Notification.user_id == user_id).all()
-    return notifications
-
-@app.patch("/api/notifications/{notification_id}/read")
-def mark_as_read(notification_id: int, db: Session = Depends(get_db)):
-    notification = db.query(Notification).filter(Notification.id == notification_id).first()
-    if not notification:
-        raise HTTPException(status_code=404, detail="Notification not found")
-
-    notification.read = True
-    db.commit()
-    db.refresh(notification)
-    return notification
-
-@app.patch("/api/notifications/mark-all-read")
-def mark_all_as_read(
-    token: str = Depends(oauth2_scheme),
-    db: Session = Depends(get_db)
-):
-    payload = verify_token(token)
-    if not payload:
-        raise HTTPException(status_code=401, detail="Token không hợp lệ")
-
-    user_id = payload["id"]
-
-    notifications = db.query(Notification).filter(
-        Notification.user_id == user_id,
-        Notification.read == False
-    ).all()
-
-    for n in notifications:
-        n.read = True
-
-    db.commit()
-
-    return {"message": f"{len(notifications)} notifications marked as read"}
-
-@app.delete("/api/notifications/{notification_id}")
-def delete_notification(
-    notification_id: int,
-    token: str = Depends(oauth2_scheme),
-    db: Session = Depends(get_db)
-):
-    payload = verify_token(token)
-    if not payload:
-        raise HTTPException(status_code=401, detail="Token không hợp lệ")
-
-    user_id = payload["id"]
-
-    # Chỉ lấy notification của user hiện tại
-    notification = db.query(Notification).filter(
-        Notification.id == notification_id,
-        Notification.user_id == user_id
-    ).first()
-
-    if not notification:
-        raise HTTPException(status_code=404, detail="Notification not found")
-
-    db.delete(notification)
-    db.commit()
-
-    return {"message": f"Notification {notification_id} deleted successfully"}

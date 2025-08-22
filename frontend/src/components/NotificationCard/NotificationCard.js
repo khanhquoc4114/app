@@ -52,7 +52,7 @@ const { Text, Title } = Typography;
             const token = getToken();
             if (!token) return;
 
-            const res = await fetch("http://localhost:8000/api/notifications", {
+            const res = await fetch("http://localhost:8000/api/notifications/", {
             headers: {
                 "Authorization": `Bearer ${token}`
             }
