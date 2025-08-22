@@ -43,7 +43,7 @@ const MyBookingsPage = () => {
             return;
         }
 
-        fetch('http://localhost:8000/api/bookings', {
+        fetch(`${process.env.REACT_APP_API_URL}/api/bookings`, {
             headers: {
                 'Authorization': `Bearer ${token}`
             }

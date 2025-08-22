@@ -46,7 +46,7 @@ const NotificationDropdown = ({ children,
             const token = getToken();
             if (!token) return;
 
-            const res = await fetch("http://localhost:8000/api/notifications/", {
+            const res = await fetch(`${process.env.REACT_APP_API_URL}/api/notifications/`, {
             headers: {
                 "Authorization": `Bearer ${token}`
             }
@@ -112,7 +112,7 @@ const NotificationDropdown = ({ children,
 
     const handleDelete = async (notificationId) => {
         const token = getToken();
-        const res = await fetch(`http://localhost:8000/api/notifications/${notificationId}`, {
+        const res = await fetch(`${process.env.REACT_APP_API_URL}/api/notifications/${notificationId}`, {
             method: "DELETE",
             headers: {
                 "Authorization": `Bearer ${token}`

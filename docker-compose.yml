@@ -16,6 +16,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - sports_net
 
   # Backend API
   backend:
@@ -36,6 +38,13 @@ services:
     volumes:
       - ./backend:/app
     command: sh -c "python seed.py && uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
+    networks:
+      - sports_net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
   # Frontend (optional)
   frontend:
@@ -51,10 +60,12 @@ services:
     environment:
       - CHOKIDAR_USEPOLLING=true
       - WATCHPACK_POLLING=true
-      - REACT_APP_API_URL=http://localhost:8000
+      - REACT_APP_API_URL=http://backend:8000
     command: ["npm", "start"]
     depends_on:
       - backend
+    networks:
+      - sports_net    
 
   pgadmin:
     image: dpage/pgadmin4:latest
@@ -67,6 +78,12 @@ services:
       - "5050:80"
     depends_on:
       - postgres
+    networks:
+      - sports_net
 
 volumes:
   postgres_data:
+
+networks:
+  sports_net:
+    driver: bridge

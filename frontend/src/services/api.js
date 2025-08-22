@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:8000/api';
+const API_BASE_URL = `${process.env.REACT_APP_API_URL}/api`;
 
 // Helper function để gọi API
 const apiCall = async (endpoint, options = {}) => {
@@ -43,7 +43,7 @@ export const authAPI = {
 
     // Đăng ký
     register: async (userData) => {
-        const res = await fetch(`http://localhost:8000/api/auth/register`, {
+        const res = await fetch(`${process.env.REACT_APP_API_URL}/api/auth/register`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(userData),

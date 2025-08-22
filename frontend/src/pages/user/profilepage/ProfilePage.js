@@ -59,7 +59,7 @@ const ProfilePage = () => {
             const token = localStorage.getItem("token");
             if (!token) return;
 
-            const res = await fetch("http://localhost:8000/api/auth/me", {
+            const res = await fetch(`${process.env.REACT_APP_API_URL}/api/auth/me`, {
                 headers: {
                     "Authorization": `Bearer ${token}`
                 }
@@ -197,7 +197,7 @@ const uploadProps = (fileType, maxCount = 1) => ({
             });
 
             const token = localStorage.getItem("token");
-            const response = await fetch("http://localhost:8000/api/auth/request-host-upgrade", {
+            const response = await fetch(`${process.env.REACT_APP_API_URL}/api/auth/request-host-upgrade`, {
                 method: "POST",
                 headers: {
                     "Authorization": `Bearer ${token}`

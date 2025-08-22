@@ -55,7 +55,7 @@ const AdminDashboard = () => {
     useEffect(() => {
         const fetchUsers = async () => {
             try {
-                const res = await fetch("http://localhost:8000/api/users/all");
+                const res = await fetch(`${process.env.REACT_APP_API_URL}/api/users/all`);
                 const data = await res.json();
                 setUsers(data);
             } catch (err) {

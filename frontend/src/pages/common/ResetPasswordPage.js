@@ -43,7 +43,7 @@ const ResetPasswordPage = () => {
 
     const verifyToken = async () => {
         try {
-            const res = await fetch(`http://localhost:8000/api/auth/verify-reset-token/${token}`, {
+            const res = await fetch(`${process.env.REACT_APP_API_URL}/api/auth/verify-reset-token/${token}`, {
                 method: "GET",
                 headers: { "Content-Type": "application/json" }
             });
@@ -65,7 +65,7 @@ const ResetPasswordPage = () => {
     const handleSubmit = async (values) => {
         setLoading(true);
         try {
-            const res = await fetch("http://localhost:8000/api/auth/reset-password", {
+            const res = await fetch(`${process.env.REACT_APP_API_URL}/api/auth/reset-password`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
