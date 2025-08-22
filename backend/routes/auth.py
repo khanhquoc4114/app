@@ -15,6 +15,7 @@ from auth import (
 
 from auth import send_reset_password_email
 from datetime import datetime
+from services.notification import create_notification
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 
@@ -27,6 +28,17 @@ def login(request: LoginRequest, db: Session = Depends(get_db)):
     access_token = create_access_token(
         data={"sub": user.username, "role": user.role, "id": user.id}
     )
+    
+    create_notification(
+        db=db,
+        user_id=user.id,
+        type="system",
+        title="Đăng nhập thành công",
+        message=f"Tài khoản {user.username} vừa đăng nhập vào hệ thống",
+        priority="low",
+        data={}
+    )
+    
     return {
         "access_token": access_token,
         "token_type": "bearer",
