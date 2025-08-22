@@ -62,7 +62,7 @@ export function createSystemMessage(content) {
     return new ChatMessage(Date.now(), 'system', content, dayjs());
 }
 
-// Tạo tin nhắn nhân viên
+// Tạo tin nhắn chủ sân
 export function createhostMessage(content) {
     return new ChatMessage(Date.now() + 1, 'host', content, dayjs(), <CustomerServiceOutlined />);
 }

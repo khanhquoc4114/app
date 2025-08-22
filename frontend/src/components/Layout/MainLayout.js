@@ -258,7 +258,7 @@ const MainLayout = ({ children, userRole = 'user' }) => {
                                         whiteSpace: 'nowrap'
                                     }}>
                                         {userRole === 'admin' ? 'Quản trị viên' :
-                                            userRole === 'host' ? 'Nhân viên' : 'Khách hàng'}
+                                            userRole === 'host' ? 'Chủ sân' : 'Khách hàng'}
                                     </Text>
                                 </div>
                             </Space>

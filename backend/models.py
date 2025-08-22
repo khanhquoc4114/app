@@ -82,12 +82,9 @@ class Notification(Base):
 
     # Liên kết với user (ai là người nhận notification này)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-
     type = Column(String, nullable=False) # loại notification (booking, payment, system, etc.)
-
-    # Nội dung
-    title = Column(String, nullable=False)
-    message = Column(Text, nullable=False)
+    title = Column(String, nullable=False) # Tiêu đề
+    message = Column(Text, nullable=False) # Nội dung 
 
     # Metadata
     timestamp = Column(DateTime(timezone=True), server_default=func.now())

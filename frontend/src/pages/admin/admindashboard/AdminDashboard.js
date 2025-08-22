@@ -66,6 +66,7 @@ const AdminDashboard = () => {
         fetchUsers();
     }, []);
 
+    // Mock data
     const revenueData = [
         { date: '2024-01-15', revenue: 1200000, bookings: 8 },
         { date: '2024-01-16', revenue: 1800000, bookings: 12 },
@@ -201,7 +202,7 @@ const AdminDashboard = () => {
             render: (role) => {
                 const config = {
                     admin: { color: 'red', text: 'Admin' },
-                    host: { color: 'orange', text: 'Nhân viên' },
+                    host: { color: 'orange', text: 'Chủ sân' },
                     user: { color: 'blue', text: 'Khách hàng' }
                 };
                 return <Tag color={config[role].color}>{config[role].text}</Tag>;
@@ -314,7 +315,7 @@ const AdminDashboard = () => {
                     <TabPane tab="Quản lý người dùng" key="users">
                         <div style={{ marginBottom: 16 }}>
                             <Button type="primary" icon={<PlusOutlined />}>
-                                Thêm nhân viên
+                                Thêm chủ sân
                             </Button>
                         </div>
                         <Table
