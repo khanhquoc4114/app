@@ -29,7 +29,7 @@ const ForgotPasswordPage = () => {
         try {
             message.success("Email khôi phục mật khẩu đã được gửi!" + values.email);
             // Giả lập API call để gửi email reset password
-            const res = await fetch("http://localhost:8000/api/forgot-password", {
+            const res = await fetch("http://localhost:8000/api/auth/forgot-password", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({

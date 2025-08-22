@@ -17,10 +17,6 @@ class UserCreate(BaseModel):
     full_name: str
     password: str
 
-class UserLogin(BaseModel):
-    username: str
-    password: str
-
 class UserResponse(BaseModel):
     id: int
     username: str
@@ -59,7 +55,6 @@ class FacilityResponse(FacilityBase):
     class Config:
         from_attributes = True
         
-        
 class LoginRequest(BaseModel):
     username: str
     password: str
@@ -87,7 +82,6 @@ class UserCreate(BaseModel):
     email: EmailStr
     full_name: str
     password: str
-    
     
 class ForgotPasswordRequest(BaseModel):
     email: EmailStr
