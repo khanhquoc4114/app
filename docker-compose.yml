@@ -25,6 +25,8 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: sports_facility_backend
+    env_file:
+      - .env
     ports:
       - "8000:8000"
     environment:
@@ -60,7 +62,7 @@ services:
     environment:
       - CHOKIDAR_USEPOLLING=true
       - WATCHPACK_POLLING=true
-      - REACT_APP_API_URL=http://backend:8000
+      - REACT_APP_API_URL=http://localhost:8000
     command: ["npm", "start"]
     depends_on:
       - backend
