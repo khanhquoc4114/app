@@ -6,7 +6,6 @@ import {
     Dropdown,
     Space,
     Typography,
-    Badge,
     Button,
     Drawer
 } from 'antd';
@@ -14,7 +13,6 @@ import {
     HomeOutlined,
     ShopOutlined,
     CalendarOutlined,
-    MessageOutlined,
     UserOutlined,
     SettingOutlined,
     LogoutOutlined,

@@ -4,8 +4,6 @@ import { Row, Col, Card, Statistic, Table, Typography, Space, Tag, Button, Modal
 import { DollarOutlined, UserOutlined, ShopOutlined, CalendarOutlined, PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined, UploadOutlined, LockOutlined, UnlockOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import AdminFacility from './AdminFacility';
-import AdminUser from './AdminUser';
-import { handleAddFacility, handleEditFacility, handleDeleteFacility, handleToggleUserStatus } from './adminDashboardLogic';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -14,9 +12,7 @@ const { RangePicker } = DatePicker;
 
 const AdminDashboard = () => {
     const [facilityModalVisible, setFacilityModalVisible] = useState(false);
-    const [userModalVisible, setUserModalVisible] = useState(false);
     const [selectedFacility, setSelectedFacility] = useState(null);
-    const [selectedUser, setSelectedUser] = useState(null);
     const [dateRange, setDateRange] = useState([dayjs().subtract(7, 'day'), dayjs()]);
 
     // Mock data

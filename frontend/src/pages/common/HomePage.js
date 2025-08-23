@@ -19,6 +19,34 @@ const HomePage = () => {
     });
     const [popularSports, setPopularSports] = React.useState([]);
 
+const sportMeta = React.useMemo(() => ({
+    badminton: { name: "Cầu lông", image: "🏸", description: "Sân cầu lông chất lượng cao" },
+    football: { name: "Bóng đá", image: "⚽", description: "Sân bóng đá cỏ nhân tạo" },
+    tennis: { name: "Tennis", image: "🎾", description: "Sân tennis tiêu chuẩn quốc tế" },
+    basketball: { name: "Bóng rổ", image: "🏀", description: "Sân bóng rổ trong nhà và ngoài trời" },
+}), []); // chỉ tạo 1 lần
+
+React.useEffect(() => {
+    const fetchPopularSports = async () => {
+        try {
+            const res = await fetch(`${process.env.REACT_APP_API_URL}/api/facilities/popular-sports`);
+            const data = await res.json();
+
+            const merged = data.map(item => ({
+                ...sportMeta[item.sportType],
+                sportType: item.sportType,
+                courts: item.courts
+            }));
+
+            setPopularSports(merged);
+        } catch (err) {
+            console.error("Lỗi fetch popular sports:", err);
+        }
+    };
+
+    fetchPopularSports();
+}, [sportMeta]);
+
     React.useEffect(() => {
         const fetchStats = async () => {
             try {
@@ -31,27 +59,6 @@ const HomePage = () => {
         };
 
         fetchStats();
-    }, []);
-
-    React.useEffect(() => {
-    const fetchPopularSports = async () => {
-        try {
-        const res = await fetch(`${process.env.REACT_APP_API_URL}/api/facilities/popular-sports`);
-        const data = await res.json();
-
-        const merged = data.map(item => ({
-            ...sportMeta[item.sportType],
-            sportType: item.sportType,
-            courts: item.courts
-        }));
-
-        setPopularSports(merged);
-        } catch (err) {
-        console.error("Lỗi fetch popular sports:", err);
-        }
-    };
-
-    fetchPopularSports();
     }, []);
 
     const statItems = [
@@ -69,61 +76,6 @@ const HomePage = () => {
             title: 'Người dùng hoạt động',
             value: stats.users,
             icon: <UserOutlined style={{ color: '#faad14' }} />,
-        },
-    ];
-
-    const sportMeta = {
-  badminton: {
-    name: "Cầu lông",
-    image: "🏸",
-    description: "Sân cầu lông chất lượng cao với hệ thống chiếu sáng hiện đại"
-  },
-  football: {
-    name: "Bóng đá",
-    image: "⚽",
-    description: "Sân bóng đá cỏ nhân tạo, phù hợp cho các trận đấu 5v5, 7v7"
-  },
-  tennis: {
-    name: "Tennis",
-    image: "🎾",
-    description: "Sân tennis tiêu chuẩn quốc tế với mặt sân chuyên nghiệp"
-  },
-  basketball: {
-    name: "Bóng rổ",
-    image: "🏀",
-    description: "Sân bóng rổ trong nhà và ngoài trời với rổ chuẩn NBA"
-  }
-};
-
-
-    const popularSportsItems = [
-        {
-            name: 'Cầu lông',
-            courts: 8,
-            image: '🏸',
-            description: 'Sân cầu lông chất lượng cao với hệ thống chiếu sáng hiện đại',
-            sportType: 'badminton'
-        },
-        {
-            name: 'Bóng đá',
-            courts: 4,
-            image: '⚽',
-            description: 'Sân bóng đá cỏ nhân tạo, phù hợp cho các trận đấu 5v5, 7v7',
-            sportType: 'football'
-        },
-        {
-            name: 'Tennis',
-            courts: 6,
-            image: '🎾',
-            description: 'Sân tennis tiêu chuẩn quốc tế với mặt sân chuyên nghiệp',
-            sportType: 'tennis'
-        },
-        {
-            name: 'Bóng rổ',
-            courts: 3,
-            image: '🏀',
-            description: 'Sân bóng rổ trong nhà và ngoài trời với rổ chuẩn NBA',
-            sportType: 'basketball'
         },
     ];
 

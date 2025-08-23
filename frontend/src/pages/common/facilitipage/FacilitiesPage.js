@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     Row,
     Col,
@@ -17,7 +17,6 @@ import {
 import {
     EnvironmentOutlined,
     ClockCircleOutlined,
-    CalendarOutlined,
     HomeOutlined,
     HeartOutlined,
     HeartFilled,
@@ -52,6 +51,50 @@ const FacilitiesPage = () => {
     const [userLocation, setUserLocation] = useState(null);
     const [favoritesLoading, setFavoritesLoading] = useState(true);
     const API_URL = process.env.REACT_APP_API_URL;
+
+    const fetchFavorites = useCallback(async () => {
+        const storedToken = localStorage.getItem("token");
+        if (!storedToken) {
+            setFavoritesLoading(false);
+            return;
+        }
+
+        try {
+            setFavoritesLoading(true);
+            const res = await fetch(`${API_URL}/api/me/favorites`, {
+                headers: {
+                    "Authorization": `Bearer ${storedToken}`
+                }
+            });
+
+            if (!res.ok) {
+                console.error("API response not ok:", res.status, res.statusText);
+                return;
+            }
+
+            const data = await res.json();
+            console.log("Favorites API response:", data);
+            
+            let favoriteIds = [];
+            if (Array.isArray(data)) {
+                favoriteIds = data.map(f => f.facility_id || f.id || f);
+            } else if (data.favorites && Array.isArray(data.favorites)) {
+                favoriteIds = data.favorites.map(f => f.facility_id || f.id || f);
+            }
+            
+            console.log("Processed favorite IDs:", favoriteIds);
+            setFavorites(favoriteIds);
+            
+        } catch (err) {
+            console.error("Error fetching favorites:", err);
+        } finally {
+            setFavoritesLoading(false);
+        }
+    }, [API_URL]);
+
+    useEffect(() => {
+        fetchFavorites();
+    }, [fetchFavorites]);
 
     // Handle URL query parameters
     useEffect(() => {
@@ -157,19 +200,6 @@ const FacilitiesPage = () => {
         return slots;
     };
 
-    const sportTypes = [
-        { value: 'all', label: 'Tất cả' },
-        { value: 'badminton', label: 'Cầu lông' },
-        { value: 'football', label: 'Bóng đá' },
-        { value: 'tennis', label: 'Tennis' },
-        { value: 'basketball', label: 'Bóng rổ' }
-    ];
-
-    const timeSlots = [
-        '06:00', '07:00', '08:00', '09:00', '10:00', '11:00',
-        '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00'
-    ];
-
     // Filter facilities
     const filteredFacilities = facilities.filter(facility => {
         const searchText = filters.searchText.toLowerCase();
@@ -237,50 +267,7 @@ const FacilitiesPage = () => {
         return favorites.includes(facility.id);
     });
 
-    const fetchFavorites = async () => {
-        const storedToken = localStorage.getItem("token");
-        if (!storedToken) {
-            setFavoritesLoading(false);
-            return;
-        }
 
-        try {
-            setFavoritesLoading(true);
-            const res = await fetch(`${API_URL}/api/me/favorites`, {
-                headers: {
-                    "Authorization": `Bearer ${storedToken}`
-                }
-            });
-
-            if (!res.ok) {
-                console.error("API response not ok:", res.status, res.statusText);
-                return;
-            }
-
-            const data = await res.json();
-            console.log("Favorites API response:", data);
-            
-            // Handle different response formats
-            let favoriteIds = [];
-            if (Array.isArray(data)) {
-                favoriteIds = data.map(f => f.facility_id || f.id || f);
-            } else if (data.favorites && Array.isArray(data.favorites)) {
-                favoriteIds = data.favorites.map(f => f.facility_id || f.id || f);
-            }
-            
-            console.log("Processed favorite IDs:", favoriteIds);
-            setFavorites(favoriteIds);
-            
-        } catch (err) {
-            console.error("Error fetching favorites:", err);
-        } finally {
-            setFavoritesLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchFavorites();
-    }, [API_URL]);
 
     const getSportIcon = (sportType) => {
         const icons = {

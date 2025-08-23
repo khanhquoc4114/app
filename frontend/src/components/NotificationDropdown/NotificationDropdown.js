@@ -5,8 +5,6 @@ import {
     List,
     Avatar,
     Typography,
-    Space,
-    Tag,
     Button,
     Empty,
     Divider
@@ -47,9 +45,9 @@ const NotificationDropdown = ({ children,
             if (!token) return;
 
             const res = await fetch(`${process.env.REACT_APP_API_URL}/api/notifications/`, {
-            headers: {
-                "Authorization": `Bearer ${token}`
-            }
+                headers: {
+                    "Authorization": `Bearer ${token}`
+                }
             });
 
             if (res.ok) {
@@ -63,7 +61,7 @@ const NotificationDropdown = ({ children,
         };
 
         fetchNotifications();
-    }, []);
+    }, [setNotificationList]);
 
     const unreadCount = notificationList.filter(n => !n.read).length;
     const recentNotifications = notificationList.slice(0, 4); // Chỉ hiển thị 4 thông báo gần nhất

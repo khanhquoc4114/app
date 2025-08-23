@@ -2,14 +2,13 @@
 // 1. Xử lý giao diện của page
 import React, { useState, useEffect } from 'react';
 import {
-    Card, Table, Typography, Space, Tag, Button, Modal, Rate, Input, message, Tabs, Empty, Row, Col
+    Card, Table, Typography, Space, Tag, Button, Modal, Rate, Input, Tabs, Empty, Row, Col
 } from 'antd';
 import {
-    CalendarOutlined, ClockCircleOutlined, DollarOutlined, StarOutlined, DeleteOutlined, EditOutlined
+    CalendarOutlined, ClockCircleOutlined, StarOutlined, DeleteOutlined, EditOutlined
 } from '@ant-design/icons';
 
 import dayjs from 'dayjs';
-import BookingItem from './BookingItem';
 import { handleCancelBooking, formatPrice, getStatusColor, getStatusText, handleReviewBooking, handleSubmitReview } from './bookingLogic';
 
 const { Title, Text } = Typography;

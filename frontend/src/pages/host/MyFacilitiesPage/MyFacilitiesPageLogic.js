@@ -1,5 +1,4 @@
 import { Modal, message } from 'antd';
-import React from 'react';
 
 // Lấy tên môn thể thao
 export const getSportName = (sportType) => {

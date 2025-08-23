@@ -16,7 +16,7 @@ import {
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 
-const { Title, Text, Link } = Typography;
+const { Title, Text} = Typography;
 
 const ForgotPasswordPage = () => {
     const [loading, setLoading] = useState(false);
