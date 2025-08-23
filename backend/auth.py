@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 from email.mime.multipart import MIMEMultipart
 import os
 import smtplib
+from fastapi import Depends, HTTPException
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from email.mime.text import MIMEText
@@ -153,3 +154,9 @@ async def send_reset_password_email(email: str, reset_token: str, user_name: str
     except Exception as e:
         print(f"Error sending email to {email}: {str(e)}")
         return False
+    
+def get_current_user_id(token: str = Depends(oauth2_scheme)) -> int:
+    payload = verify_token(token)
+    if not payload:
+        raise HTTPException(status_code=401, detail="Token không hợp lệ")
+    return payload["id"]

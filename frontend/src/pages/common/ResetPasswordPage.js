@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     Card,
     Form,
@@ -32,24 +32,14 @@ const ResetPasswordPage = () => {
     const { token } = useParams();
     const navigate = useNavigate();
 
-    useEffect(() => {
-        // Kiểm tra token khi component mount
-        if (token) {
-            verifyToken();
-        } else {
-            setTokenValid(false);
-        }
-    }, [token]);
-
-    const verifyToken = async () => {
+    const verifyToken = useCallback(async () => {
         try {
-            const res = await fetch(`http://localhost:8000/api/auth/verify-reset-token/${token}`, {
+            const res = await fetch(`${process.env.REACT_APP_API_URL}/api/auth/verify-reset-token/${token}`, {
                 method: "GET",
                 headers: { "Content-Type": "application/json" }
             });
 
             if (res.ok) {
-                const data = await res.json();
                 setTokenValid(true);
             } else {
                 const error = await res.json();
@@ -60,12 +50,20 @@ const ResetPasswordPage = () => {
             setTokenValid(false);
             message.error("Có lỗi xảy ra khi xác thực token");
         }
-    };
+    }, [token]);
+
+    useEffect(() => {
+        if (token) {
+            verifyToken();
+        } else {
+            setTokenValid(false);
+        }
+    }, [token, verifyToken]);
 
     const handleSubmit = async (values) => {
         setLoading(true);
         try {
-            const res = await fetch("http://localhost:8000/api/auth/reset-password", {
+            const res = await fetch(`${process.env.REACT_APP_API_URL}/api/auth/reset-password`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({

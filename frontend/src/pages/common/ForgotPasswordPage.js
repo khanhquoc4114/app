@@ -16,7 +16,7 @@ import {
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 
-const { Title, Text, Link } = Typography;
+const { Title, Text} = Typography;
 
 const ForgotPasswordPage = () => {
     const [loading, setLoading] = useState(false);
@@ -29,7 +29,7 @@ const ForgotPasswordPage = () => {
         try {
             message.success("Email khôi phục mật khẩu đã được gửi!" + values.email);
             // Giả lập API call để gửi email reset password
-            const res = await fetch("http://localhost:8000/api/auth/forgot-password", {
+            const res = await fetch(`${process.env.REACT_APP_API_URL}/api/auth/forgot-password`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({

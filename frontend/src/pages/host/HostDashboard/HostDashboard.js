@@ -10,9 +10,7 @@ import {
     Tag,
     Button,
     DatePicker,
-    Modal,
     Tabs,
-    Select,
     Radio
 } from 'antd';
 import {
@@ -28,7 +26,6 @@ import { handleCheckIn, handleCancelBooking, formatPrice } from './HostDashboard
 
 const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
-const { Option } = Select;
 
 const HostDashboard = () => {
     const [selectedDate, setSelectedDate] = useState(dayjs());

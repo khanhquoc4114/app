@@ -9,17 +9,14 @@ import {
     Button,
     Space,
     Typography,
-    Collapse,
     Checkbox,
     Rate,
-    TimePicker,
     Tag,
     Divider,
     AutoComplete
 } from 'antd';
 import {
     SearchOutlined,
-    FilterOutlined,
     EnvironmentOutlined,
     DollarOutlined,
     ClockCircleOutlined,
@@ -28,11 +25,9 @@ import {
     DownOutlined,
     UpOutlined
 } from '@ant-design/icons';
-import dayjs from 'dayjs';
 
 const { Text } = Typography;
 const { Option } = Select;
-const { Panel } = Collapse;
 
 const AdvancedSearch = ({
     onSearch,

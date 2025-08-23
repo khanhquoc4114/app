@@ -4,8 +4,6 @@ import { Row, Col, Card, Statistic, Table, Typography, Space, Tag, Button, Modal
 import { DollarOutlined, UserOutlined, ShopOutlined, CalendarOutlined, PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined, UploadOutlined, LockOutlined, UnlockOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import AdminFacility from './AdminFacility';
-import AdminUser from './AdminUser';
-import { handleAddFacility, handleEditFacility, handleDeleteFacility, handleToggleUserStatus } from './adminDashboardLogic';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -14,9 +12,7 @@ const { RangePicker } = DatePicker;
 
 const AdminDashboard = () => {
     const [facilityModalVisible, setFacilityModalVisible] = useState(false);
-    const [userModalVisible, setUserModalVisible] = useState(false);
     const [selectedFacility, setSelectedFacility] = useState(null);
-    const [selectedUser, setSelectedUser] = useState(null);
     const [dateRange, setDateRange] = useState([dayjs().subtract(7, 'day'), dayjs()]);
 
     // Mock data
@@ -55,7 +51,7 @@ const AdminDashboard = () => {
     useEffect(() => {
         const fetchUsers = async () => {
             try {
-                const res = await fetch("http://localhost:8000/api/users/all");
+                const res = await fetch(`${process.env.REACT_APP_API_URL}/api/users/all`);
                 const data = await res.json();
                 setUsers(data);
             } catch (err) {

@@ -5,10 +5,8 @@ import {
     Typography,
     Space,
     Avatar,
-    Divider,
     Tag,
     Spin,
-    message
 } from 'antd';
 import {
     SendOutlined,

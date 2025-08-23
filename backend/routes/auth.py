@@ -10,7 +10,7 @@ from schemas import (
 from auth import (
     verify_password, hash_password,
     create_access_token, verify_token,
-    oauth2_scheme, create_reset_token, verify_reset_token
+    oauth2_scheme, create_reset_token, verify_reset_token, get_current_user_id
 )
 
 from auth import send_reset_password_email

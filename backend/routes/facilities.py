@@ -2,7 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from database import get_db
-from models import Facility
+from models import Facility, UserFavorite
+from auth import verify_token, oauth2_scheme, get_current_user_id
 
 router = APIRouter(prefix="/api/facilities", tags=["Facilities"])
 
@@ -66,3 +67,51 @@ def get_popular_sports(db: Session = Depends(get_db)):
         .all()
     )
     return [{"sportType": r.sport_type, "courts": r.courts} for r in results]
+
+@router.post("/{facility_id}/favorite")
+def add_favorite(
+    facility_id: int,
+    token: str = Depends(oauth2_scheme),
+    db: Session = Depends(get_db)
+):
+    payload = verify_token(token)
+    if not payload:
+        raise HTTPException(status_code=401, detail="Token không hợp lệ")
+    user_id = payload["id"]
+
+    # kiểm tra facility có tồn tại không
+    facility = db.query(Facility).filter(Facility.id == facility_id).first()
+    if not facility:
+        raise HTTPException(status_code=404, detail="Sân không tồn tại")
+
+    # kiểm tra có favorite rồi chưa
+    existing = db.query(UserFavorite).filter_by(user_id=user_id, facility_id=facility_id).first()
+    if existing:
+        raise HTTPException(status_code=409, detail="Bạn đã thích sân này rồi")
+
+    # thêm favorite
+    new_favorite = UserFavorite(user_id=user_id, facility_id=facility_id)
+    db.add(new_favorite)
+    db.commit()
+    db.refresh(new_favorite)
+
+    return {"message": "Đã thích sân thành công", "favorite_id": new_favorite.id}
+
+@router.delete("/{facility_id}/favorite")
+def remove_favorite(
+    facility_id: int,
+    token: str = Depends(oauth2_scheme),
+    db: Session = Depends(get_db)
+):
+    payload = verify_token(token)
+    if not payload:
+        raise HTTPException(status_code=401, detail="Token không hợp lệ")
+    user_id = payload["id"]
+
+    favorite = db.query(UserFavorite).filter_by(user_id=user_id, facility_id=facility_id).first()
+    if not favorite:
+        raise HTTPException(status_code=404, detail="Bạn chưa thích sân này")
+
+    db.delete(favorite)
+    db.commit()
+    return {"message": "Đã bỏ thích sân"}

@@ -8,7 +8,6 @@ import {
     Tag,
     Button,
     Badge,
-    Dropdown,
     Empty,
     Divider,
     message
@@ -32,7 +31,7 @@ import { useNotifications } from "../../contexts/NotificationContext";
 
 dayjs.extend(relativeTime);
 
-const { Text, Title } = Typography;
+const { Text } = Typography;
 
     const NotificationCard = ({
         notifications: initialNotifications = [],
@@ -44,18 +43,16 @@ const { Text, Title } = Typography;
     }) => {
     const [filter, setFilter] = useState('all');
     const [notificationList, setNotificationList] = useNotifications();
-    const [userInfo, setUserInfo] = useState(null);
-
 
     useEffect(() => {
         const fetchNotifications = async () => {
             const token = getToken();
             if (!token) return;
 
-            const res = await fetch("http://localhost:8000/api/notifications/", {
-            headers: {
-                "Authorization": `Bearer ${token}`
-            }
+            const res = await fetch(`${process.env.REACT_APP_API_URL}/api/notifications/`, {
+                headers: {
+                    "Authorization": `Bearer ${token}`
+                }
             });
 
             if (res.ok) {
@@ -69,7 +66,7 @@ const { Text, Title } = Typography;
         };
 
         fetchNotifications();
-    }, []);
+    }, [setNotificationList]);
 
     const mockNotifications = [
         {
@@ -170,13 +167,13 @@ const { Text, Title } = Typography;
             onMarkAllAsRead();
             }
         } catch (err) {
-            console.error("Lỗi khi mark all as read:", err);
+            console.error("Lỗi khi đánh dấu đã đọc :", err);
         }
     };
 
     const handleDelete = async (notificationId) => {
         const token = getToken();
-        const res = await fetch(`http://localhost:8000/api/notifications/${notificationId}`, {
+        const res = await fetch(`${process.env.REACT_APP_API_URL}/api/notifications/${notificationId}`, {
             method: "DELETE",
             headers: {
                 "Authorization": `Bearer ${token}`

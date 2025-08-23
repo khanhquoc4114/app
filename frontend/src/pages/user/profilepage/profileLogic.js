@@ -23,7 +23,7 @@ export const handleChangePassword = async (values, setLoading, passwordForm) => 
     try {
         const token = localStorage.getItem("token");
 
-        const res = await fetch("http://localhost:8000/api/auth/change-password", {
+        const res = await fetch(`${process.env.REACT_APP_API_URL}/api/auth/change-password`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
