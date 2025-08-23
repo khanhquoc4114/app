@@ -1,6 +1,6 @@
 import React from 'react';
-import { Space, Typography, Tag, Button } from 'antd';
-import { HeartFilled, EnvironmentOutlined, ShopOutlined, ReloadOutlined } from '@ant-design/icons';
+import { Space, Typography, Tag } from 'antd';
+import { HeartFilled, EnvironmentOutlined, ShopOutlined } from '@ant-design/icons';
 
 const { Text } = Typography;
 
@@ -8,8 +8,7 @@ const FacilityStats = ({
     totalCount,
     favoriteCount,
     nearbyCount,
-    hasLocation,
-    onResetLocation
+    hasLocation
 }) => {
     return (
         <div style={{ marginBottom: 16 }}>
@@ -44,18 +43,6 @@ const FacilityStats = ({
                         <Tag color="success" style={{ margin: 0 }}>
                             ✅ Đã bật định vị
                         </Tag>
-                        {onResetLocation && (
-                            <Button
-                                size="small"
-                                type="text"
-                                icon={<ReloadOutlined />}
-                                onClick={onResetLocation}
-                                style={{ fontSize: '12px', height: '20px', padding: '0 4px' }}
-                                title="Đặt lại cài đặt vị trí"
-                            >
-                                Đặt lại
-                            </Button>
-                        )}
                     </Space>
                 )}
             </Space>

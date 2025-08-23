@@ -15,6 +15,7 @@ import MainLayout from './components/Layout/MainLayout';
 import LoginPage from './pages/common/LoginPage';
 import HomePage from './pages/common/HomePage';
 import FacilitiesPage from './pages/common/facilitipage/FacilitiesPage';
+import FacilityDetailPage from './pages/common/FacilityDetailPage/FacilityDetailPage';
 import ChatPage from './pages/common/chat/ChatPage';
 import NotificationsPage from './pages/common/NotificationsPage';
 import RegisterPage from './pages/common/RegisterPage';
@@ -138,6 +139,18 @@ const AppRoutes = () => {
                 }
             />
 
+            {/* Facility Detail Route */}
+            <Route
+                path="/facilities/:id"
+                element={
+                    <ProtectedRoute>
+                        <LayoutWrapper userRole={userRole}>
+                            <FacilityDetailPage />
+                        </LayoutWrapper>
+                    </ProtectedRoute>
+                }
+            />
+
             {/* User Routes */}
             <Route
                 path="/my-bookings"
@@ -205,6 +218,7 @@ const AppRoutes = () => {
                     </ProtectedRoute>
                 }
             />
+
 
             {/* Admin Routes */}
             <Route
