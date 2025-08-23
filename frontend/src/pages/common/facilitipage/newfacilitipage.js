@@ -1,8 +1,28 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { getDistance } from 'geolib';
-import { Row, Col, Card, Button, Typography, Tag, Rate, message, Breadcrumb } from 'antd';
-import { EnvironmentOutlined, ClockCircleOutlined, HomeOutlined, HeartOutlined, HeartFilled } from '@ant-design/icons';
-import { useLocation, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+    Row,
+    Col,
+    Card,
+    Button,
+    Typography,
+    Space,
+    Tag,
+    Rate,
+    Modal,
+    Form,
+    DatePicker,
+    message,
+    Breadcrumb
+} from 'antd';
+import {
+    EnvironmentOutlined,
+    ClockCircleOutlined,
+    HomeOutlined,
+    HeartOutlined,
+    HeartFilled,
+} from '@ant-design/icons';
+import dayjs from 'dayjs';
+import { useLocation } from 'react-router-dom';
 import AdvancedSearch from '../../../components/AdvancedSearch/AdvancedSearch';
 import FacilityStats from '../../../components/FacilityStats/FacilityStats';
 
@@ -21,68 +41,14 @@ const FacilitiesPage = () => {
         availability: 'all',
         sortBy: 'name'
     });
+    const [bookingModalVisible, setBookingModalVisible] = useState(false);
+    const [selectedFacility, setSelectedFacility] = useState(null);
+    const [selectedDate, setSelectedDate] = useState(dayjs());
+    const [selectedTimeSlots, setSelectedTimeSlots] = useState([]);
+    const [bookedSlots, setBookedSlots] = useState({});
     const [facilities, setFacilities] = useState([]);
     const [favorites, setFavorites] = useState([]);
     const [userLocation, setUserLocation] = useState(null);
-    const [facilitiesWithCoords, setFacilitiesWithCoords] = useState([]);
-    const [coordsLoading, setCoordsLoading] = useState(false);
-    const navigate = useNavigate();
-    // Cache cho coordinates để tránh gọi API nhiều lần
-    const [coordsCache, setCoordsCache] = useState(() => {
-        const saved = localStorage.getItem('facilityCoordinatesCache');
-        return saved ? JSON.parse(saved) : {};
-    });
-
-    // Lấy vị trí hiện tại của user bằng Geolocation API
-    useEffect(() => {
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    setUserLocation({
-                        latitude: position.coords.latitude,
-                        longitude: position.coords.longitude
-                    });
-                },
-                (error) => {
-                    console.warn('Không thể lấy vị trí:', error);
-                    setUserLocation(null);
-                }
-            );
-        }
-    }, []);
-    
-    // Hàm lấy lat/lng từ địa chỉ bằng Nominatim (OpenStreetMap) với cache
-    const getLatLngFromAddress = async (address) => {
-        // Kiểm tra cache trước
-        if (coordsCache[address]) {
-            return coordsCache[address];
-        }
-
-        const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address)}&format=json&limit=1`;
-        try {
-            const response = await fetch(url, {
-                headers: { 'User-Agent': 'sports-facility-frontend/1.0' }
-            });
-            const data = await response.json();
-            if (data && data.length > 0) {
-                const coords = {
-                    latitude: parseFloat(data[0].lat),
-                    longitude: parseFloat(data[0].lon)
-                };
-                
-                // Lưu vào cache
-                const newCache = { ...coordsCache, [address]: coords };
-                setCoordsCache(newCache);
-                localStorage.setItem('facilityCoordinatesCache', JSON.stringify(newCache));
-                
-                return coords;
-            }
-        } catch (e) {
-            console.error('Nominatim error:', e);
-        }
-        return null;
-    };
-
     const [favoritesLoading, setFavoritesLoading] = useState(true);
     const API_URL = process.env.REACT_APP_API_URL;
 
@@ -130,78 +96,6 @@ const FacilitiesPage = () => {
         fetchFavorites();
     }, [fetchFavorites]);
 
-    // Tự động lấy lat/lng từ location bằng Nominatim nếu chưa có (FIXED: không tạo vòng lặp)
-    useEffect(() => {
-        async function fetchLatLngForFacilities() {
-            if (facilities.length === 0) return;
-            
-            setCoordsLoading(true);
-            const facilitiesNeedingCoords = facilities.filter(f => 
-                (!f.latitude || !f.longitude) && f.location && !coordsCache[f.location]
-            );
-            
-            if (facilitiesNeedingCoords.length === 0) {
-                // Tất cả facilities đã có coords hoặc đã cache
-                const updated = facilities.map(facility => ({
-                    ...facility,
-                    ...coordsCache[facility.location]
-                }));
-                setFacilitiesWithCoords(updated);
-                setCoordsLoading(false);
-                return;
-            }
-
-            console.log(`Đang lấy tọa độ cho ${facilitiesNeedingCoords.length} địa điểm...`);
-            
-            // Gọi API từng cái một để tránh rate limit
-            const updatedFacilities = [...facilities];
-            for (let i = 0; i < facilitiesNeedingCoords.length; i++) {
-                const facility = facilitiesNeedingCoords[i];
-                const coords = await getLatLngFromAddress(facility.location);
-                if (coords) {
-                    const index = updatedFacilities.findIndex(f => f.id === facility.id);
-                    if (index !== -1) {
-                        updatedFacilities[index] = { ...updatedFacilities[index], ...coords };
-                    }
-                }
-                // Delay nhỏ để tránh rate limit
-                if (i < facilitiesNeedingCoords.length - 1) {
-                    await new Promise(resolve => setTimeout(resolve, 500));
-                }
-            }
-            
-            setFacilitiesWithCoords(updatedFacilities);
-            setCoordsLoading(false);
-        }
-        
-        fetchLatLngForFacilities();
-    }, [facilities.length]); // ✅ Chỉ phụ thuộc vào length, không phụ thuộc vào facilities
-
-    // Tính khoảng cách với useMemo để tối ưu hiệu suất
-    const facilitiesWithDistance = React.useMemo(() => {
-        const baseFacilities = facilitiesWithCoords.length > 0 ? facilitiesWithCoords : facilities;
-        
-        if (!userLocation) return baseFacilities;
-        
-        return baseFacilities.map(facility => {
-            if (facility.latitude && facility.longitude) {
-                const distance = getDistance(
-                    userLocation,
-                    { latitude: facility.latitude, longitude: facility.longitude }
-                );
-                return { ...facility, distance };
-            }
-            return facility;
-        });
-    }, [facilitiesWithCoords, facilities, userLocation]);
-    // Hàm hiển thị khoảng cách dạng "x.x km" hoặc "xxx m"
-    const renderDistance = (distance) => {
-        if (distance == null) return null;
-        if (distance >= 1000) {
-            return `${(distance / 1000).toFixed(1)} km`;
-        }
-        return `${distance} m`;
-    };
     // Handle URL query parameters
     useEffect(() => {
         const searchParams = new URLSearchParams(location.search);
@@ -214,6 +108,28 @@ const FacilitiesPage = () => {
             }));
         }
     }, [location.search]);
+
+    // Fetch facilities từ API
+    useEffect(() => {
+        const fetchFacilities = async () => {
+            try {
+                const res = await fetch(`${API_URL}/api/facilities`);
+                const data = await res.json();
+                console.log("Facilities data:", data); // Debug log
+
+                const facilitiesWithSlots = data.map(facility => ({
+                    ...facility,
+                    available_slots: generateTimeSlots(facility.opening_hours)
+                }));
+
+                setFacilities(facilitiesWithSlots);
+            } catch (err) {
+                console.error("Lỗi fetch facilities:", err);
+            }
+        };
+
+        fetchFacilities();
+    }, [API_URL]);
 
     // Open Google Maps with directions from user location to facility
     const openGoogleMaps = (facility) => {
@@ -234,45 +150,73 @@ const FacilitiesPage = () => {
         window.open(url, '_blank');
     };
 
-    // Fetch facilities từ API
-    useEffect(() => {
-        const fetchFacilities = async () => {
-            try {
-                const res = await fetch(`${API_URL}/api/facilities`);
-                const data = await res.json();
-                
-                const facilitiesWithSlots = data.map(facility => ({
-                    ...facility,
-                }));
+    // Fetch booked slots from database for specific facility and date
+    const fetchBookedSlots = async (facilityId, date) => {
+        try {
+            const token = localStorage.getItem('token');
+            if (!token) return {};
 
-                setFacilities(facilitiesWithSlots);
-            } catch (err) {
-                console.error("Lỗi fetch facilities:", err);
-            }
-        };
+            const dateString = date.format('YYYY-MM-DD');
+            const res = await fetch(`${API_URL}/api/bookings`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            if (!res.ok) return {};
+            const bookings = await res.json();
 
-        fetchFacilities();
-    }, [API_URL]);
+            // Filter bookings for this facility and date
+            const facilityBookings = bookings.filter(booking => {
+                const bookingDate = booking.start_time ? booking.start_time.split('T')[0] : '';
+                return booking.facility_id === facilityId && bookingDate === dateString;
+            });
 
+            // Mark booked time slots
+            const booked = {};
+            facilityBookings.forEach(booking => {
+                const startTime = new Date(booking.start_time);
+                const endTime = new Date(booking.end_time);
+                for (let hour = startTime.getHours(); hour < endTime.getHours(); hour++) {
+                    const timeSlot = `${hour.toString().padStart(2, '0')}:00`;
+                    booked[timeSlot] = true;
+                }
+            });
+            return booked;
+        } catch (error) {
+            return {};
+        }
+    };
 
+    // Generate time slots based on opening hours
+    const generateTimeSlots = (openingHours) => {
+        const [startTime, endTime] = openingHours.split(' - ');
+        const startHour = parseInt(startTime.split(':')[0]);
+        const endHour = parseInt(endTime.split(':')[0]);
 
-    const filteredFacilities = facilitiesWithDistance.filter(facility => {
+        const slots = [];
+        for (let hour = startHour; hour <= endHour; hour++) {
+            slots.push(`${hour.toString().padStart(2, '0')}:00`);
+        }
+        return slots;
+    };
+
+    // Filter facilities
+    const filteredFacilities = facilities.filter(facility => {
         const searchText = filters.searchText.toLowerCase();
-        const safeLower = v => (typeof v === 'string' ? v.toLowerCase() : '');
         const matchesSearch = filters.searchText === '' ||
-            safeLower(facility.name).includes(searchText) ||
-            safeLower(facility.description).includes(searchText) ||
-            safeLower(facility.location).includes(searchText) ||
-            safeLower(facility.address).includes(searchText) ||
-            safeLower(facility.district).includes(searchText) ||
-            safeLower(facility.ward).includes(searchText) ||
-            safeLower(facility.city).includes(searchText);
+            facility.name.toLowerCase().includes(searchText) ||
+            facility.description.toLowerCase().includes(searchText) ||
+            facility.location.toLowerCase().includes(searchText) ||
+            facility.address.toLowerCase().includes(searchText) ||
+            facility.district.toLowerCase().includes(searchText) ||
+            facility.ward.toLowerCase().includes(searchText) ||
+            facility.city.toLowerCase().includes(searchText);
 
         const matchesSport = filters.sport === 'all' || facility.sport_type === filters.sport;
 
         const matchesLocation = filters.location === 'all' || 
-            safeLower(facility.district).includes(safeLower(filters.location)) ||
-            safeLower(facility.location).includes(safeLower(filters.location));
+            facility.district.toLowerCase().includes(filters.location.toLowerCase()) ||
+            facility.location.toLowerCase().includes(filters.location.toLowerCase());
 
         const matchesPrice = facility.price_per_hour >= filters.priceRange[0] &&
             facility.price_per_hour <= filters.priceRange[1];
@@ -294,14 +238,12 @@ const FacilitiesPage = () => {
 
         return matchesSearch && matchesSport && matchesLocation && matchesPrice && matchesRating && matchesAmenities;
     }).sort((a, b) => {
-        // Priority 1: Favorites always first (regardless of sort option)
         const aIsFavorite = favorites.includes(a.id);
         const bIsFavorite = favorites.includes(b.id);
 
         if (aIsFavorite && !bIsFavorite) return -1;
         if (!aIsFavorite && bIsFavorite) return 1;
 
-        // Priority 2: Sort by selected criteria
         switch (filters.sortBy) {
             case 'price_asc':
                 return a.price_per_hour - b.price_per_hour;
@@ -315,12 +257,19 @@ const FacilitiesPage = () => {
         }
     });
 
-    // Separate favorites for display (remove nearby logic)
-    const favoriteFacilities = filteredFacilities.filter(f => favorites.includes(f.id));
-    const allFacilitiesForDisplay = filteredFacilities;
+    // Separate favorites for display - FIXED
+    const favoriteFacilities = filteredFacilities.filter(facility => {
+        console.log(`Checking facility ${facility.id} (${facility.name}):`, {
+            facilityId: facility.id,
+            favoriteIds: favorites,
+            isIncluded: favorites.includes(facility.id)
+        });
+        return favorites.includes(facility.id);
+    });
+
+
 
     const getSportIcon = (sportType) => {
-
         const icons = {
             badminton: '🏸',
             football: '⚽',
@@ -340,45 +289,143 @@ const FacilitiesPage = () => {
         return names[sportType] || sportType;
     };
 
-    const handleToggleFavorite = async (facilityId, e) => {
-        e.stopPropagation();
+    const handleBookFacility = async (facility) => {
+        setSelectedFacility(facility);
+        setBookingModalVisible(true);
 
-        const token = localStorage.getItem("token");
-        if (!token) {
-            message.error("Bạn cần đăng nhập để dùng tính năng này");
+        // Fetch real booked slots from database
+        const facilityDateKey = `${facility.id}_${selectedDate.format('YYYY-MM-DD')}`;
+        if (!bookedSlots[facilityDateKey]) {
+            const bookedSlotsFromDB = await fetchBookedSlots(facility.id, selectedDate);
+            setBookedSlots(prev => ({
+                ...prev,
+                [facilityDateKey]: bookedSlotsFromDB
+            }));
+        }
+    };
+
+    const handleTimeSlotChange = (timeSlot) => {
+        setSelectedTimeSlots(prev => {
+            if (prev.includes(timeSlot)) {
+                return prev.filter(slot => slot !== timeSlot);
+            } else {
+                return [...prev, timeSlot];
+            }
+        });
+    };
+
+    const handleDateChange = async (date) => {
+        setSelectedDate(date);
+        setSelectedTimeSlots([]); // Clear selected slots when date changes
+
+        // Fetch real booked slots for new date if not exists
+        if (selectedFacility) {
+            const facilityDateKey = `${selectedFacility.id}_${date.format('YYYY-MM-DD')}`;
+            if (!bookedSlots[facilityDateKey]) {
+                const bookedSlotsFromDB = await fetchBookedSlots(selectedFacility.id, date);
+                setBookedSlots(prev => ({
+                    ...prev,
+                    [facilityDateKey]: bookedSlotsFromDB
+                }));
+            }
+        }
+    };
+
+    // Fixed toggle favorite function
+const handleToggleFavorite = async (facilityId, e) => {
+    e.stopPropagation();
+
+    const token = localStorage.getItem("token");
+    if (!token) {
+        message.error("Bạn cần đăng nhập để dùng tính năng này");
+        return;
+    }
+
+    const isFavorited = favorites.includes(facilityId);
+    console.log("Toggling favorite for facility:", facilityId, "Currently favorited:", isFavorited);
+
+    try {
+        const method = isFavorited ? "DELETE" : "POST";
+        const res = await fetch(`${API_URL}/api/facilities/${facilityId}/favorite`, {
+            method,
+            headers: {
+                "Authorization": `Bearer ${token}`,
+                "Content-Type": "application/json",
+            },
+        });
+
+        if (!res.ok) {
+            const errorText = await res.text();
+            console.error(`${method} favorite failed:`, res.status, errorText);
+            throw new Error(isFavorited ? "Không thể bỏ thích" : "Không thể thêm thích");
+        }
+
+        const responseData = await res.json();
+        console.log(`${method} favorite success:`, responseData);
+        
+        // Refresh favorites from server instead of manual state update
+        await fetchFavorites();
+        
+        message.success(isFavorited ? "Đã bỏ khỏi danh sách yêu thích" : "Đã thêm vào danh sách yêu thích");
+
+    } catch (error) {
+        console.error("Favorite toggle error:", error);
+        message.error("Có lỗi xảy ra, thử lại sau");
+    }
+};
+
+    const handleBookingSubmit = async () => {
+        if (!selectedTimeSlots.length) {
+            message.error('Vui lòng chọn ít nhất một khung giờ');
             return;
         }
 
-        const isFavorited = favorites.includes(facilityId);
-        console.log("Toggling favorite for facility:", facilityId, "Currently favorited:", isFavorited);
+        const token = localStorage.getItem('token');
+        if (!token) {
+            message.error('Vui lòng đăng nhập để đặt sân');
+            return;
+        }
+
+        // Determine start and end time
+        const sortedSlots = selectedTimeSlots.sort();
+        const startHour = parseInt(sortedSlots[0].split(':')[0]);
+        const endHour = parseInt(sortedSlots[sortedSlots.length - 1].split(':')[0]) + 1;
+
+        const startTime = selectedDate.clone().hour(startHour).minute(0).second(0).millisecond(0);
+        const endTime = selectedDate.clone().hour(endHour).minute(0).second(0).millisecond(0);
+
+        // Booking data
+        const bookingData = {
+            facility_id: selectedFacility.id,
+            booking_date: selectedDate.format('YYYY-MM-DDT00:00:00'),
+            start_time: startTime.format('YYYY-MM-DDTHH:mm:ss'),
+            end_time: endTime.format('YYYY-MM-DDTHH:mm:ss'),
+            time_slots: selectedTimeSlots,
+            total_price: selectedTimeSlots.length * selectedFacility.price_per_hour,
+            notes: `Đặt sân ${selectedFacility.name} - ${sortedSlots.join(', ')}`
+        };
 
         try {
-            const method = isFavorited ? "DELETE" : "POST";
-            const res = await fetch(`${API_URL}/api/facilities/${facilityId}/favorite`, {
-                method,
+            const response = await fetch(`${API_URL}/api/bookings`, {
+                method: 'POST',
                 headers: {
-                    "Authorization": `Bearer ${token}`,
-                    "Content-Type": "application/json",
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
                 },
+                body: JSON.stringify(bookingData)
             });
 
-            if (!res.ok) {
-                const errorText = await res.text();
-                console.error(`${method} favorite failed:`, res.status, errorText);
-                throw new Error(isFavorited ? "Không thể bỏ thích" : "Không thể thêm thích");
+            if (!response.ok) {
+                throw new Error('Có lỗi xảy ra khi đặt sân');
             }
 
-            const responseData = await res.json();
-            console.log(`${method} favorite success:`, responseData);
-            
-            // Refresh favorites from server instead of manual state update
-            await fetchFavorites();
-            
-            message.success(isFavorited ? "Đã bỏ khỏi danh sách yêu thích" : "Đã thêm vào danh sách yêu thích");
+            const result = await response.json();
+            message.success(`Đặt sân thành công! Mã đặt: ${result.booking_id}`);
+            setBookingModalVisible(false);
+            setSelectedTimeSlots([]);
 
-        } catch (error) {
-            console.error("Favorite toggle error:", error);
-            message.error("Có lỗi xảy ra, thử lại sau");
+        } catch (err) {
+            message.error(err.message || 'Có lỗi xảy ra');
         }
     };
 
@@ -408,7 +455,7 @@ const FacilitiesPage = () => {
     const renderFacilityCard = (facility, showDistance = false, isFavoriteSection = false) => (
         <Card
             hoverable
-            onClick={() => navigate(`/facilities/${facility.id}`)}
+            onClick={() => handleBookFacility(facility)}
             style={{
                 cursor: 'pointer',
                 transition: 'all 0.3s ease',
@@ -458,7 +505,7 @@ const FacilitiesPage = () => {
                             fontSize: '10px',
                             fontWeight: 'bold'
                         }}>
-                            {renderDistance(facility.distance)}
+                            Xem trên bản đồ
                         </div>
                     )}
 
@@ -639,6 +686,13 @@ const FacilitiesPage = () => {
         </Card>
     );
 
+    console.log("Current state:", { // Debug log for render
+        favoritesLoading,
+        favorites,
+        facilitiesCount: facilities.length,
+        favoriteFacilitiesCount: favoriteFacilities.length
+    });
+
     return (
         <div>
             {/* Breadcrumb */}
@@ -670,10 +724,9 @@ const FacilitiesPage = () => {
                 </Text>
             </div>
 
-
             {/* Advanced Search */}
             <AdvancedSearch
-                key={filters.sport} // Force re-render when sport changes
+                key={filters.sport}
                 initialFilters={filters}
                 facilities={facilities}
                 onFilterChange={setFilters}
@@ -683,43 +736,23 @@ const FacilitiesPage = () => {
                 }}
             />
 
-            {/* Location Banner - only show when needed and not dismissed */}
-
-            {/* Coordinate Loading Indicator */}
-            {coordsLoading && (
-                <div style={{ 
-                    background: '#e6f7ff', 
-                    border: '1px solid #91d5ff',
-                    borderRadius: '6px',
-                    padding: '12px 16px',
-                    marginBottom: '16px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px'
-                }}>
-                    <div style={{
-                        width: '16px',
-                        height: '16px',
-                        border: '2px solid #1890ff',
-                        borderTop: '2px solid transparent',
-                        borderRadius: '50%',
-                        animation: 'spin 1s linear infinite'
-                    }} />
-                    <Text style={{ color: '#1890ff' }}>
-                        Đang lấy tọa độ địa điểm để tính khoảng cách...
-                    </Text>
-                </div>
-            )}
-
             {/* Facility Statistics */}
             <FacilityStats
-                totalCount={allFacilitiesForDisplay.length}
+                totalCount={filteredFacilities.length}
                 favoriteCount={favoriteFacilities.length}
                 hasLocation={!!userLocation}
+                onResetLocation={() => {
+                    // Clear localStorage and reset states
+                    setUserLocation(null);
+                    // Reset sort to default
+                    setFilters(prev => ({
+                        ...prev,
+                        sortBy: 'name'
+                    }));
+                }}
             />
 
-            {/* All Facilities Section */}
-            {/* Favorite Facilities Section */}
+            {/* Favorite Facilities Section - FIXED */}
             {!favoritesLoading && favoriteFacilities.length > 0 && (
                 <>
                     <div style={{ marginBottom: 16 }}>
@@ -753,19 +786,167 @@ const FacilitiesPage = () => {
                     🏟️ {filters.sport !== 'all' ? `Tất cả sân ${getSportName(filters.sport).toLowerCase()}` : 'Tất cả sân thể thao'}
                 </Title>
                 <Text type="secondary">
-                    {allFacilitiesForDisplay.length} sân có sẵn
+                    {filteredFacilities.length} sân có sẵn
                     {favorites.length > 0 && ' • Sân yêu thích được ưu tiên hiển thị đầu tiên'}
                 </Text>
             </div>
 
             {/* Facilities grid */}
             <Row gutter={[12, 12]}>
-                {allFacilitiesForDisplay.map(facility => (
+                {filteredFacilities.map(facility => (
                     <Col xs={24} sm={12} md={8} lg={6} key={facility.id}>
                         {renderFacilityCard(facility, userLocation && facility.distance, false)}
                     </Col>
                 ))}
             </Row>
+
+            {/* Empty state */}
+            {!favoritesLoading && filteredFacilities.length === 0 && (
+                <div style={{ textAlign: 'center', padding: 40 }}>
+                    <Text type="secondary">Không tìm thấy sân nào phù hợp với tiêu chí tìm kiếm</Text>
+                </div>
+            )}
+
+            {/* Booking Modal */}
+            <Modal
+                title={`Đặt sân: ${selectedFacility?.name}`}
+                open={bookingModalVisible}
+                onCancel={() => {
+                    setBookingModalVisible(false);
+                    setSelectedTimeSlots([]);
+                }}
+                footer={null}
+                width={600}
+            >
+                {selectedFacility && (
+                    <div>
+                        <div style={{ marginBottom: 16 }}>
+                            <Text strong>Thông tin sân:</Text>
+                            <div style={{ marginTop: 8 }}>
+                                <div>📍 {selectedFacility.location}</div>
+                                <div>🕐 {selectedFacility.opening_hours}</div>
+                                <div>💰 {formatPrice(selectedFacility.price_per_hour)}/giờ</div>
+                            </div>
+                        </div>
+
+                        <Form layout="vertical">
+                            <Form.Item label="Chọn ngày" required>
+                                <DatePicker
+                                    value={selectedDate}
+                                    onChange={handleDateChange}
+                                    style={{ width: '100%' }}
+                                    disabledDate={(current) => current && current < dayjs().startOf('day')}
+                                />
+                            </Form.Item>
+
+                            <Form.Item label="Chọn khung giờ" required>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+                                    {selectedFacility.available_slots.map(slot => {
+                                        // Get booked status from state
+                                        const facilityDateKey = `${selectedFacility.id}_${selectedDate.format('YYYY-MM-DD')}`;
+                                        const isBooked = bookedSlots[facilityDateKey]?.[slot] || false;
+                                        const isSelected = selectedTimeSlots.includes(slot);
+                                        const isPastTime = selectedDate.isSame(dayjs(), 'day') &&
+                                            parseInt(slot.split(':')[0]) <= dayjs().hour();
+
+                                        return (
+                                            <Button
+                                                key={slot}
+                                                type={isSelected ? 'primary' : 'default'}
+                                                disabled={isBooked || isPastTime}
+                                                onClick={() => handleTimeSlotChange(slot)}
+                                                style={{
+                                                    textAlign: 'center',
+                                                    backgroundColor: isBooked ? '#f5f5f5' : undefined,
+                                                    borderColor: isBooked ? '#d9d9d9' : undefined,
+                                                    color: isBooked ? '#999' : undefined
+                                                }}
+                                            >
+                                                <div>{slot}</div>
+                                                {isBooked && (
+                                                    <div style={{ fontSize: '10px', color: '#ff4d4f' }}>
+                                                        Đã đặt
+                                                    </div>
+                                                )}
+                                                {isPastTime && !isBooked && (
+                                                    <div style={{ fontSize: '10px', color: '#999' }}>
+                                                        Đã qua
+                                                    </div>
+                                                )}
+                                            </Button>
+                                        );
+                                    })}
+                                </div>
+                                <div style={{ marginTop: 12 }}>
+                                    <Space direction="vertical" size={4}>
+                                        <Text type="secondary" style={{ fontSize: '12px' }}>
+                                            💡 Có thể chọn nhiều khung giờ liên tiếp
+                                        </Text>
+                                        <Space size={16}>
+                                            <Space size={4}>
+                                                <div style={{
+                                                    width: 12,
+                                                    height: 12,
+                                                    backgroundColor: '#1890ff',
+                                                    borderRadius: 2
+                                                }} />
+                                                <Text style={{ fontSize: '11px' }}>Đã chọn</Text>
+                                            </Space>
+                                            <Space size={4}>
+                                                <div style={{
+                                                    width: 12,
+                                                    height: 12,
+                                                    backgroundColor: '#f5f5f5',
+                                                    border: '1px solid #d9d9d9',
+                                                    borderRadius: 2
+                                                }} />
+                                                <Text style={{ fontSize: '11px' }}>Đã đặt</Text>
+                                            </Space>
+                                            <Space size={4}>
+                                                <div style={{
+                                                    width: 12,
+                                                    height: 12,
+                                                    backgroundColor: '#fff',
+                                                    border: '1px solid #d9d9d9',
+                                                    borderRadius: 2
+                                                }} />
+                                                <Text style={{ fontSize: '11px' }}>Còn trống</Text>
+                                            </Space>
+                                        </Space>
+                                    </Space>
+                                </div>
+                            </Form.Item>
+
+                            {selectedTimeSlots.length > 0 && (
+                                <Form.Item label="Tổng kết">
+                                    <div style={{ background: '#f6f6f6', padding: 16, borderRadius: 6 }}>
+                                        <div>Ngày: {selectedDate.format('DD/MM/YYYY')}</div>
+                                        <div>Khung giờ: {selectedTimeSlots.sort().join(', ')}</div>
+                                        <div>Số giờ: {selectedTimeSlots.length} giờ</div>
+                                        <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#1890ff' }}>
+                                            Tổng tiền: {formatPrice(selectedTimeSlots.length * selectedFacility.price_per_hour)}
+                                        </div>
+                                    </div>
+                                </Form.Item>
+                            )}
+
+                            <Form.Item>
+                                <Space>
+                                    <Button type="primary" onClick={handleBookingSubmit}>
+                                        Xác nhận đặt sân
+                                    </Button>
+                                    <Button onClick={() => {
+                                        setBookingModalVisible(false);
+                                        setSelectedTimeSlots([]);
+                                    }}>
+                                        Hủy
+                                    </Button>
+                                </Space>
+                            </Form.Item>
+                        </Form>
+                    </div>
+                )}
+            </Modal>
 
             {/* CSS for heart animation */}
             <style jsx={true}>{`
@@ -773,11 +954,6 @@ const FacilitiesPage = () => {
                     0% { transform: scale(1); }
                     50% { transform: scale(1.3); }
                     100% { transform: scale(1); }
-                }
-                
-                @keyframes spin {
-                    0% { transform: rotate(0deg); }
-                    100% { transform: rotate(360deg); }
                 }
                 
                 .heart-bounce {

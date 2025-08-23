@@ -263,8 +263,9 @@ const AdvancedSearch = ({
                         }
                     >
                         <Input
-                            prefix={<SearchOutlined />}
+                            suffix={<SearchOutlined />}
                             onPressEnter={handleSearch}
+                            style={{ height: 48, display: 'flex', alignItems: 'center' }}
                         />
                     </AutoComplete>
                 </Col>

@@ -30,6 +30,30 @@ def get_facilities(db: Session = Depends(get_db)):
         for f in facilities
     ]
 
+# API lấy chi tiết sân theo id
+@router.get("/{facility_id}")
+def get_facility_detail(facility_id: int, db: Session = Depends(get_db)):
+    facility = db.query(Facility).filter(Facility.id == facility_id, Facility.is_active == True).first()
+    if not facility:
+        raise HTTPException(status_code=404, detail="Facility not found")
+    return {
+        "id": facility.id,
+        "name": facility.name,
+        "sport_type": facility.sport_type,
+        "description": facility.description,
+        "price_per_hour": facility.price_per_hour,
+        "image_url": facility.image_url,
+        "location": facility.location,
+        "rating": facility.rating,
+        "reviews_count": facility.reviews_count,
+        "amenities": facility.amenities,
+        "opening_hours": facility.opening_hours,
+        "is_active": facility.is_active,
+        "created_at": facility.created_at,
+        "updated_at": facility.updated_at,
+        "owner_id": facility.owner_user_id,
+    }
+
 @router.get("/count")
 def count_active_facilities(db: Session = Depends(get_db)):
     return {"count": db.query(Facility).filter(Facility.is_active == True).count()}
