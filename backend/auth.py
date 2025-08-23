@@ -8,6 +8,10 @@ from passlib.context import CryptContext
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from fastapi.security import OAuth2PasswordBearer
+from sqlalchemy.orm import Session
+from database import get_db
+from models import User
+
 
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 SECRET_KEY = "my-secret-key-123"
@@ -160,3 +164,21 @@ def get_current_user_id(token: str = Depends(oauth2_scheme)) -> int:
     if not payload:
         raise HTTPException(status_code=401, detail="Token không hợp lệ")
     return payload["id"]
+
+
+
+def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)) -> User:
+    payload = verify_token(token)
+    if not payload:
+        raise HTTPException(status_code=401, detail="Token không hợp lệ")
+
+    user_id = payload["id"]
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User không tồn tại")
+    return user
+
+def get_admin_user(current_user: User = Depends(get_current_user)) -> User:
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Bạn không có quyền truy cập")
+    return current_user

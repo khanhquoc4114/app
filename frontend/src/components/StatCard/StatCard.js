@@ -64,13 +64,15 @@ const StatCard = ({
                 height: cardHeight[size],
                 cursor: onClick ? 'pointer' : 'default'
             }}
-            bodyStyle={{
-                padding: size === 'small' ? '16px' : '20px',
-                height: '100%',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between'
-            }}
+  styles={{
+    body: {
+      padding: size === 'small' ? '16px' : '20px',
+      height: '100%',
+      display: 'flex',
+      flexDirection: 'column',
+      justifyContent: 'space-between',
+    },
+  }}
         >
             <div>
                 <Statistic

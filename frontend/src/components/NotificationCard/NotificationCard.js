@@ -216,7 +216,9 @@ const { Text } = Typography;
                     </Button>
                 )
             }
-            bodyStyle={{ padding: 0 }}
+              styles={{
+    body: { padding: 0 },
+  }}
         >
             {/* Filter buttons */}
             <div style={{ padding: '16px 16px 0 16px' }}>

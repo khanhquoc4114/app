@@ -187,7 +187,7 @@ const uploadProps = (fileType, maxCount = 1) => ({
             });
 
             const token = localStorage.getItem("token");
-            const response = await fetch(`${process.env.REACT_APP_API_URL}/api/auth/request-host-upgrade`, {
+            const response = await fetch(`${process.env.REACT_APP_API_URL}/request-host-upgrade`, {
                 method: "POST",
                 headers: {
                     "Authorization": `Bearer ${token}`

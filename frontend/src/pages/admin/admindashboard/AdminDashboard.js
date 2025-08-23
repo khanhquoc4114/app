@@ -1,11 +1,11 @@
 // Trang dashboard quản trị hệ thống
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Card, Statistic, Table, Typography, Space, Tag, Button, Modal, Form, Input, Select, Tabs, DatePicker, Upload, message } from 'antd';
-import { DollarOutlined, UserOutlined, ShopOutlined, CalendarOutlined, PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined, UploadOutlined, LockOutlined, UnlockOutlined } from '@ant-design/icons';
+import { Row, Col, Card, Statistic, Table, Typography, Space, Tag, Button, Modal, Form, Input, Select, Tabs, DatePicker, Upload, message, Avatar, Tooltip, Badge } from 'antd';
+import { DollarOutlined, UserOutlined, ShopOutlined, CalendarOutlined, PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined, UploadOutlined, LockOutlined, UnlockOutlined, CheckOutlined, CloseOutlined, FileTextOutlined, IdcardOutlined, PhoneOutlined, MailOutlined, BankOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import AdminFacility from './AdminFacility';
 
-const { Title, Text } = Typography;
+const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
 const { TabPane } = Tabs;
 const { RangePicker } = DatePicker;
@@ -14,6 +14,8 @@ const AdminDashboard = () => {
     const [facilityModalVisible, setFacilityModalVisible] = useState(false);
     const [selectedFacility, setSelectedFacility] = useState(null);
     const [dateRange, setDateRange] = useState([dayjs().subtract(7, 'day'), dayjs()]);
+    const [roleRequestDetailVisible, setRoleRequestDetailVisible] = useState(false);
+    const [selectedRequest, setSelectedRequest] = useState(null);
 
     // Mock data
     const adminStats = [
@@ -47,6 +49,65 @@ const AdminDashboard = () => {
     ];
 
     const [users, setUsers] = useState([]);
+
+    // Mock data cho yêu cầu nâng role
+    const [roleRequests, setRoleRequests] = useState([
+        {
+            id: 1,
+            user_id: 123,
+            username: 'nguyenvana',
+            full_name: 'Nguyễn Văn A',
+            email: 'nguyenvana@gmail.com',
+            phone: '0987654321',
+            current_role: 'user',
+            requested_role: 'host',
+            status: 'pending',
+            request_date: '2024-01-20',
+            business_license: 'GPKD123456789',
+            business_name: 'Sân thể thao ABC',
+            business_address: '123 Đường XYZ, Quận 1, TP.HCM',
+            bank_account: '1234567890 - Vietcombank',
+            experience: '5 năm kinh nghiệm quản lý sân thể thao',
+            reason: 'Tôi muốn mở rộng dịch vụ cho thuê sân thể thao để phục vụ cộng đồng tốt hơn.',
+            documents: ['gpkd.pdf', 'cmnd.pdf', 'sao_ke_ngan_hang.pdf']
+        },
+        {
+            id: 2,
+            user_id: 124,
+            username: 'tranthib',
+            full_name: 'Trần Thị B',
+            email: 'tranthib@gmail.com',
+            phone: '0976543210',
+            current_role: 'user',
+            requested_role: 'host',
+            status: 'pending',
+            request_date: '2024-01-19',
+            business_license: 'GPKD987654321',
+            business_name: 'Trung tâm thể thao DEF',
+            business_address: '456 Đường ABC, Quận 2, TP.HCM',
+            bank_account: '9876543210 - BIDV',
+            experience: '3 năm làm việc trong lĩnh vực thể thao',
+            reason: 'Có sẵn cơ sở vật chất và muốn kinh doanh dịch vụ sân thể thao.',
+            documents: ['gpkd.pdf', 'cmnd.pdf']
+        },
+        {
+            id: 3,
+            user_id: 125,
+            username: 'lvanc',
+            full_name: 'Lê Văn C',
+            email: 'levanc@gmail.com',
+            phone: '0965432109',
+            current_role: 'user',
+            requested_role: 'host',
+            status: 'approved',
+            request_date: '2024-01-15',
+            approved_date: '2024-01-18',
+            approved_by: 'Admin System',
+            business_license: 'GPKD456789123',
+            business_name: 'Câu lạc bộ GHI',
+            business_address: '789 Đường DEF, Quận 3, TP.HCM'
+        }
+    ]);
 
     useEffect(() => {
         const fetchUsers = async () => {
@@ -96,6 +157,48 @@ const AdminDashboard = () => {
     const handleToggleUserStatus = (record) => {
         const action = record.is_active ? 'khóa' : 'mở khóa';
         message.success(`Đã ${action} tài khoản ${record.username}`);
+    };
+
+    // Xử lý yêu cầu nâng role
+    const handleApproveRequest = (record) => {
+        Modal.confirm({
+            title: 'Xác nhận duyệt yêu cầu',
+            content: `Bạn có chắc muốn duyệt yêu cầu nâng role của ${record.full_name}?`,
+            onOk: () => {
+                // Cập nhật trạng thái
+                setRoleRequests(prev => prev.map(req => 
+                    req.id === record.id 
+                        ? { ...req, status: 'approved', approved_date: dayjs().format('YYYY-MM-DD'), approved_by: 'Admin System' }
+                        : req
+                ));
+                message.success(`Đã duyệt yêu cầu của ${record.full_name}`);
+            }
+        });
+    };
+
+    const handleRejectRequest = (record) => {
+        Modal.confirm({
+            title: 'Xác nhận từ chối yêu cầu',
+            content: (
+                <div>
+                    <p>Bạn có chắc muốn từ chối yêu cầu nâng role của {record.full_name}?</p>
+                    <Input.TextArea placeholder="Lý do từ chối (tùy chọn)" rows={3} />
+                </div>
+            ),
+            onOk: () => {
+                setRoleRequests(prev => prev.map(req => 
+                    req.id === record.id 
+                        ? { ...req, status: 'rejected', rejected_date: dayjs().format('YYYY-MM-DD'), rejected_by: 'Admin System' }
+                        : req
+                ));
+                message.success(`Đã từ chối yêu cầu của ${record.full_name}`);
+            }
+        });
+    };
+
+    const handleViewRequestDetail = (record) => {
+        setSelectedRequest(record);
+        setRoleRequestDetailVisible(true);
     };
 
     const facilityColumns = [
@@ -246,6 +349,110 @@ const AdminDashboard = () => {
         }
     ];
 
+    const roleRequestColumns = [
+        {
+            title: 'Thông tin người dùng',
+            key: 'user_info',
+            width: 250,
+            render: (_, record) => (
+                <div>
+                    <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
+                        <Avatar style={{ backgroundColor: '#1890ff', marginRight: 8 }}>
+                            {record.full_name?.charAt(0)}
+                        </Avatar>
+                        <div>
+                            <div style={{ fontWeight: 'bold' }}>{record.full_name}</div>
+                            <div style={{ fontSize: '12px', color: '#666' }}>@{record.username}</div>
+                        </div>
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#666' }}>
+                        <div><MailOutlined /> {record.email}</div>
+                        <div><PhoneOutlined /> {record.phone}</div>
+                    </div>
+                </div>
+            )
+        },
+        {
+            title: 'Thông tin kinh doanh',
+            key: 'business_info',
+            render: (_, record) => (
+                <div style={{ fontSize: '12px' }}>
+                    <div style={{ fontWeight: 'bold', marginBottom: 4 }}>{record.business_name}</div>
+                    <div><IdcardOutlined /> {record.business_license}</div>
+                    <div style={{ marginTop: 4 }}>{record.business_address}</div>
+                </div>
+            )
+        },
+        {
+            title: 'Ngày yêu cầu',
+            dataIndex: 'request_date',
+            key: 'request_date',
+            width: 100,
+            render: (date) => dayjs(date).format('DD/MM/YYYY')
+        },
+        {
+            title: 'Trạng thái',
+            dataIndex: 'status',
+            key: 'status',
+            width: 120,
+            render: (status) => {
+                const config = {
+                    pending: { color: 'orange', text: 'Chờ duyệt' },
+                    approved: { color: 'green', text: 'Đã duyệt' },
+                    rejected: { color: 'red', text: 'Từ chối' }
+                };
+                return (
+                    <Badge 
+                        color={config[status].color} 
+                        text={config[status].text}
+                    />
+                );
+            }
+        },
+        {
+            title: 'Thao tác',
+            key: 'action',
+            width: 200,
+            render: (_, record) => (
+                <Space wrap>
+                    <Tooltip title="Xem chi tiết">
+                        <Button 
+                            size="small" 
+                            icon={<EyeOutlined />}
+                            onClick={() => handleViewRequestDetail(record)}
+                        >
+                            Chi tiết
+                        </Button>
+                    </Tooltip>
+                    {record.status === 'pending' && (
+                        <>
+                            <Tooltip title="Duyệt yêu cầu">
+                                <Button 
+                                    size="small" 
+                                    type="primary"
+                                    icon={<CheckOutlined />}
+                                    onClick={() => handleApproveRequest(record)}
+                                >
+                                    Duyệt
+                                </Button>
+                            </Tooltip>
+                            <Tooltip title="Từ chối yêu cầu">
+                                <Button 
+                                    size="small" 
+                                    danger
+                                    icon={<CloseOutlined />}
+                                    onClick={() => handleRejectRequest(record)}
+                                >
+                                    Từ chối
+                                </Button>
+                            </Tooltip>
+                        </>
+                    )}
+                </Space>
+            )
+        }
+    ];
+
     const revenueColumns = [
         {
             title: 'Ngày',
@@ -268,6 +475,9 @@ const AdminDashboard = () => {
             key: 'bookings'
         }
     ];
+
+    // Đếm số yêu cầu pending
+    const pendingRequestsCount = roleRequests.filter(req => req.status === 'pending').length;
 
     return (
         <div>
@@ -358,8 +568,190 @@ const AdminDashboard = () => {
                             }}
                         />
                     </TabPane>
+
+                    <TabPane 
+                        tab={
+                            <Badge count={pendingRequestsCount} offset={[10, 0]}>
+                                Yêu cầu nâng role
+                            </Badge>
+                        } 
+                        key="role-requests"
+                    >
+                        <div style={{ marginBottom: 16 }}>
+                            <Space>
+                                <Text strong>Bộ lọc:</Text>
+                                <Select defaultValue="all" style={{ width: 120 }}>
+                                    <Option value="all">Tất cả</Option>
+                                    <Option value="pending">Chờ duyệt</Option>
+                                    <Option value="approved">Đã duyệt</Option>
+                                    <Option value="rejected">Từ chối</Option>
+                                </Select>
+                                <Button>Làm mới</Button>
+                            </Space>
+                        </div>
+                        <Table
+                            columns={roleRequestColumns}
+                            dataSource={roleRequests}
+                            pagination={{ 
+                                pageSize: 10,
+                                showTotal: (total, range) => `${range[0]}-${range[1]} của ${total} yêu cầu`
+                            }}
+                            scroll={{ x: 1200 }}
+                            expandable={{
+                                expandedRowRender: (record) => (
+                                    <div style={{ padding: '16px', backgroundColor: '#fafafa' }}>
+                                        <Row gutter={16}>
+                                            <Col span={12}>
+                                                <div style={{ marginBottom: 16 }}>
+                                                    <Text strong>Kinh nghiệm:</Text>
+                                                    <Paragraph style={{ marginTop: 8 }}>
+                                                        {record.experience}
+                                                    </Paragraph>
+                                                </div>
+                                                <div>
+                                                    <Text strong>Lý do yêu cầu:</Text>
+                                                    <Paragraph style={{ marginTop: 8 }}>
+                                                        {record.reason}
+                                                    </Paragraph>
+                                                </div>
+                                            </Col>
+                                            <Col span={12}>
+                                                <div style={{ marginBottom: 16 }}>
+                                                    <Text strong><BankOutlined /> Tài khoản ngân hàng:</Text>
+                                                    <div style={{ marginTop: 8 }}>{record.bank_account}</div>
+                                                </div>
+                                                <div>
+                                                    <Text strong><FileTextOutlined /> Tài liệu đính kèm:</Text>
+                                                    <div style={{ marginTop: 8 }}>
+                                                        {record.documents?.map((doc, index) => (
+                                                            <Tag key={index} style={{ margin: 2 }}>
+                                                                <FileTextOutlined /> {doc}
+                                                            </Tag>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            </Col>
+                                        </Row>
+                                    </div>
+                                )
+                            }}
+                        />
+                    </TabPane>
                 </Tabs>
             </Card>
+
+            {/* Modal chi tiết yêu cầu nâng role */}
+            <Modal
+                title="Chi tiết yêu cầu nâng role"
+                open={roleRequestDetailVisible}
+                onCancel={() => setRoleRequestDetailVisible(false)}
+                footer={
+                    selectedRequest?.status === 'pending' ? [
+                        <Button key="reject" danger icon={<CloseOutlined />} onClick={() => handleRejectRequest(selectedRequest)}>
+                            Từ chối
+                        </Button>,
+                        <Button key="approve" type="primary" icon={<CheckOutlined />} onClick={() => handleApproveRequest(selectedRequest)}>
+                            Duyệt yêu cầu
+                        </Button>
+                    ] : [
+                        <Button key="close" onClick={() => setRoleRequestDetailVisible(false)}>
+                            Đóng
+                        </Button>
+                    ]
+                }
+                width={800}
+            >
+                {selectedRequest && (
+                    <div>
+                        <Row gutter={16}>
+                            <Col span={12}>
+                                <Card size="small" title="Thông tin cá nhân">
+                                    <p><strong>Họ tên:</strong> {selectedRequest.full_name}</p>
+                                    <p><strong>Username:</strong> {selectedRequest.username}</p>
+                                    <p><strong>Email:</strong> {selectedRequest.email}</p>
+                                    <p><strong>Số điện thoại:</strong> {selectedRequest.phone}</p>
+                                    <p><strong>Role hiện tại:</strong> <Tag color="blue">{selectedRequest.current_role}</Tag></p>
+                                    <p><strong>Role yêu cầu:</strong> <Tag color="orange">{selectedRequest.requested_role}</Tag></p>
+                                </Card>
+                            </Col>
+                            <Col span={12}>
+                                <Card size="small" title="Thông tin doanh nghiệp">
+                                    <p><strong>Tên doanh nghiệp:</strong> {selectedRequest.business_name}</p>
+                                    <p><strong>Giấy phép KD:</strong> {selectedRequest.business_license}</p>
+                                    <p><strong>Địa chỉ:</strong> {selectedRequest.business_address}</p>
+                                    <p><strong>Tài khoản NH:</strong> {selectedRequest.bank_account}</p>
+                                </Card>
+                            </Col>
+                        </Row>
+                        
+                        <Row gutter={16} style={{ marginTop: 16 }}>
+                            <Col span={24}>
+                                <Card size="small" title="Kinh nghiệm và lý do">
+                                    <div style={{ marginBottom: 16 }}>
+                                        <Text strong>Kinh nghiệm:</Text>
+                                        <Paragraph style={{ marginTop: 8, padding: 12, backgroundColor: '#f5f5f5', borderRadius: 4 }}>
+                                            {selectedRequest.experience}
+                                        </Paragraph>
+                                    </div>
+                                    <div>
+                                        <Text strong>Lý do yêu cầu:</Text>
+                                        <Paragraph style={{ marginTop: 8, padding: 12, backgroundColor: '#f5f5f5', borderRadius: 4 }}>
+                                            {selectedRequest.reason}
+                                        </Paragraph>
+                                    </div>
+                                </Card>
+                            </Col>
+                        </Row>
+
+                        <Row gutter={16} style={{ marginTop: 16 }}>
+                            <Col span={12}>
+                                <Card size="small" title="Tài liệu đính kèm">
+                                    <Space direction="vertical" style={{ width: '100%' }}>
+                                        {selectedRequest.documents?.map((doc, index) => (
+                                            <div key={index} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 8, border: '1px solid #f0f0f0', borderRadius: 4 }}>
+                                                <Space>
+                                                    <FileTextOutlined />
+                                                    <Text>{doc}</Text>
+                                                </Space>
+                                                <Button size="small" type="link">Tải xuống</Button>
+                                            </div>
+                                        ))}
+                                    </Space>
+                                </Card>
+                            </Col>
+                            <Col span={12}>
+                                <Card size="small" title="Thông tin yêu cầu">
+                                    <p><strong>Ngày yêu cầu:</strong> {dayjs(selectedRequest.request_date).format('DD/MM/YYYY HH:mm')}</p>
+                                    <p><strong>Trạng thái:</strong> 
+                                        <Tag color={
+                                            selectedRequest.status === 'pending' ? 'orange' :
+                                            selectedRequest.status === 'approved' ? 'green' : 'red'
+                                        } style={{ marginLeft: 8 }}>
+                                            {selectedRequest.status === 'pending' ? 'Chờ duyệt' :
+                                             selectedRequest.status === 'approved' ? 'Đã duyệt' : 'Từ chối'}
+                                        </Tag>
+                                    </p>
+                                    {selectedRequest.approved_date && (
+                                        <>
+                                            <p><strong>Ngày duyệt:</strong> {dayjs(selectedRequest.approved_date).format('DD/MM/YYYY HH:mm')}</p>
+                                            <p><strong>Người duyệt:</strong> {selectedRequest.approved_by}</p>
+                                        </>
+                                    )}
+                                    {selectedRequest.rejected_date && (
+                                        <>
+                                            <p><strong>Ngày từ chối:</strong> {dayjs(selectedRequest.rejected_date).format('DD/MM/YYYY HH:mm')}</p>
+                                            <p><strong>Người từ chối:</strong> {selectedRequest.rejected_by}</p>
+                                            {selectedRequest.rejection_reason && (
+                                                <p><strong>Lý do từ chối:</strong> {selectedRequest.rejection_reason}</p>
+                                            )}
+                                        </>
+                                    )}
+                                </Card>
+                            </Col>
+                        </Row>
+                    </div>
+                )}
+            </Modal>
 
             {/* Modal thêm/sửa sân */}
             <Modal

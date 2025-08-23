@@ -27,11 +27,42 @@ class User(Base):
     # Relationships
     bookings = relationship("Booking", back_populates="user")
     favorites = relationship("UserFavorite", back_populates="user", cascade="all, delete-orphan")
-    notifications = relationship(
-        "Notification",
+    notifications = relationship("Notification", back_populates="user", cascade="all, delete-orphan")
+    upgrade_requests = relationship(
+        "UserUpgradeRequest",
         back_populates="user",
         cascade="all, delete-orphan"
     )
+    
+class UserUpgradeRequest(Base):
+    __tablename__ = "user_upgrade_requests"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    
+    status = Column(String, default="pending")  # pending / approved / rejected
+    reason = Column(String, nullable=True)          # lý do từ chối (nếu có)
+    rejection_reason = Column(String, nullable=True)
+
+    cccd_front_image = Column(String, nullable=False)             # lưu path file
+    cccd_back_image = Column(String, nullable=False)
+    business_license_image = Column(String, nullable=False)
+    facility_images = Column(Text, nullable=False)
+    additional_documents = Column(Text, nullable=True)
+    experience = Column(Text, nullable=True)
+    
+    business_name = Column(String, nullable=True)
+    business_address = Column(String, nullable=True)
+    business_license = Column(String, nullable=False)
+    
+    bank_account = Column(String, nullable=True)
+    bank_name = Column(String, nullable=True)
+
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    # Relationship với user
+    user = relationship("User", back_populates="upgrade_requests")
 
 class Facility(Base):
     __tablename__ = "facilities"

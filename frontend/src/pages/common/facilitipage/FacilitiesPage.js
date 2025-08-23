@@ -462,13 +462,13 @@ const handleToggleFavorite = async (facilityId, e) => {
                 border: favorites.includes(facility.id) ? '2px solid #ff4d4f' : '2px solid transparent',
                 height: '100%',
                 display: 'flex',
-                flexDirection: 'column'
-            }}
-            bodyStyle={{
-                flex: 1,
-                display: 'flex',
                 flexDirection: 'column',
-                padding: '12px'
+                body: {
+                    flex: 1,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    padding: '12px',
+                },
             }}
             onMouseEnter={(e) => {
                 e.currentTarget.style.borderColor = favorites.includes(facility.id) ? '#ff4d4f' : '#1890ff';
@@ -949,7 +949,7 @@ const handleToggleFavorite = async (facilityId, e) => {
             </Modal>
 
             {/* CSS for heart animation */}
-            <style jsx>{`
+            <style jsx={true}>{`
                 @keyframes heartBounce {
                     0% { transform: scale(1); }
                     50% { transform: scale(1.3); }

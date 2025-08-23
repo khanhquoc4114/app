@@ -148,7 +148,9 @@ const Header = ({ onMenuToggle }) => {
                 onClose={() => setMobileMenuVisible(false)}
                 open={mobileMenuVisible}
                 width={280}
-                bodyStyle={{ padding: 0 }}
+                  styles={{
+    body: { padding: 0 },
+  }}
             >
                 <Menu
                     mode="vertical"
@@ -164,7 +166,7 @@ const Header = ({ onMenuToggle }) => {
                 />
             </Drawer>
 
-            <style jsx>{`
+            <style jsx={true}>{`
                 @media (max-width: 768px) {
                     .mobile-menu-btn {
                         display: inline-flex !important;

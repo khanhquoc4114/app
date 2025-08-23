@@ -288,13 +288,15 @@ const MainLayout = ({ children, userRole = 'user' }) => {
                 placement="left"
                 onClose={() => setMobileDrawerVisible(false)}
                 open={mobileDrawerVisible}
-                bodyStyle={{ padding: 0 }}
+                  styles={{
+    body: { padding: 0 },
+  }}
                 width={280}
             >
                 <SidebarContent />
             </Drawer>
 
-            <style jsx>{`
+            <style jsx={true}>{`
                 @media (max-width: 992px) {
                     .desktop-sider {
                         display: none !important;

@@ -177,7 +177,7 @@ const ChatBubble = () => {
             </Drawer>
 
             {/* CSS Animation */}
-            <style jsx>{`
+            <style jsx={true}>{`
                 @keyframes slideInUp {
                     from {
                         opacity: 0;
