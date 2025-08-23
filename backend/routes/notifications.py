@@ -3,18 +3,16 @@ from sqlalchemy.orm import Session
 from sqlalchemy import update
 from database import get_db
 from models import Notification
-from auth import verify_token, oauth2_scheme
+from auth import verify_token, oauth2_scheme, get_current_user_id
 
 router = APIRouter(prefix="/api/notifications", tags=["Notifications"])
 
 @router.get("/")
-def get_notifications(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
-    payload = verify_token(token)
-    if not payload:
-        raise HTTPException(status_code=401, detail="Token không hợp lệ")
-
-    user_id = payload["id"]
-    notifications = db.query(Notification).filter(Notification.user_id == user_id).all()
+def get_notifications(
+    current_user_id: int = Depends(get_current_user_id),
+    db: Session = Depends(get_db)
+):
+    notifications = db.query(Notification).filter_by(user_id=current_user_id).all()
     return notifications
 
 @router.patch("/{notification_id}/read")

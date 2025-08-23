@@ -1,5 +1,5 @@
 from sqlalchemy.dialects.postgresql import ARRAY
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, Text, ForeignKey, Float, JSON
+from sqlalchemy import Table, Column, Integer, String, DateTime, Boolean, Text, ForeignKey, Float, JSON
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database import Base
@@ -26,6 +26,7 @@ class User(Base):
     
     # Relationships
     bookings = relationship("Booking", back_populates="user")
+    favorites = relationship("UserFavorite", back_populates="user", cascade="all, delete-orphan")
     notifications = relationship(
         "Notification",
         back_populates="user",
@@ -54,6 +55,18 @@ class Facility(Base):
     # Relationships
     bookings = relationship("Booking", back_populates="facility")
     owner = relationship("User", foreign_keys=[owner_user_id])
+    liked_by = relationship("UserFavorite", back_populates="facility", cascade="all, delete-orphan")
+
+class UserFavorite(Base):
+    __tablename__ = "user_favorites"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"))
+    facility_id = Column(Integer, ForeignKey("facilities.id", ondelete="CASCADE"))
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    user = relationship("User", back_populates="favorites")
+    facility = relationship("Facility", back_populates="liked_by")
 
 class Booking(Base):
     __tablename__ = "bookings"

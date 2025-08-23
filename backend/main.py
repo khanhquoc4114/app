@@ -56,3 +56,17 @@ def root():
 def get_users(db: Session = Depends(get_db)):
     users = db.query(User).all()
     return users
+
+@app.get("/api/me/favorites")
+def get_favorites(
+    token: str = Depends(oauth2_scheme),
+    db: Session = Depends(get_db)
+):
+    payload = verify_token(token)
+    if not payload:
+        raise HTTPException(status_code=401, detail="Token không hợp lệ")
+    user_id = payload["id"]
+
+    # Thay đổi từ filter_by sang filter
+    favorites = db.query(UserFavorite.facility_id).filter(UserFavorite.user_id == user_id).all()
+    return [f.facility_id for f in favorites]
