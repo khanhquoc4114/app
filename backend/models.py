@@ -70,7 +70,8 @@ class Facility(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
     owner_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # id user chủ sân
-    sport_type = Column(String, nullable=False)  # badminton, football, tennis, etc.
+    sport_type = Column(ARRAY(String), nullable=False)  # badminton, football, tennis, etc.
+    court_layout = Column(JSON, nullable=True)   # lưu layout sân dưới dạng JSON
     description = Column(Text)
     price_per_hour = Column(Float, nullable=False)
     image_url = Column(String)
@@ -105,6 +106,8 @@ class Booking(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     facility_id = Column(Integer, ForeignKey("facilities.id"), nullable=False)
+    sport_type = Column(String, nullable=True)  
+    court_id = Column(Integer, nullable=True)  
     booking_date = Column(DateTime, nullable=False)
     start_time = Column(DateTime, nullable=False)
     end_time = Column(DateTime, nullable=False)

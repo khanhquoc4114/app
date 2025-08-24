@@ -21,12 +21,16 @@ const FacilityDetailPage = () => {
   const [bookingModalVisible, setBookingModalVisible] = useState(false);
   const [selectedDate, setSelectedDate] = useState(dayjs());
   const [selectedTimeSlots, setSelectedTimeSlots] = useState([]);
-  const [bookedSlots, setBookedSlots] = useState({});
+  const [selectedCourt, setSelectedCourt] = useState(null);
+  const [selectedSportType, setSelectedSportType] = useState(
+  Array.isArray(facility?.sport_type) ? facility.sport_type[0] : facility?.sport_type
+  );  
+  const [bookings, setBookings] = useState([]);
+
   const [favorites, setFavorites] = useState([]);
   const [reviews, setReviews] = useState([]);
   const [facilityStats, setFacilityStats] = useState({});
-  const [weatherInfo, setWeatherInfo] = useState(null);
-  const [shareModalVisible, setShareModalVisible] = useState(false);
+  const courtCount = facility?.court_layout?.find?.(c => c.sport_type === selectedSportType)?.count || 0;  const [shareModalVisible, setShareModalVisible] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
   const API_URL = process.env.REACT_APP_API_URL;
 
@@ -87,7 +91,7 @@ const FacilityDetailPage = () => {
     return favorites.includes(facilityId);
   };
 
-  // Generate time slots based on opening hours
+  // Tạo slot thời gian dựa trên giờ mở cửa
   const generateTimeSlots = (openingHours) => {
     const [startTime, endTime] = openingHours.split(' - ');
     const startHour = parseInt(startTime.split(':')[0]);
@@ -100,59 +104,31 @@ const FacilityDetailPage = () => {
     return slots;
   };
 
-  // Fetch booked slots from database for specific facility and date
-  const fetchBookedSlots = async (facilityId, date) => {
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        console.warn('No token found for fetching booked slots');
-        return {};
-      }
-
-      if (!API_URL) {
-        console.error('API_URL not configured');
-        return {};
-      }
-
-      const dateString = date.format('YYYY-MM-DD');
-      const res = await fetch(`${API_URL}/api/bookings`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (!res.ok) {
-        console.warn('Failed to fetch bookings:', res.status);
-        return {};
-      }
-
-      const bookings = await res.json();
-
-      // Filter bookings for this facility and date
-      const facilityBookings = bookings.filter(booking => {
-        const bookingDate = booking.start_time ? booking.start_time.split('T')[0] : '';
-        return booking.facility_id === facilityId && bookingDate === dateString;
-      });
-
-      // Mark booked time slots
-      const booked = {};
-      facilityBookings.forEach(booking => {
-        if (booking.start_time && booking.end_time) {
-          const startTime = new Date(booking.start_time);
-          const endTime = new Date(booking.end_time);
-          for (let hour = startTime.getHours(); hour < endTime.getHours(); hour++) {
-            const timeSlot = `${hour.toString().padStart(2, '0')}:00`;
-            booked[timeSlot] = true;
-          }
-        }
-      });
-      return booked;
-    } catch (error) {
-      console.error('Error fetching booked slots:', error);
-      return {};
-    }
+  // Fetch bookings khi mở modal hoặc đổi ngày
+  const fetchBookings = async (facilityId, date, sportType) => {
+    if (!API_URL) return [];
+    const token = localStorage.getItem('token');
+    const params = new URLSearchParams({
+      facility_id: facilityId,
+      date: date.format('YYYY-MM-DD'),
+      sport_type: sportType
+    });
+    const res = await fetch(`${API_URL}/api/bookings/search?${params.toString()}`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) return [];
+    return await res.json();
   };
 
+  // Gọi hàm này khi mở modal hoặc đổi ngày:
+  useEffect(() => {
+    if (bookingModalVisible && facility && selectedDate && selectedSportType) {
+      fetchBookings(facility.id, selectedDate, selectedSportType).then(data => {
+        setBookings(data);
+        console.log('Bookings fetched:', data);
+      });
+    }
+  }, [bookingModalVisible, facility, selectedDate, selectedSportType]);
   // Handle time slot selection
   const handleTimeSlotChange = (timeSlot) => {
     setSelectedTimeSlots(prev => {
@@ -163,29 +139,28 @@ const FacilityDetailPage = () => {
       }
     });
   };
-
-  // Handle date change
-  const handleDateChange = async (date) => {
+  // Khi facility thay đổi, reset selectedSportType
+  useEffect(() => {
+  if (facility?.sport_type) {
+    setSelectedSportType(Array.isArray(facility.sport_type) ? facility.sport_type[0] : facility.sport_type);
+  }
+}, [facility]);
+  
+  const handleDateChange = (date) => {
     setSelectedDate(date);
-    setSelectedTimeSlots([]); // Clear selected slots when date changes
-
-    // Fetch real booked slots for new date if not exists
-    if (facility) {
-      const facilityDateKey = `${facility.id}_${date.format('YYYY-MM-DD')}`;
-      if (!bookedSlots[facilityDateKey]) {
-        const bookedSlotsFromDB = await fetchBookedSlots(facility.id, date);
-        setBookedSlots(prev => ({
-          ...prev,
-          [facilityDateKey]: bookedSlotsFromDB
-        }));
-      }
-    }
+    setSelectedTimeSlots([]);
+    setSelectedCourt(null);
   };
-
   // Handle booking submission
   const handleBookingSubmit = async () => {
     if (!selectedTimeSlots.length) {
       message.error('Vui lòng chọn ít nhất một khung giờ');
+      return;
+    }
+
+    // Kiểm tra chọn sân nếu có nhiều sân
+    if (facility.total_courts > 1 && selectedCourt === null) {
+      message.error('Vui lòng chọn sân mong muốn');
       return;
     }
 
@@ -219,14 +194,17 @@ const FacilityDetailPage = () => {
     const endTime = selectedDate.clone().hour(endHour).minute(0).second(0).millisecond(0);
 
     // Booking data to send to backend
+    const courtInfo = facility.total_courts > 1 ? ` - Sân ${selectedCourt + 1}` : '';
     const bookingData = {
       facility_id: facility.id,
+      sport_type: selectedSportType,
+      court_id: selectedCourt, 
       booking_date: selectedDate.format('YYYY-MM-DDT00:00:00'),
       start_time: startTime.format('YYYY-MM-DDTHH:mm:ss'),
       end_time: endTime.format('YYYY-MM-DDTHH:mm:ss'),
       time_slots: selectedTimeSlots,
       total_price: selectedTimeSlots.length * facility.price_per_hour,
-      notes: `Đặt sân ${facility.name} - ${sortedSlots.join(', ')}`
+      notes: `Đặt sân ${facility.name}${courtInfo} - ${sortedSlots.join(', ')}`
     };
 
     console.log('Booking data:', bookingData); // Debug log
@@ -250,14 +228,7 @@ const FacilityDetailPage = () => {
       message.success(`Đặt sân thành công! Mã đặt: ${result.booking_id}`);
       setBookingModalVisible(false);
       setSelectedTimeSlots([]);
-
-      // Refresh booked slots for current date
-      const facilityDateKey = `${facility.id}_${selectedDate.format('YYYY-MM-DD')}`;
-      const bookedSlotsFromDB = await fetchBookedSlots(facility.id, selectedDate);
-      setBookedSlots(prev => ({
-        ...prev,
-        [facilityDateKey]: bookedSlotsFromDB
-      }));
+      setSelectedCourt(null); // Reset chọn sân
 
     } catch (err) {
       console.error('Booking error:', err);
@@ -306,7 +277,7 @@ const FacilityDetailPage = () => {
           ...data,
           available_slots: generateTimeSlots(data.opening_hours)
         });
-
+        
         // Lấy thông tin chủ sân
         if (data.owner_id) {
           const ownerRes = await fetch(`${API_URL}/api/users/${data.owner_id}`);
@@ -347,16 +318,6 @@ const FacilityDetailPage = () => {
     }
 
     setBookingModalVisible(true);
-
-    // Fetch real booked slots from database
-    const facilityDateKey = `${facility.id}_${selectedDate.format('YYYY-MM-DD')}`;
-    if (!bookedSlots[facilityDateKey]) {
-      const bookedSlotsFromDB = await fetchBookedSlots(facility.id, selectedDate);
-      setBookedSlots(prev => ({
-        ...prev,
-        [facilityDateKey]: bookedSlotsFromDB
-      }));
-    }
   };
 
   const handleToggleFavorite = () => {
@@ -488,7 +449,12 @@ const FacilityDetailPage = () => {
           </div>
 
           <div style={{ marginBottom: 12 }}>
-            <Tag color="blue" style={{ fontSize: '14px', padding: '4px 12px' }}>{facility.sport_type}</Tag>
+              {Array.isArray(facility.sport_type)
+                ? facility.sport_type.map(type => (
+                    <Tag color="blue" key={type}>{type}</Tag>
+                  ))
+                : <Tag color="blue">{facility.sport_types}</Tag>
+              }           
             <Rate disabled defaultValue={facility.rating} style={{ fontSize: 16, marginLeft: 8 }} />
             <Text type="secondary" style={{ marginLeft: 8 }}>
               {facility.rating} ({facility.reviews_count} đánh giá)
@@ -569,6 +535,7 @@ const FacilityDetailPage = () => {
         onCancel={() => {
           setBookingModalVisible(false);
           setSelectedTimeSlots([]);
+          setSelectedCourt(null);
         }}
         footer={null}
         width={600}
@@ -594,94 +561,231 @@ const FacilityDetailPage = () => {
                 />
               </Form.Item>
 
-              <Form.Item label="Chọn khung giờ" required>
-                {facility.available_slots && facility.available_slots.length > 0 ? (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
-                    {facility.available_slots.map(slot => {
-                      // Get booked status from state
-                      const facilityDateKey = `${facility.id}_${selectedDate.format('YYYY-MM-DD')}`;
-                      const isBooked = bookedSlots[facilityDateKey]?.[slot] || false;
-                      const isSelected = selectedTimeSlots.includes(slot);
-                      const isPastTime = selectedDate.isSame(dayjs(), 'day') &&
-                        parseInt(slot.split(':')[0]) <= dayjs().hour();
-
+              {/* Chọn sân trong nhà */}
+              {facility.total_courts > 1 && (
+                <Form.Item label="Chọn sân" required>
+                  <div style={{ marginBottom: 8 }}>
+                    <Text type="secondary" style={{ fontSize: '12px' }}>
+                      🏓 Chọn sân mong muốn (vị trí tốt nhất: gần quạt, thoáng mát)
+                    </Text>
+                  </div>
+                  <div 
+                    style={{ 
+                      display: 'grid', 
+                      gridTemplateColumns: `repeat(${facility.court_columns || 3}, 1fr)`, 
+                      gap: 8,
+                      padding: 12,
+                      border: '1px solid #d9d9d9',
+                      borderRadius: 6,
+                      backgroundColor: '#fafafa'
+                    }}
+                  >
+                      {Array.from({ length: courtCount }).map((_, idx) => {                      
+                      const isSelected = selectedCourt === idx;
+                      const courtNumber = idx + 1;
+                      
                       return (
                         <Button
-                          key={slot}
+                          key={idx}
                           type={isSelected ? 'primary' : 'default'}
-                          disabled={isBooked || isPastTime}
-                          onClick={() => handleTimeSlotChange(slot)}
+                          onClick={() => setSelectedCourt(idx)}
                           style={{
-                            textAlign: 'center',
-                            backgroundColor: isBooked ? '#f5f5f5' : undefined,
-                            borderColor: isBooked ? '#d9d9d9' : undefined,
-                            color: isBooked ? '#999' : undefined
+                            height: 60,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '12px',
+                            borderRadius: 4
                           }}
                         >
-                          <div>{slot}</div>
-                          {isBooked && (
-                            <div style={{ fontSize: '10px', color: '#ff4d4f' }}>
-                              Đã đặt
+                          <div style={{ fontWeight: 'bold' }}>Sân {courtNumber}</div>
+                          {/* Hiển thị đặc điểm sân */}
+                          {(courtNumber === 1 || courtNumber === 3) && (
+                            <div style={{ fontSize: '10px', color: '#52c41a' }}>
+                              🌀 Gần quạt
                             </div>
                           )}
-                          {isPastTime && !isBooked && (
-                            <div style={{ fontSize: '10px', color: '#999' }}>
-                              Đã qua
+                          {(courtNumber === 2 || courtNumber === 5) && (
+                            <div style={{ fontSize: '10px', color: '#1890ff' }}>
+                              ❄️ Mát mẻ
                             </div>
                           )}
                         </Button>
                       );
                     })}
                   </div>
-                ) : (
-                  <div style={{ padding: '20px', textAlign: 'center', color: '#999' }}>
-                    Không có khung giờ khả dụng
+                  <div style={{ marginTop: 8, fontSize: '11px', color: '#666' }}>
+                    💡 Mẹo: Sân gần quạt thường mát mẻ và thoáng khí hơn
                   </div>
-                )}
-                <div style={{ marginTop: 12 }}>
-                  <Space direction="vertical" size={4}>
-                    <Text type="secondary" style={{ fontSize: '12px' }}>
-                      💡 Có thể chọn nhiều khung giờ liên tiếp
-                    </Text>
-                    <Space size={16}>
-                      <Space size={4}>
-                        <div style={{
-                          width: 12,
-                          height: 12,
-                          backgroundColor: '#1890ff',
-                          borderRadius: 2
-                        }} />
-                        <Text style={{ fontSize: '11px' }}>Đã chọn</Text>
-                      </Space>
-                      <Space size={4}>
-                        <div style={{
-                          width: 12,
-                          height: 12,
-                          backgroundColor: '#f5f5f5',
-                          border: '1px solid #d9d9d9',
-                          borderRadius: 2
-                        }} />
-                        <Text style={{ fontSize: '11px' }}>Đã đặt</Text>
-                      </Space>
-                      <Space size={4}>
-                        <div style={{
-                          width: 12,
-                          height: 12,
-                          backgroundColor: '#fff',
-                          border: '1px solid #d9d9d9',
-                          borderRadius: 2
-                        }} />
-                        <Text style={{ fontSize: '11px' }}>Còn trống</Text>
-                      </Space>
-                    </Space>
-                  </Space>
-                </div>
-              </Form.Item>
+                </Form.Item>
+              )}
+
+              <Form.Item >
+          <div style={{ marginBottom: 8 }}>
+            <Text strong>Loại sân:</Text>{' '}
+            {Array.isArray(facility.sport_type)
+              ? facility.sport_type.map(type => (
+                  <Tag
+                    key={type}
+                    color={selectedSportType === type ? "blue" : "default"}
+                    style={{ fontSize: 14, padding: '2px 12px', cursor: 'pointer' }}
+                      onClick={() => {
+                        setSelectedSportType(type);
+                        console.log('Đã chọn môn:', type); // Log giá trị vừa chọn
+                        setTimeout(() => {
+                          console.log('selectedSportType sau khi set:', type);
+                        }, 0);
+                      }}                    
+                  >
+                    {type}
+                  </Tag>
+                ))
+              : (
+                  <Tag color="blue" style={{ fontSize: 14, padding: '2px 12px' }}>
+                    {facility.sport_type}
+                  </Tag>
+                )
+            }
+          </div>
+          {/* Heatmap Timeline */}
+          <div style={{ overflowX: 'auto', marginBottom: 16 }}>
+            <div style={{ fontWeight: 'bold', marginBottom: 8 }}>
+            </div>
+            <table style={{ borderCollapse: 'collapse', minWidth: 900 }}>
+              <thead>
+                <tr>
+                  <th style={{ border: '1px solid #ccc', padding: 4, background: '#fafafa', minWidth: 70 }}>Sân / Giờ</th>
+                  {(facility.available_slots || []).map(slot => (
+                    <th key={slot} style={{ border: '1px solid #ccc', padding: 4, background: '#fafafa', minWidth: 50 }}>{slot}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {Array.from({ length: courtCount }).map((_, courtIdx) => (
+                    <tr key={courtIdx}>
+                      <td style={{ border: '1px solid #ccc', padding: 4, fontWeight: 'bold', background: '#f6faff' }}>
+                        Sân {courtIdx + 1}
+                      </td>
+                      {(facility.available_slots || []).map((slot, slotIdx) => {
+                      // Lấy trạng thái đặt cho từng sân/giờ (có thể thay đổi logic này nếu có dữ liệu thực tế)
+                      const facilityDateKey = `${facility.id}_${selectedDate.format('YYYY-MM-DD')}`;
+ 
+                      const isBooked = bookings.some(
+                        booking =>
+                          booking.court_id === courtIdx &&
+                          booking.sport_type === selectedSportType &&
+                          dayjs(booking.start_time).format('HH:mm') <= slot &&
+                          dayjs(booking.end_time).format('HH:mm') > slot
+                      );                  
+                      const isSelected = selectedCourt === courtIdx && selectedTimeSlots.includes(slot);
+                      const isPastTime = selectedDate.isSame(dayjs(), 'day') &&
+                        parseInt(slot.split(':')[0]) <= dayjs().hour();
+
+                      let cellBg = '#fff';
+                      let cellColor = '#222';
+                      let cellText = '';
+                      if (isBooked) {
+                        cellBg = '#ffeded';
+                        cellColor = '#ff4d4f';
+                        cellText = 'X';
+                      } else if (isSelected) {
+                        cellBg = '#e6f7ff';
+                        cellColor = '#1890ff';
+                        cellText = 'O';
+                      } else if (isPastTime) {
+                        cellBg = '#f5f5f5';
+                        cellColor = '#bbb';
+                        cellText = '-';
+                      } else {
+                        cellBg = '#eaffea';
+                        cellColor = '#52c41a';
+                        cellText = 'O';
+                      }
+
+                      return (
+                        <td
+                          key={slotIdx}
+                          style={{
+                            border: '1px solid #ccc',
+                            padding: 0,
+                            textAlign: 'center',
+                            background: cellBg,
+                            color: cellColor,
+                            fontWeight: 'bold',
+                            cursor: isBooked || isPastTime ? 'not-allowed' : 'pointer',
+                            height: 36,
+                            minWidth: 40
+                          }}
+                          onClick={() => {
+                            if (!isBooked && !isPastTime) {
+                              setSelectedCourt(courtIdx);
+                              handleTimeSlotChange(slot);
+                            }
+                          }}
+                        >
+                          {cellText}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div style={{ marginTop: 12 }}>
+              <Space size={16}>
+                <Space size={4}>
+                  <div style={{
+                    width: 12,
+                    height: 12,
+                    backgroundColor: '#e6f7ff',
+                    borderRadius: 2,
+                    border: '1px solid #1890ff'
+                  }} />
+                  <Text style={{ fontSize: '11px' }}>Đã chọn</Text>
+                </Space>
+                <Space size={4}>
+                  <div style={{
+                    width: 12,
+                    height: 12,
+                    backgroundColor: '#ffeded',
+                    borderRadius: 2,
+                    border: '1px solid #ff4d4f'
+                  }} />
+                  <Text style={{ fontSize: '11px' }}>Đã đặt</Text>
+                </Space>
+                <Space size={4}>
+                  <div style={{
+                    width: 12,
+                    height: 12,
+                    backgroundColor: '#eaffea',
+                    borderRadius: 2,
+                    border: '1px solid #52c41a'
+                  }} />
+                  <Text style={{ fontSize: '11px' }}>Còn trống</Text>
+                </Space>
+                <Space size={4}>
+                  <div style={{
+                    width: 12,
+                    height: 12,
+                    backgroundColor: '#f5f5f5',
+                    borderRadius: 2,
+                    border: '1px solid #bbb'
+                  }} />
+                  <Text style={{ fontSize: '11px' }}>Đã qua</Text>
+                </Space>
+              </Space>
+            </div>
+          </div>
+        </Form.Item>
 
               {selectedTimeSlots.length > 0 && (
                 <Form.Item label="Tổng kết">
                   <div style={{ background: '#f6f6f6', padding: 16, borderRadius: 6 }}>
                     <div>Ngày: {selectedDate.format('DD/MM/YYYY')}</div>
+                      {courtCount > 1 && selectedCourt !== null && (
+                        <div>Sân: Sân {selectedCourt + 1}</div>
+                      )}
                     <div>Khung giờ: {selectedTimeSlots.sort().join(', ')}</div>
                     <div>Số giờ: {selectedTimeSlots.length} giờ</div>
                     <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#1890ff' }}>
@@ -699,6 +803,7 @@ const FacilityDetailPage = () => {
                   <Button onClick={() => {
                     setBookingModalVisible(false);
                     setSelectedTimeSlots([]);
+                    setSelectedCourt(null);
                   }}>
                     Hủy
                   </Button>

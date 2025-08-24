@@ -4,6 +4,8 @@ from datetime import datetime
 
 class BookingCreate(BaseModel):
     facility_id: int
+    sport_type: str
+    court_id: int 
     booking_date: datetime
     start_time: datetime
     end_time: datetime
