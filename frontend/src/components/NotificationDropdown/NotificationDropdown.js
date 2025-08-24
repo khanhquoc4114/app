@@ -34,7 +34,7 @@ const { Text } = Typography;
 
 const NotificationDropdown = ({ children,
         onMarkAsRead
- }) => {
+    }) => {
   const navigate = useNavigate();
   const [visible, setVisible] = useState(false);
   const [notificationList, setNotificationList] = useNotifications();

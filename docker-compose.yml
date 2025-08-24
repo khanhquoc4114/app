@@ -39,14 +39,23 @@ services:
         condition: service_healthy
     volumes:
       - ./backend:/app
-    command: sh -c "python seed.py && uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
+    command: sh -c "uvicorn main:app --host 0.0.0.0 --port 8000 --reload --reload-dir /app"
     networks:
       - sports_net
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:8000/health || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 3
+
+  seed:
+    build: ./backend
+    command: python seed.py
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - sports_net
 
   # Frontend 
   frontend:
@@ -58,6 +67,7 @@ services:
       - "3000:3000"
     volumes:
       - ./frontend:/app
+      - /app/node_modules
     environment:
       - CHOKIDAR_USEPOLLING=true
       - WATCHPACK_POLLING=true

@@ -41,21 +41,20 @@ class UserUpgradeRequest(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     
     status = Column(String, default="pending")  # pending / approved / rejected
-    reason = Column(String, nullable=True)          # lý do từ chối (nếu có)
+    reason = Column(String, nullable=True)
+    experience = Column(Text, nullable=True)
     rejection_reason = Column(String, nullable=True)
 
-    cccd_front_image = Column(String, nullable=False)             # lưu path file
+    cccd_front_image = Column(String, nullable=False)
     cccd_back_image = Column(String, nullable=False)
     business_license_image = Column(String, nullable=False)
     facility_images = Column(Text, nullable=False)
-    additional_documents = Column(Text, nullable=True)
-    experience = Column(Text, nullable=True)
     
     business_name = Column(String, nullable=True)
     business_address = Column(String, nullable=True)
     business_license = Column(String, nullable=False)
     
-    bank_account = Column(String, nullable=True)
+    bank_id = Column(String, nullable=True)
     bank_name = Column(String, nullable=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())

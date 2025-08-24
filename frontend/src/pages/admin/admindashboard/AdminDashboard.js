@@ -4,6 +4,7 @@ import { Row, Col, Card, Statistic, Table, Typography, Space, Tag, Button, Modal
 import { DollarOutlined, UserOutlined, ShopOutlined, CalendarOutlined, PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined, UploadOutlined, LockOutlined, UnlockOutlined, CheckOutlined, CloseOutlined, FileTextOutlined, IdcardOutlined, PhoneOutlined, MailOutlined, BankOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import AdminFacility from './AdminFacility';
+import axios from 'axios';
 
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
@@ -49,65 +50,39 @@ const AdminDashboard = () => {
     ];
 
     const [users, setUsers] = useState([]);
+    const [roleFilter, setRoleFilter] = useState("all");
 
-    // Mock data cho yêu cầu nâng role
-    const [roleRequests, setRoleRequests] = useState([
-        {
-            id: 1,
-            user_id: 123,
-            username: 'nguyenvana',
-            full_name: 'Nguyễn Văn A',
-            email: 'nguyenvana@gmail.com',
-            phone: '0987654321',
-            current_role: 'user',
-            requested_role: 'host',
-            status: 'pending',
-            request_date: '2024-01-20',
-            business_license: 'GPKD123456789',
-            business_name: 'Sân thể thao ABC',
-            business_address: '123 Đường XYZ, Quận 1, TP.HCM',
-            bank_account: '1234567890 - Vietcombank',
-            experience: '5 năm kinh nghiệm quản lý sân thể thao',
-            reason: 'Tôi muốn mở rộng dịch vụ cho thuê sân thể thao để phục vụ cộng đồng tốt hơn.',
-            documents: ['gpkd.pdf', 'cmnd.pdf', 'sao_ke_ngan_hang.pdf']
-        },
-        {
-            id: 2,
-            user_id: 124,
-            username: 'tranthib',
-            full_name: 'Trần Thị B',
-            email: 'tranthib@gmail.com',
-            phone: '0976543210',
-            current_role: 'user',
-            requested_role: 'host',
-            status: 'pending',
-            request_date: '2024-01-19',
-            business_license: 'GPKD987654321',
-            business_name: 'Trung tâm thể thao DEF',
-            business_address: '456 Đường ABC, Quận 2, TP.HCM',
-            bank_account: '9876543210 - BIDV',
-            experience: '3 năm làm việc trong lĩnh vực thể thao',
-            reason: 'Có sẵn cơ sở vật chất và muốn kinh doanh dịch vụ sân thể thao.',
-            documents: ['gpkd.pdf', 'cmnd.pdf']
-        },
-        {
-            id: 3,
-            user_id: 125,
-            username: 'lvanc',
-            full_name: 'Lê Văn C',
-            email: 'levanc@gmail.com',
-            phone: '0965432109',
-            current_role: 'user',
-            requested_role: 'host',
-            status: 'approved',
-            request_date: '2024-01-15',
-            approved_date: '2024-01-18',
-            approved_by: 'Admin System',
-            business_license: 'GPKD456789123',
-            business_name: 'Câu lạc bộ GHI',
-            business_address: '789 Đường DEF, Quận 3, TP.HCM'
-        }
-    ]);
+    const handleFilterChange = (value) => {
+        setRoleFilter(value);
+    };
+
+    const [roleRequests, setRoleRequests] = useState([]);
+    const [loading, setLoading] = useState(false);
+
+    const fetchRoleRequests = async () => {
+    setLoading(true);
+    try {
+        const res = await axios.get(`${process.env.REACT_APP_API_URL}/admin/upgrade-requests`, {
+            headers: {
+                Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+        });
+        setRoleRequests(res.data);
+    } catch (err) {
+        console.error("Lỗi khi gọi API:", err);
+    } finally {
+        setLoading(false);
+    }
+    };
+
+    useEffect(() => {
+        fetchRoleRequests();
+    }, []);
+
+    const handleRefresh = () => {
+        fetchRoleRequests();
+        message.success("Danh sách đã được làm mới");
+    };
 
     useEffect(() => {
         const fetchUsers = async () => {
@@ -161,38 +136,98 @@ const AdminDashboard = () => {
 
     // Xử lý yêu cầu nâng role
     const handleApproveRequest = (record) => {
-        Modal.confirm({
-            title: 'Xác nhận duyệt yêu cầu',
-            content: `Bạn có chắc muốn duyệt yêu cầu nâng role của ${record.full_name}?`,
-            onOk: () => {
-                // Cập nhật trạng thái
-                setRoleRequests(prev => prev.map(req => 
-                    req.id === record.id 
-                        ? { ...req, status: 'approved', approved_date: dayjs().format('YYYY-MM-DD'), approved_by: 'Admin System' }
-                        : req
-                ));
-                message.success(`Đã duyệt yêu cầu của ${record.full_name}`);
+    Modal.confirm({
+        title: "Xác nhận duyệt yêu cầu",
+        content: `Bạn có chắc muốn duyệt yêu cầu nâng role của ${record.full_name}?`,
+        okText: "Duyệt",
+        cancelText: "Hủy",
+        onOk: async () => {
+        try {
+            // Gọi API duyệt request
+            const res = await axios.post(`${process.env.REACT_APP_API_URL}/admin/upgrade-requests/${record.id}/approve`,
+            {},
+            {
+                headers: {
+                Authorization: `Bearer ${localStorage.getItem("token")}`, // nếu có auth
+                },
             }
-        });
+            );
+
+            // Nếu thành công thì cập nhật state
+            setRoleRequests((prev) =>
+                prev.map((req) =>
+                    req.id === record.id
+                    ? {
+                        ...req,
+                        status: "approved",
+                        approved_date: dayjs().format("YYYY-MM-DD"),
+                        approved_by: "Admin System",
+                        }
+                    : req
+                )
+            );
+            setRoleRequestDetailVisible(false);
+
+            message.success(res.data.detail || `Đã duyệt yêu cầu của ${record.full_name}`);
+        } catch (err) {
+            console.error("Lỗi duyệt request:", err);
+            message.error("Không thể duyệt yêu cầu. Vui lòng thử lại.");
+        }
+        },
+    });
     };
 
     const handleRejectRequest = (record) => {
+        let reason = ""; // lưu lý do cục bộ cho modal
+
         Modal.confirm({
-            title: 'Xác nhận từ chối yêu cầu',
+            title: "Xác nhận từ chối yêu cầu",
             content: (
-                <div>
-                    <p>Bạn có chắc muốn từ chối yêu cầu nâng role của {record.full_name}?</p>
-                    <Input.TextArea placeholder="Lý do từ chối (tùy chọn)" rows={3} />
-                </div>
+            <div>
+                <p>Bạn có chắc muốn từ chối yêu cầu nâng role của {record.full_name}?</p>
+                <Input.TextArea
+                placeholder="Lý do từ chối (tùy chọn)"
+                rows={3}
+                onChange={(e) => (reason = e.target.value)}
+                />
+            </div>
             ),
-            onOk: () => {
-                setRoleRequests(prev => prev.map(req => 
-                    req.id === record.id 
-                        ? { ...req, status: 'rejected', rejected_date: dayjs().format('YYYY-MM-DD'), rejected_by: 'Admin System' }
-                        : req
-                ));
-                message.success(`Đã từ chối yêu cầu của ${record.full_name}`);
+            okText: "Từ chối",
+            cancelText: "Hủy",
+            async onOk() {
+            try {
+                // Gọi API reject
+                const res = await axios.post(
+                `http://localhost:8000/admin/upgrade-requests/${record.id}/reject`,
+                { reason }, // gửi JSON
+                {
+                    headers: {
+                    Authorization: `Bearer ${localStorage.getItem("token")}`, // nếu cần
+                    },
+                }
+                );
+
+                // Update state
+                setRoleRequests((prev) =>
+                prev.map((req) =>
+                    req.id === record.id
+                    ? {
+                        ...req,
+                        status: "rejected",
+                        rejected_date: dayjs().format("YYYY-MM-DD"),
+                        rejected_by: "Admin System",
+                        rejection_reason: reason,
+                        }
+                    : req
+                )
+                );
+
+                message.success(res.data.detail || `Đã từ chối yêu cầu của ${record.full_name}`);
+            } catch (err) {
+                console.error("Lỗi reject request:", err);
+                message.error("Không thể từ chối yêu cầu. Vui lòng thử lại.");
             }
+            },
         });
     };
 
@@ -361,13 +396,13 @@ const AdminDashboard = () => {
                             {record.full_name?.charAt(0)}
                         </Avatar>
                         <div>
-                            <div style={{ fontWeight: 'bold' }}>{record.full_name}</div>
-                            <div style={{ fontSize: '12px', color: '#666' }}>@{record.username}</div>
+                            <div style={{ fontWeight: 'bold' }}>{record.user.full_name}</div>
+                            <div style={{ fontSize: '12px', color: '#666' }}>@{record.user.username}</div>
                         </div>
                     </div>
                     <div style={{ fontSize: '12px', color: '#666' }}>
-                        <div><MailOutlined /> {record.email}</div>
-                        <div><PhoneOutlined /> {record.phone}</div>
+                        <div><MailOutlined /> {record.user.email}</div>
+                        <div><PhoneOutlined /> {record.user.phone}</div>
                     </div>
                 </div>
             )
@@ -569,7 +604,7 @@ const AdminDashboard = () => {
                         />
                     </TabPane>
 
-                    <TabPane 
+                    <TabPane // Yêu cầu nâng role
                         tab={
                             <Badge count={pendingRequestsCount} offset={[10, 0]}>
                                 Yêu cầu nâng role
@@ -580,18 +615,20 @@ const AdminDashboard = () => {
                         <div style={{ marginBottom: 16 }}>
                             <Space>
                                 <Text strong>Bộ lọc:</Text>
-                                <Select defaultValue="all" style={{ width: 120 }}>
+                                <Select defaultValue="all" style={{ width: 120 }} onChange={handleFilterChange}>
                                     <Option value="all">Tất cả</Option>
                                     <Option value="pending">Chờ duyệt</Option>
                                     <Option value="approved">Đã duyệt</Option>
                                     <Option value="rejected">Từ chối</Option>
                                 </Select>
-                                <Button>Làm mới</Button>
+                                <Button onClick={handleRefresh} type="primary">Làm mới</Button>
                             </Space>
                         </div>
                         <Table
                             columns={roleRequestColumns}
-                            dataSource={roleRequests}
+                            dataSource={        roleFilter === "all"
+            ? roleRequests
+            : roleRequests.filter(req => req.status === roleFilter)}
                             pagination={{ 
                                 pageSize: 10,
                                 showTotal: (total, range) => `${range[0]}-${range[1]} của ${total} yêu cầu`
@@ -666,12 +703,12 @@ const AdminDashboard = () => {
                         <Row gutter={16}>
                             <Col span={12}>
                                 <Card size="small" title="Thông tin cá nhân">
-                                    <p><strong>Họ tên:</strong> {selectedRequest.full_name}</p>
-                                    <p><strong>Username:</strong> {selectedRequest.username}</p>
-                                    <p><strong>Email:</strong> {selectedRequest.email}</p>
+                                    <p><strong>Họ tên:</strong> {selectedRequest.user.full_name}</p>
+                                    <p><strong>Username:</strong> {selectedRequest.user.username}</p>
+                                    <p><strong>Email:</strong> {selectedRequest.user.email}</p>
                                     <p><strong>Số điện thoại:</strong> {selectedRequest.phone}</p>
-                                    <p><strong>Role hiện tại:</strong> <Tag color="blue">{selectedRequest.current_role}</Tag></p>
-                                    <p><strong>Role yêu cầu:</strong> <Tag color="orange">{selectedRequest.requested_role}</Tag></p>
+                                    <p><strong>Role hiện tại:</strong> <Tag color="blue">{selectedRequest.user.role}</Tag></p>
+                                    <p><strong>Role yêu cầu:</strong> <Tag color="orange">Host{selectedRequest.requested_role}</Tag></p>
                                 </Card>
                             </Col>
                             <Col span={12}>
@@ -679,7 +716,7 @@ const AdminDashboard = () => {
                                     <p><strong>Tên doanh nghiệp:</strong> {selectedRequest.business_name}</p>
                                     <p><strong>Giấy phép KD:</strong> {selectedRequest.business_license}</p>
                                     <p><strong>Địa chỉ:</strong> {selectedRequest.business_address}</p>
-                                    <p><strong>Tài khoản NH:</strong> {selectedRequest.bank_account}</p>
+                                    <p><strong>Tài khoản NH:</strong> {selectedRequest.bank_id} - {selectedRequest.bank_name}</p>
                                 </Card>
                             </Col>
                         </Row>
@@ -721,7 +758,7 @@ const AdminDashboard = () => {
                             </Col>
                             <Col span={12}>
                                 <Card size="small" title="Thông tin yêu cầu">
-                                    <p><strong>Ngày yêu cầu:</strong> {dayjs(selectedRequest.request_date).format('DD/MM/YYYY HH:mm')}</p>
+                                    <p><strong>Ngày yêu cầu:</strong> {dayjs(selectedRequest.created_at).format('DD/MM/YYYY HH:mm')}</p>
                                     <p><strong>Trạng thái:</strong> 
                                         <Tag color={
                                             selectedRequest.status === 'pending' ? 'orange' :

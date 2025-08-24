@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import update
+from sqlalchemy import case, desc
 from database import get_db
 from models import Notification
 from auth import verify_token, oauth2_scheme, get_current_user_id
@@ -12,7 +13,24 @@ def get_notifications(
     current_user_id: int = Depends(get_current_user_id),
     db: Session = Depends(get_db)
 ):
-    notifications = db.query(Notification).filter_by(user_id=current_user_id).all()
+    priority_order = case(
+        (Notification.priority == "high", 1),
+        (Notification.priority == "medium", 2),
+        (Notification.priority == "low", 3),
+        else_=4
+    )
+
+    notifications = (
+        db.query(Notification)
+        .filter(Notification.user_id == current_user_id)
+        .order_by(
+            Notification.read.asc(),     # chưa đọc (False=0) trước, đã đọc (True=1) sau
+            priority_order,              # high -> medium -> low
+            desc(Notification.timestamp) # mới nhất trước
+        )
+        .all()
+    )
+
     return notifications
 
 @router.patch("/{notification_id}/read")
