@@ -3,6 +3,7 @@ from sqlalchemy import Table, Column, Integer, String, DateTime, Boolean, Text, 
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database import Base
+from fastapi import Request 
 
 class User(Base):
     __tablename__ = "users"
@@ -11,7 +12,10 @@ class User(Base):
     username = Column(String, unique=True, index=True, nullable=False)
     email = Column(String, unique=True, index=True, nullable=False)
     full_name = Column(String, nullable=False)
-    hashed_password = Column(String, nullable=False)
+    hashed_password = Column(String, nullable=True)
+    provider = Column(String, nullable=True)         # "google", "github", ...
+    provider_id = Column(String, nullable=True)      # id từ Google
+    
     role = Column(String, default="user")  # user, admin, host
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

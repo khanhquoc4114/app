@@ -1,3 +1,4 @@
+import os
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 from database import get_db
@@ -14,8 +15,11 @@ from auth import (
 )
 
 from auth import send_reset_password_email
-from datetime import datetime
+from datetime import datetime, timedelta
 from services.notification import create_notification
+from fastapi import Request
+from authlib.integrations.starlette_client import OAuth
+from fastapi.responses import RedirectResponse
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 
@@ -169,3 +173,85 @@ async def reset_password(request: ResetPasswordRequest, db: Session = Depends(ge
     user.hashed_password = hash_password(request.new_password)
     db.commit()
     return {"message": "Đặt lại mật khẩu thành công!"}
+
+# login with google
+oauth = OAuth()
+
+google = oauth.register(
+    name='google',
+    client_id=os.getenv('GOOGLE_CLIENT_ID'),
+    client_secret=os.getenv('GOOGLE_CLIENT_SECRET'),
+    authorize_url='https://accounts.google.com/o/oauth2/auth',
+    access_token_url='https://oauth2.googleapis.com/token',
+    userinfo_url='https://www.googleapis.com/oauth2/v2/userinfo',
+    client_kwargs={
+        'scope': 'openid email profile'
+    },
+    redirect_uri='http://localhost:5000/auth/google/callback',
+    jwks_uri = "https://www.googleapis.com/oauth2/v3/certs"
+)
+
+@router.get("/google")
+async def google_auth(request: Request):
+    redirect_uri = str(request.url_for("google_callback"))
+    return await oauth.google.authorize_redirect(request, redirect_uri)
+
+ACCESS_TOKEN_EXPIRE_MINUTES = 60
+FRONTEND_URL = "http://localhost:3000"
+
+@router.get("/google/callback", name="google_callback")
+async def google_callback(
+    request: Request, 
+    db: Session = Depends(get_db)
+):
+    token = await oauth.google.authorize_access_token(request)
+    user_data = token.get("userinfo")
+
+    if not user_data:
+        raise HTTPException(status_code=400, detail="Google login failed")
+
+    # Tìm user trong DB
+    db_user = db.query(User).filter(User.email == user_data["email"]).first()
+
+    # Nếu chưa có thì tạo mới
+    if not db_user:
+        db_user = User(
+            username=user_data["email"].split("@")[0],
+            email=user_data["email"],
+            full_name=user_data.get("name", ""),
+            provider="google",
+            provider_id=user_data["sub"],   # id duy nhất của Google user
+            hashed_password=None,           # login social => không cần password
+            avatar=user_data.get("picture")
+        )
+        db.add(db_user)
+        db.commit()
+        db.refresh(db_user)
+
+    # Tạo JWT access token
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": db_user.email, "role": db_user.role, "id": db_user.id},
+        expires_delta=access_token_expires
+    )
+    
+    redirect_url = (
+        f"{FRONTEND_URL}/auth/callback/google"
+        f"?token={access_token}"
+        f"&role={getattr(db_user, 'role', 'user')}"
+    )
+
+    return RedirectResponse(url=redirect_url, status_code=302)
+
+    # return {
+    #     "access_token": access_token,
+    #     "token_type": "bearer",
+    #     "user": {
+    #         "id": db_user.id,
+    #         "email": db_user.email,
+    #         "full_name": db_user.full_name,
+    #         "avatar": db_user.avatar,
+    #         "role": db_user.role
+    #     }
+    # }
+    

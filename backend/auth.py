@@ -165,8 +165,6 @@ def get_current_user_id(token: str = Depends(oauth2_scheme)) -> int:
         raise HTTPException(status_code=401, detail="Token không hợp lệ")
     return payload["id"]
 
-
-
 def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)) -> User:
     payload = verify_token(token)
     if not payload:

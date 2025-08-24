@@ -47,15 +47,15 @@ const Sidebar = ({ collapsed = false }) => {
                     label: 'Dashboard',
                 },
                 {
-                    key: '/admin/facilities',
+                    key: '/api/admin/facilities',
                     label: 'Quản lý sân',
                 },
                 {
-                    key: '/admin/users',
+                    key: '/api/admin/users',
                     label: 'Quản lý người dùng',
                 },
                 {
-                    key: '/admin/revenue',
+                    key: '/api/admin/revenue',
                     label: 'Doanh thu',
                 },
             ],

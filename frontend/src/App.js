@@ -21,6 +21,7 @@ import NotificationsPage from './pages/common/NotificationsPage';
 import RegisterPage from './pages/common/RegisterPage';
 import ForgotPasswordPage from './pages/common/ForgotPasswordPage';
 import ResetPasswordPage from './pages/common/ResetPasswordPage';
+import AuthCallback from './components/AuthCallback';
 
 // User Pages
 import MyBookingsPage from './pages/user/bookingpage/MyBookingsPage';
@@ -78,6 +79,7 @@ const AppRoutes = () => {
     const { isAuthenticated, userRole } = useAuth();
 
     return (
+        
         <Routes>
             {/* Public Routes */}
             <Route
@@ -234,6 +236,7 @@ const AppRoutes = () => {
 
             {/* Fallback */}
             <Route path="*" element={<Navigate to="/" replace />} />
+            <Route path="/auth/callback/google" element={<AuthCallback />} />
         </Routes>
     );
 };

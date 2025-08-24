@@ -16,7 +16,6 @@ export const AuthProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Check localStorage on app start
         const storedAuth = localStorage.getItem('isAuthenticated');
         const storedRole = localStorage.getItem('userRole');
 
@@ -41,16 +40,8 @@ export const AuthProvider = ({ children }) => {
         setUserRole('user');
     };
 
-    const value = {
-        isAuthenticated,
-        userRole,
-        loading,
-        login,
-        logout
-    };
-
     return (
-        <AuthContext.Provider value={value}>
+        <AuthContext.Provider value={{ isAuthenticated, userRole, loading, login, logout }}>
             {children}
         </AuthContext.Provider>
     );
