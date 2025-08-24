@@ -549,9 +549,12 @@ const FacilitiesPage = () => {
                                 <HeartFilled style={{ color: '#ff4d4f', marginLeft: 4, fontSize: '12px' }} />
                             )}
                         </div>
-                        <Tag color="blue" size="small" style={{ fontSize: '10px' }}>
-                            {getSportName(facility.sport_type)}
-                        </Tag>
+                        {Array.isArray(facility.sport_type)
+                        ? facility.sport_type.map(type => (
+                            <Tag color="blue" key={type}>{getSportName(type)}</Tag>
+                            ))
+                        : <Tag color="blue">{getSportName(facility.sport_type)}</Tag>
+                        }
                     </div>
                 }
                 description={

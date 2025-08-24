@@ -27,8 +27,9 @@ def get_bookings(
         {
             "id": b.id,
             "facility_id": b.facility_id,
+            "sport_type": b.sport_type,
             "facility": b.facility.name if b.facility else None,
-            "sport": b.facility.sport_type if b.facility else None,
+            "court_id": b.court_id,
             "location": b.facility.location if b.facility else None,
             "user_id": b.user_id,
             "start_time": b.start_time,
@@ -65,6 +66,8 @@ def create_booking(
     new_booking = Booking(
         user_id=user_id,
         facility_id=booking_data.facility_id,
+        sport_type=booking_data.sport_type,
+        court_id=booking_data.court_id,
         booking_date=booking_data.booking_date,
         start_time=booking_data.start_time,
         end_time=booking_data.end_time,
@@ -87,3 +90,37 @@ def create_booking(
         "booking_date": new_booking.booking_date.isoformat(),
         "time_slots": booking_data.time_slots
     }
+from fastapi import Query
+
+@router.get("/search")
+def search_bookings(
+    facility_id: int = Query(..., description="ID sân"),
+    date: str = Query(..., description="Ngày đặt (YYYY-MM-DD)"),
+    sport_type: str = Query(None, description="Loại môn thể thao"),
+    db: Session = Depends(get_db)
+):
+    query = db.query(Booking).filter(
+        Booking.facility_id == facility_id,
+        Booking.booking_date == date
+    )
+    if sport_type:
+        query = query.filter(Booking.sport_type == sport_type)
+    bookings = query.all()
+    return [
+        {
+            "id": b.id,
+            "facility_id": b.facility_id,
+            "sport_type": b.sport_type,
+            "court_id": b.court_id,
+            "user_id": b.user_id,
+            "start_time": b.start_time,
+            "end_time": b.end_time,
+            "status": b.status,
+            "total_price": b.total_price,
+            "created_at": b.created_at,
+            "payment_status": b.payment_status,
+            "payment_method": b.payment_method,
+            "notes": b.notes
+        }
+        for b in bookings
+    ]

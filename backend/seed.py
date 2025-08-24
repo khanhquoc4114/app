@@ -12,7 +12,11 @@ def seed_facilities(db: Session):
             Facility(
                 name="Sân cầu lông 54",
                 owner_user_id=user_map.get("nguyenvana"),
-                sport_type="badminton",
+                sport_type= ["badminton", "football"],  # vẫn giữ để tương thích cũ
+                court_layout=[
+                    {"sport_type": "badminton", "count": 6},
+                    {"sport_type": "football", "count": 4}
+                ],                
                 description="Sân cầu lông chất lượng cao với sàn gỗ chuyên nghiệp, hệ thống chiếu sáng LED hiện đại",
                 price_per_hour=80000,
                 image_url="/images/badminton-1.jpg",
@@ -25,7 +29,10 @@ def seed_facilities(db: Session):
             Facility(
                 name="Sân bóng đá 2",
                 owner_user_id=user_map.get("tranthib"),
-                sport_type="football",
+                sport_type=["football"],
+                court_layout=[
+                    {"sport_type": "football", "count": 2}
+                ],              
                 description="Sân bóng đá mini 5v5 với cỏ nhân tạo cao cấp, hệ thống tưới nước tự động",
                 price_per_hour=200000,
                 image_url="/images/football-1.jpg",
@@ -38,7 +45,10 @@ def seed_facilities(db: Session):
             Facility(
                 name="Sân tennis 1",
                 owner_user_id=user_map.get("leminhc"),
-                sport_type="tennis",
+                sport_type=["tennis"],
+                court_layout=[
+                    {"sport_type": "tennis", "count": 1}
+                ],
                 description="Sân tennis tiêu chuẩn quốc tế với mặt sân hard court, lưới chuyên nghiệp",
                 price_per_hour=150000,
                 image_url="/images/tennis-1.jpg",
@@ -51,7 +61,10 @@ def seed_facilities(db: Session):
             Facility(
                 name="Sân bóng rổ",
                 owner_user_id=user_map.get("admin1"),
-                sport_type="basketball",
+                sport_type=["basketball"],
+                court_layout=[
+                    {"sport_type": "basketball", "count": 1}
+                ],
                 description="Sân bóng rổ trong nhà với sàn gỗ chuyên nghiệp, rổ chuẩn NBA",
                 price_per_hour=120000,
                 image_url="/images/basketball-1.jpg",
@@ -203,6 +216,7 @@ def seed_bookings(db: Session):
             Booking(
                 user_id=user_map.get("nguyenvana"),
                 facility_id=facility_map.get("Sân cầu lông 54"),
+                court_id=2,
                 booking_date=datetime(2025, 8, 21, 8, 0, 0),
                 start_time=datetime(2025, 8, 21, 8, 0, 0),
                 end_time=datetime(2025, 8, 21, 10, 0, 0),
@@ -215,6 +229,7 @@ def seed_bookings(db: Session):
             Booking(
                 user_id=user_map.get("user"),
                 facility_id=facility_map.get("Sân bóng đá 2"),
+                court_id=1,
                 booking_date=datetime(2025, 8, 22, 18, 0, 0),
                 start_time=datetime(2025, 8, 22, 18, 0, 0),
                 end_time=datetime(2025, 8, 22, 20, 0, 0),
@@ -227,6 +242,7 @@ def seed_bookings(db: Session):
             Booking(
                 user_id=user_map.get("host"),
                 facility_id=facility_map.get("Sân tennis 1"),
+                court_id=1,
                 booking_date=datetime(2025, 8, 23, 14, 0, 0),
                 start_time=datetime(2025, 8, 23, 14, 0, 0),
                 end_time=datetime(2025, 8, 23, 16, 0, 0),
