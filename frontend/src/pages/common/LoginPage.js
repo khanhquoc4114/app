@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
     Card,
     Form,
@@ -59,6 +59,8 @@ const LoginPage = () => {
                 navigate("/admin");
             } else if (data.user.role === "host") {
                 navigate("/host");
+            } else if (data.user.role === "staff") {
+                navigate("/staff");
             } else {
                 navigate("/");
             }
@@ -213,6 +215,9 @@ const LoginPage = () => {
                             <Text style={{ fontSize: '12px', display: 'block' }}>
                                 User: user / user123
                             </Text>
+                            <Text style={{ fontSize: '12px', display: 'block' }}>
+                                Staff: staff / staff123
+                            </Text>                            
                         </div>
                     </Card>
                 </Col>

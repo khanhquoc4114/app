@@ -41,6 +41,7 @@ dayjs.locale('vi');
 const ProtectedRoute = ({ children, requiredRole = null }) => {
     const { isAuthenticated, userRole, loading } = useAuth();
 
+    // Show loading spinner if authentication is still loading
     if (loading) {
         return (
             <div style={{
@@ -54,14 +55,20 @@ const ProtectedRoute = ({ children, requiredRole = null }) => {
         );
     }
 
+    // Redirect to login if not authenticated
     if (!isAuthenticated) {
         return <Navigate to="/login" replace />;
     }
 
-    if (requiredRole && userRole !== requiredRole) {
-        return <Navigate to="/home" replace />;
+    // If `requiredRole` is provided, check if `userRole` matches the role(s)
+    if (requiredRole) {
+        const rolesArray = Array.isArray(requiredRole) ? requiredRole : [requiredRole];
+        if (!rolesArray.includes(userRole)) {
+            return <Navigate to="/home" replace />;
+        }
     }
 
+    // Render children if everything is okay
     return children;
 };
 
@@ -213,10 +220,10 @@ const AppRoutes = () => {
             <Route
                 path="/my-facilities"
                 element={
-                    <ProtectedRoute requiredRole="host">
-                        <LayoutWrapper userRole={userRole}>
-                            <MyFacilitiesPage />
-                        </LayoutWrapper>
+                    <ProtectedRoute requiredRoles={["host", "staff"]}>
+                    <LayoutWrapper userRole={userRole}>
+                        <MyFacilitiesPage />
+                    </LayoutWrapper>
                     </ProtectedRoute>
                 }
             />

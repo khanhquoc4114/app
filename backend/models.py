@@ -15,7 +15,6 @@ class User(Base):
     hashed_password = Column(String, nullable=True)
     provider = Column(String, nullable=True)         # "google", "github", ...
     provider_id = Column(String, nullable=True)      # id từ Google
-    
     role = Column(String, default="user")  # user, admin, host
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -32,6 +31,8 @@ class User(Base):
     bookings = relationship("Booking", back_populates="user")
     favorites = relationship("UserFavorite", back_populates="user", cascade="all, delete-orphan")
     notifications = relationship("Notification", back_populates="user", cascade="all, delete-orphan")
+    staff_members = relationship("Staff", back_populates="host", foreign_keys="Staff.host_id")  # chỉ host mới có
+    staff_of = relationship("Staff", back_populates="user", foreign_keys="Staff.user_id")  # chỉ staff mới có
     upgrade_requests = relationship(
         "UserUpgradeRequest",
         back_populates="user",
@@ -142,3 +143,14 @@ class Notification(Base):
     data = Column(JSON)
 
     user = relationship("User", back_populates="notifications")
+      
+class Staff(Base):
+    __tablename__ = "staffs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    host_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    host = relationship("User", foreign_keys=[host_id], back_populates="staff_members")
+    user = relationship("User", foreign_keys=[user_id], back_populates="staff_of")

@@ -94,6 +94,14 @@ const MainLayout = ({ children, userRole = 'user' }) => {
             }
         ];
 
+        const staffItems = [
+            {
+                key: '/my-facilities',
+                icon: <ShopOutlined />,
+                label: 'Sân của tôi'
+            }
+        ];
+
         const adminItems = [
             {
                 key: '/admin',
@@ -106,6 +114,8 @@ const MainLayout = ({ children, userRole = 'user' }) => {
             return [...commonItems, ...adminItems];
         } else if (userRole === 'host') {
             return [...commonItems, ...hostItems];
+        } else if (userRole === 'staff') {
+            return [...commonItems, ...staffItems];
         } else {
             return [...commonItems, ...userItems];
         }
@@ -256,7 +266,8 @@ const MainLayout = ({ children, userRole = 'user' }) => {
                                         whiteSpace: 'nowrap'
                                     }}>
                                         {userRole === 'admin' ? 'Quản trị viên' :
-                                            userRole === 'host' ? 'Chủ sân' : 'Khách hàng'}
+                                            userRole === 'host' ? 'Chủ sân' : 
+                                            userRole === 'staff' ? 'Nhân viên' : 'Khách hàng'}
                                     </Text>
                                 </div>
                             </Space>

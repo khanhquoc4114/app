@@ -153,11 +153,11 @@ def seed_users(db: Session):
     if db.query(User).count() == 0:
         sample_users = [
             User(
-                username="nguyenvana",
+                username="staff",
                 email="nguyenvana@example.com",
                 full_name="Nguyễn Văn A",
-                hashed_password=hash_password("password123"),
-                role="user",
+                hashed_password=hash_password("staff123"),
+                role="staff",
                 total_bookings=5,
                 total_spent=800000
             ),

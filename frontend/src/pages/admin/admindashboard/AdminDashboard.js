@@ -1,5 +1,5 @@
 // Trang dashboard quản trị hệ thống
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Row, Col, Card, Statistic, Table, Typography, Space, Tag, Button, Modal, Form, Input, Select, Tabs, DatePicker, Upload, message, Avatar, Tooltip, Badge } from 'antd';
 import { DollarOutlined, UserOutlined, ShopOutlined, CalendarOutlined, PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined, UploadOutlined, LockOutlined, UnlockOutlined, CheckOutlined, CloseOutlined, FileTextOutlined, IdcardOutlined, PhoneOutlined, MailOutlined, BankOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
@@ -57,27 +57,27 @@ const AdminDashboard = () => {
     };
 
     const [roleRequests, setRoleRequests] = useState([]);
-    const [loading, setLoading] = useState(false);
+    const [setLoading] = useState(false);
 
-    const fetchRoleRequests = async () => {
-    setLoading(true);
-    try {
-        const res = await axios.get(`${process.env.REACT_APP_API_URL}/api/admin/upgrade-requests`, {
-            headers: {
-                Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
-        });
-        setRoleRequests(res.data);
-    } catch (err) {
-        console.error("Lỗi khi gọi API:", err);
-    } finally {
-        setLoading(false);
-    }
-    };
+    const fetchRoleRequests = useCallback(async () => {
+        setLoading(true);
+        try {
+            const res = await axios.get(`${process.env.REACT_APP_API_URL}/api/admin/upgrade-requests`, {
+                headers: {
+                    Authorization: `Bearer ${localStorage.getItem("token")}`,
+                },
+            });
+            setRoleRequests(res.data);
+        } catch (err) {
+            console.error("Lỗi khi gọi API:", err);
+        } finally {
+            setLoading(false);
+        }
+    }, [setLoading]);
 
     useEffect(() => {
         fetchRoleRequests();
-    }, []);
+    }, [fetchRoleRequests]);
 
     const handleRefresh = () => {
         fetchRoleRequests();
@@ -337,7 +337,8 @@ const AdminDashboard = () => {
                 const config = {
                     admin: { color: 'red', text: 'Admin' },
                     host: { color: 'orange', text: 'Chủ sân' },
-                    user: { color: 'blue', text: 'Khách hàng' }
+                    user: { color: 'blue', text: 'Khách hàng' },
+                    staff: { color: 'green', text: 'Nhân viên' }
                 };
                 return <Tag color={config[role].color}>{config[role].text}</Tag>;
             }
