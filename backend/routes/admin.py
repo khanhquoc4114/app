@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from auth import get_admin_user
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from database import get_db
 from models import User

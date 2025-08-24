@@ -12,10 +12,12 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
-from routes import facilities, notifications, auth, booking, me, admin
+from routes import facilities, notifications, auth, booking, me, admin, messages
 from auth import get_current_user
 import json
 from starlette.middleware.sessions import SessionMiddleware
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query
+from typing import Dict
 
 # Create tables
 Base.metadata.create_all(bind=engine)
@@ -46,6 +48,7 @@ app.include_router(auth.router)
 app.include_router(booking.router)
 app.include_router(me.router)
 app.include_router(admin.router)
+app.include_router(messages.router)
 
 # Health check endpoint
 @app.get("/api/health")
@@ -133,6 +136,43 @@ async def request_host_upgrade(
         import traceback
         print(f"Traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+active_connections: Dict[int, WebSocket] = {}
+
+# test: ws://localhost:8000/chat?token=<token>
+@app.websocket("/chat")
+async def websocket_endpoint(websocket: WebSocket, token: str = Query(...)):
+    # Giải mã token -> user_id
+    user = decode_token(token)  # bạn phải viết hàm này
+    await websocket.accept()
+
+    active_connections[user["id"]] = websocket
+    try:
+        while True:
+            data = await websocket.receive_json()
+            receiver_id = data["receiver_id"]
+            content = data["content"]
+
+            # Gửi message cho receiver nếu đang online
+            if receiver_id in active_connections:
+                await active_connections[receiver_id].send_json({
+                    "from": user["id"],
+                    "message": content
+                })
+
+    except WebSocketDisconnect:
+        active_connections.pop(user["id"], None)
+
+def decode_token(token: str):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id: int = payload.get("id")
+        role: str = payload.get("role")
+        if user_id is None:
+            raise ValueError("Invalid token: no user id")
+        return {"id": user_id, "role": role}
+    except JWTError as e:
+        raise ValueError(f"Invalid token: {e}")
 
 UPLOAD_DIR = "uploads"
 

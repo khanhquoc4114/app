@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 from email.mime.multipart import MIMEMultipart
 import os
 import smtplib
-from fastapi import Depends, HTTPException
+from fastapi import Depends, HTTPException, status, WebSocket
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from email.mime.text import MIMEText
@@ -174,6 +174,32 @@ def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User không tồn tại")
+    return user
+
+async def get_current_user_ws(websocket: WebSocket, db: Session = Depends(get_db)):
+    # Lấy token từ query string
+    token = websocket.query_params.get("token")
+    if not token:
+        await websocket.close(code=1008)  # policy violation
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token missing")
+
+    try:
+        # Giải mã JWT
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id: int = payload.get("sub")
+        if user_id is None:
+            await websocket.close(code=1008)
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+    except JWTError:
+        await websocket.close(code=1008)
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+
+    # Tìm user trong DB
+    user = db.query(User).filter(User.id == user_id).first()
+    if user is None:
+        await websocket.close(code=1008)
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+
     return user
 
 def get_admin_user(current_user: User = Depends(get_current_user)) -> User:
