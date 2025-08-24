@@ -62,7 +62,7 @@ const AdminDashboard = () => {
     const fetchRoleRequests = async () => {
     setLoading(true);
     try {
-        const res = await axios.get(`${process.env.REACT_APP_API_URL}/admin/upgrade-requests`, {
+        const res = await axios.get(`${process.env.REACT_APP_API_URL}/api/admin/upgrade-requests`, {
             headers: {
                 Authorization: `Bearer ${localStorage.getItem("token")}`,
             },
@@ -144,7 +144,7 @@ const AdminDashboard = () => {
         onOk: async () => {
         try {
             // Gọi API duyệt request
-            const res = await axios.post(`${process.env.REACT_APP_API_URL}/admin/upgrade-requests/${record.id}/approve`,
+            const res = await axios.post(`${process.env.REACT_APP_API_URL}/api/admin/upgrade-requests/${record.id}/approve`,
             {},
             {
                 headers: {
@@ -198,7 +198,7 @@ const AdminDashboard = () => {
             try {
                 // Gọi API reject
                 const res = await axios.post(
-                `http://localhost:8000/admin/upgrade-requests/${record.id}/reject`,
+                `http://localhost:8000/api/admin/upgrade-requests/${record.id}/reject`,
                 { reason }, // gửi JSON
                 {
                     headers: {

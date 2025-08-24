@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Card,
     Form,
@@ -71,7 +71,15 @@ const LoginPage = () => {
     };
 
     const handleSocialLogin = (provider) => {
-        message.info(`Đăng nhập bằng ${provider} (Tính năng đang phát triển)`);
+        if (provider === "google") {
+            // Redirect sang backend route Google OAuth
+            window.location.href = "http://localhost:8000/api/auth/google";
+        } else if (provider === "facebook") {
+            // Redirect sang backend route Facebook OAuth
+            window.location.href = "http://localhost:8000/api/auth/facebook";
+        } else {
+            message.error("Provider không hợp lệ");
+        }
     };
 
     const handleRegisterClick = () => {
@@ -167,7 +175,7 @@ const LoginPage = () => {
                             <Button
                                 block
                                 icon={<GoogleOutlined />}
-                                onClick={() => handleSocialLogin('Google')}
+                                onClick={() => handleSocialLogin('google')}
                                 style={{ borderColor: '#db4437', color: '#db4437' }}
                             >
                                 Đăng nhập bằng Google
@@ -175,7 +183,7 @@ const LoginPage = () => {
                             <Button
                                 block
                                 icon={<FacebookOutlined />}
-                                onClick={() => handleSocialLogin('Facebook')}
+                                onClick={() => handleSocialLogin('facebook')}
                                 style={{ borderColor: '#4267B2', color: '#4267B2' }}
                             >
                                 Đăng nhập bằng Facebook

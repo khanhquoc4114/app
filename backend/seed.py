@@ -245,7 +245,7 @@ def seed_bookings(db: Session):
 
 def init_db():
     # Tạo bảng nếu chưa có
-    Base.metadata.create_all(bind=engine)
+    Base.metadata.create_all(bind=engine, checkfirst=True)
 
     db: Session = SessionLocal()
     try:
