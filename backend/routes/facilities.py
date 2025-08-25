@@ -1,11 +1,65 @@
-from fastapi import APIRouter, Depends, HTTPException
+from datetime import datetime
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from database import get_db
-from models import Facility, UserFavorite
-from auth import verify_token, oauth2_scheme, get_current_user_id
+from models import Facility, UserFavorite, User
+from auth import verify_token, oauth2_scheme, get_current_user
+from typing import List, Optional
+from pydantic import BaseModel
 
 router = APIRouter(prefix="/api/facilities", tags=["Facilities"])
+
+
+class CourtLayout(BaseModel):
+    rows: int
+    cols: int
+    total_courts: int
+
+class FacilityCreate(BaseModel):
+    name: str
+    sport_type: List[str]
+    description: str
+    price_per_hour: float
+    location: str
+    amenities: Optional[List[str]] = []
+    opening_hours: str
+    court_layout: Optional[CourtLayout] = None
+    image_url: Optional[str] = None
+    is_active: bool = True
+
+class FacilityUpdate(BaseModel):
+    name: Optional[str] = None
+    sport_type: Optional[List[str]] = None
+    description: Optional[str] = None
+    price_per_hour: Optional[float] = None
+    location: Optional[str] = None
+    amenities: Optional[List[str]] = None
+    opening_hours: Optional[str] = None
+    court_layout: Optional[CourtLayout] = None
+    image_url: Optional[str] = None
+    is_active: Optional[bool] = None
+
+class FacilityResponse(BaseModel):
+    id: int
+    name: str
+    owner_user_id: int
+    sport_type: List[str]
+    court_layout: Optional[dict] = None
+    description: str
+    price_per_hour: float
+    image_url: Optional[str] = None
+    location: str
+    rating: float
+    reviews_count: int
+    amenities: List[str]
+    opening_hours: str
+    is_active: bool
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
 
 @router.get("/")
 def get_facilities(db: Session = Depends(get_db)):
@@ -31,6 +85,166 @@ def get_facilities(db: Session = Depends(get_db)):
         for f in facilities
     ]
 
+@router.post("/", response_model=FacilityResponse, status_code=status.HTTP_201_CREATED)
+async def create_facility(
+    facility_data: FacilityCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Tạo sân mới - chỉ user có role 'host' hoặc 'admin' mới được tạo
+    """
+    # Kiểm tra quyền tạo sân
+    if current_user.role not in ["host", "admin"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Chỉ chủ sân hoặc admin mới có thể tạo sân mới"
+        )
+    
+    # Tạo facility mới
+    new_facility = Facility(
+        name=facility_data.name,
+        owner_user_id=current_user.id,
+        sport_type=facility_data.sport_type,
+        court_layout= facility_data.court_layout.dict() if facility_data.court_layout else None,
+        description=facility_data.description,
+        price_per_hour=facility_data.price_per_hour,
+        image_url=facility_data.image_url,
+        location=facility_data.location,
+        amenities=facility_data.amenities,
+        opening_hours=facility_data.opening_hours,
+        is_active=facility_data.is_active
+    )
+    
+    try:
+        db.add(new_facility)
+        db.commit()
+        db.refresh(new_facility)
+        
+        return new_facility
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Lỗi khi tạo sân: {str(e)}"
+        )
+
+@router.put("/{facility_id}", response_model=FacilityResponse)
+async def update_facility(
+    facility_id: int,
+    facility_data: FacilityUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Cập nhật thông tin sân
+    """
+    facility = db.query(Facility).filter(Facility.id == facility_id).first()
+    
+    if not facility:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Không tìm thấy sân"
+        )
+    
+    # Kiểm tra quyền sửa
+    if facility.owner_user_id != current_user.id and current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Bạn không có quyền sửa sân này"
+        )
+    
+    # Cập nhật các field
+    update_data = facility_data.dict(exclude_unset=True)
+    if "court_layout" in update_data and update_data["court_layout"]:
+        update_data["court_layout"] = update_data["court_layout"]
+    
+    for field, value in update_data.items():
+        setattr(facility, field, value)
+    
+    try:
+        db.commit()
+        db.refresh(facility)
+        return facility
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Lỗi khi cập nhật sân: {str(e)}"
+        )
+
+@router.delete("/{facility_id}")
+async def delete_facility(
+    facility_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Xóa sân
+    """
+    facility = db.query(Facility).filter(Facility.id == facility_id).first()
+    
+    if not facility:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Không tìm thấy sân"
+        )
+    
+    # Kiểm tra quyền xóa
+    if facility.owner_user_id != current_user.id and current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Bạn không có quyền xóa sân này"
+        )
+    
+    try:
+        db.delete(facility)
+        db.commit()
+        return {"message": "Xóa sân thành công"}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Lỗi khi xóa sân: {str(e)}"
+        )
+
+@router.patch("/{facility_id}/status")
+async def update_facility_status(
+    facility_id: int,
+    is_active: bool,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Cập nhật trạng thái sân (hoạt động/tạm ngưng)
+    """
+    facility = db.query(Facility).filter(Facility.id == facility_id).first()
+    
+    if not facility:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Không tìm thấy sân"
+        )
+    
+    # Kiểm tra quyền
+    if facility.owner_user_id != current_user.id and current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Bạn không có quyền thay đổi trạng thái sân này"
+        )
+    
+    facility.is_active = is_active
+    
+    try:
+        db.commit()
+        return {"message": "Cập nhật trạng thái thành công", "is_active": is_active}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Lỗi khi cập nhật trạng thái: {str(e)}"
+        )
+
 # API lấy chi tiết sân theo id
 @router.get("/{facility_id}")
 def get_facility_detail(facility_id: int, db: Session = Depends(get_db)):
@@ -53,7 +267,7 @@ def get_facility_detail(facility_id: int, db: Session = Depends(get_db)):
         "is_active": facility.is_active,
         "created_at": facility.created_at,
         "updated_at": facility.updated_at,
-        "owner_id": facility.owner_user_id,
+        "owner_user_id": facility.owner_user_id,
     }
 
 @router.get("/count")
@@ -117,3 +331,4 @@ def remove_favorite(
     db.delete(favorite)
     db.commit()
     return {"message": "Đã bỏ thích sân"}
+

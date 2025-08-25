@@ -5,141 +5,282 @@ import {
     Typography,
     Space,
     Avatar,
-    Tag,
     Spin,
+    Badge,
+    Card
 } from 'antd';
 import {
     SendOutlined,
     RobotOutlined,
     UserOutlined,
     CustomerServiceOutlined,
-    QuestionCircleOutlined,
     PaperClipOutlined,
-    SmileOutlined
+    SmileOutlined,
+    SearchOutlined,
+    MoreOutlined,
+    PhoneOutlined,
+    VideoCameraOutlined,
+    InfoCircleOutlined,
+    ArrowLeftOutlined,
+    MessageOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 
 const { Text } = Typography;
 const { TextArea } = Input;
 
-const ChatInterface = ({ onClose }) => {
-    const [messages, setMessages] = useState([]);
+const MessengerChatInterface = ({ onClose }) => {
+    const [selectedChat, setSelectedChat] = useState(null);
+    const [messages, setMessages] = useState({});
     const [inputMessage, setInputMessage] = useState('');
     const [isTyping, setIsTyping] = useState(false);
-    const [chatMode, setChatMode] = useState('bot'); // 'bot' or 'human'
+    const [searchTerm, setSearchTerm] = useState('');
+    const [isMobile, setIsMobile] = useState(false);
     const messagesEndRef = useRef(null);
 
-    // Quick questions
-    const quickQuestions = [
-        'Giờ mở cửa của sân?',
-        'Cách đặt sân?',
-        'Chính sách hủy đặt?',
-        'Giá thuê sân?',
-        'Liên hệ hỗ trợ'
-    ];
-
-    // Initial bot message
+    // Check if mobile
     useEffect(() => {
-        const welcomeMessage = {
-            id: 1,
-            type: 'bot',
-            content: 'Xin chào! Tôi là AI Assistant của hệ thống đặt sân thể thao. Tôi có thể giúp bạn:\n\n• Tìm hiểu về các sân thể thao\n• Hướng dẫn đặt sân\n• Giải đáp thắc mắc\n• Kết nối với nhân viên hỗ trợ\n\nBạn cần hỗ trợ gì?',
-            timestamp: dayjs(),
-            avatar: <RobotOutlined />
+        const checkMobile = () => {
+            setIsMobile(window.innerWidth <= 768);
         };
-        setMessages([welcomeMessage]);
+        
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
     }, []);
 
-    // Auto scroll to bottom
+    // Sample chat conversations
+    const [chatList, setChatList] = useState([
+        {
+            id: 'ai-support',
+            type: 'bot',
+            name: 'AI Assistant',
+            avatar: <RobotOutlined />,
+            lastMessage: 'Tôi có thể giúp bạn đặt sân thể thao!',
+            lastTime: dayjs().subtract(5, 'minute'),
+            unreadCount: 0,
+            online: true,
+            avatarColor: '#1890ff'
+        },
+        {
+            id: 'admin-support',
+            type: 'admin',
+            name: 'Nhân viên hỗ trợ',
+            avatar: <CustomerServiceOutlined />,
+            lastMessage: 'Chúng tôi sẽ hỗ trợ bạn 24/7',
+            lastTime: dayjs().subtract(30, 'minute'),
+            unreadCount: 2,
+            online: true,
+            avatarColor: '#52c41a'
+        },
+        {
+            id: 'user-001',
+            type: 'user',
+            name: 'Nguyễn Văn Minh',
+            avatar: 'M',
+            lastMessage: 'Bạn có muốn đi chơi cầu lông không?',
+            lastTime: dayjs().subtract(1, 'hour'),
+            unreadCount: 1,
+            online: true,
+            avatarColor: '#722ed1'
+        },
+        {
+            id: 'user-002',
+            type: 'user',
+            name: 'Trần Thị Lan',
+            avatar: 'L',
+            lastMessage: 'Sân tennis lúc 7h tối nhé!',
+            lastTime: dayjs().subtract(2, 'hour'),
+            unreadCount: 0,
+            online: false,
+            avatarColor: '#eb2f96'
+        },
+        {
+            id: 'group-001',
+            type: 'group',
+            name: 'Nhóm Cầu Lông HCM',
+            avatar: '🏸',
+            lastMessage: 'Ai đi đánh cầu lông chiều nay không?',
+            lastTime: dayjs().subtract(3, 'hour'),
+            unreadCount: 5,
+            online: true,
+            avatarColor: '#fa541c',
+            memberCount: 12
+        },
+        {
+            id: 'user-003',
+            type: 'user',
+            name: 'Lê Hoàng Nam',
+            avatar: 'N',
+            lastMessage: 'Cảm ơn bạn đã book sân!',
+            lastTime: dayjs().subtract(1, 'day'),
+            unreadCount: 0,
+            online: false,
+            avatarColor: '#13c2c2'
+        }
+    ]);
+
+    // Sample messages for different chats
+    const sampleMessages = {
+        'ai-support': [
+            {
+                id: 1,
+                type: 'bot',
+                content: 'Xin chào! Tôi là AI Assistant của hệ thống đặt sân thể thao. Tôi có thể giúp bạn:\n\n• Tìm hiểu về các sân thể thao\n• Hướng dẫn đặt sân\n• Giải đáp thắc mắc\n• Kết nối với nhân viên hỗ trợ\n\nBạn cần hỗ trợ gì?',
+                timestamp: dayjs().subtract(10, 'minute'),
+                avatar: <RobotOutlined />
+            }
+        ],
+        'user-001': [
+            {
+                id: 1,
+                type: 'user',
+                content: 'Chào bạn! Mình thấy bạn hay đặt sân cầu lông nhỉ?',
+                timestamp: dayjs().subtract(2, 'hour'),
+                avatar: 'M',
+                sender: 'Nguyễn Văn Minh'
+            },
+            {
+                id: 2,
+                type: 'me',
+                content: 'Chào bạn! Đúng rồi, mình rất thích chơi cầu lông',
+                timestamp: dayjs().subtract(1.5, 'hour'),
+                avatar: <UserOutlined />
+            },
+            {
+                id: 3,
+                type: 'user',
+                content: 'Bạn có muốn đi chơi cầu lông không? Mình đang tìm partner',
+                timestamp: dayjs().subtract(1, 'hour'),
+                avatar: 'M',
+                sender: 'Nguyễn Văn Minh'
+            }
+        ],
+        'group-001': [
+            {
+                id: 1,
+                type: 'user',
+                content: 'Chào mọi người!',
+                timestamp: dayjs().subtract(4, 'hour'),
+                avatar: 'A',
+                sender: 'Admin'
+            },
+            {
+                id: 2,
+                type: 'user',
+                content: 'Hi all! 👋',
+                timestamp: dayjs().subtract(3.5, 'hour'),
+                avatar: 'M',
+                sender: 'Minh'
+            },
+            {
+                id: 3,
+                type: 'user',
+                content: 'Ai đi đánh cầu lông chiều nay không?',
+                timestamp: dayjs().subtract(3, 'hour'),
+                avatar: 'L',
+                sender: 'Lan'
+            }
+        ]
+    };
+
+    // Initialize messages
     useEffect(() => {
-        scrollToBottom();
-    }, [messages]);
+        setMessages(sampleMessages);
+    }, []);
+
+    // Auto scroll to bottom when messages change
+    useEffect(() => {
+        if (selectedChat) {
+            setTimeout(() => scrollToBottom(), 100);
+        }
+    }, [messages, selectedChat]);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     };
 
+    const handleChatSelect = (chat) => {
+        setSelectedChat(chat);
+        // Mark as read
+        setChatList(prev => 
+            prev.map(c => 
+                c.id === chat.id ? { ...c, unreadCount: 0 } : c
+            )
+        );
+    };
+
     const handleSendMessage = () => {
-        if (!inputMessage.trim()) return;
+        if (!inputMessage.trim() || !selectedChat) return;
 
         const userMessage = {
             id: Date.now(),
-            type: 'user',
+            type: 'me',
             content: inputMessage,
             timestamp: dayjs(),
             avatar: <UserOutlined />
         };
 
-        setMessages(prev => [...prev, userMessage]);
-        setInputMessage('');
-        setIsTyping(true);
+        // Add message to current chat
+        setMessages(prev => ({
+            ...prev,
+            [selectedChat.id]: [...(prev[selectedChat.id] || []), userMessage]
+        }));
 
-        // Simulate bot response
-        setTimeout(() => {
-            const botResponse = generateBotResponse(inputMessage);
-            const botMessage = {
-                id: Date.now() + 1,
-                type: 'bot',
-                content: botResponse,
-                timestamp: dayjs(),
-                avatar: <RobotOutlined />
-            };
-            setMessages(prev => [...prev, botMessage]);
-            setIsTyping(false);
-        }, 1500);
+        // Update last message in chat list
+        setChatList(prev => 
+            prev.map(chat => 
+                chat.id === selectedChat.id 
+                ? { ...chat, lastMessage: inputMessage, lastTime: dayjs() }
+                : chat
+            )
+        );
+
+        setInputMessage('');
+
+        // Simulate response for bot/admin
+        if (selectedChat.type === 'bot' || selectedChat.type === 'admin') {
+            setIsTyping(true);
+            setTimeout(() => {
+                const botResponse = generateBotResponse(inputMessage);
+                const botMessage = {
+                    id: Date.now() + 1,
+                    type: selectedChat.type,
+                    content: botResponse,
+                    timestamp: dayjs(),
+                    avatar: selectedChat.avatar
+                };
+                
+                setMessages(prev => ({
+                    ...prev,
+                    [selectedChat.id]: [...(prev[selectedChat.id] || []), botMessage]
+                }));
+                
+                setChatList(prev => 
+                    prev.map(chat => 
+                        chat.id === selectedChat.id 
+                        ? { ...chat, lastMessage: botResponse.substring(0, 50) + '...', lastTime: dayjs() }
+                        : chat
+                    )
+                );
+                
+                setIsTyping(false);
+            }, 1500);
+        }
     };
 
     const generateBotResponse = (userInput) => {
         const input = userInput.toLowerCase();
 
         if (input.includes('giờ') || input.includes('mở cửa')) {
-            return 'Hệ thống sân thể thao của chúng tôi mở cửa:\n\n🕕 **Giờ hoạt động:** 06:00 - 22:00 hàng ngày\n🏸 **Sân cầu lông:** 06:00 - 22:00\n⚽ **Sân bóng đá:** 05:00 - 23:00\n🎾 **Sân tennis:** 06:00 - 21:00\n\nBạn có thể đặt sân trực tuyến 24/7!';
+            return 'Hệ thống sân thể thao mở cửa:\n\n🕕 06:00 - 22:00 hàng ngày\n🏸 Sân cầu lông: 06:00 - 22:00\n⚽ Sân bóng đá: 05:00 - 23:00\n🎾 Sân tennis: 06:00 - 21:00';
         }
 
-        if (input.includes('đặt sân') || input.includes('booking')) {
-            return 'Để đặt sân, bạn có thể:\n\n1️⃣ **Trực tuyến:** Vào trang "Danh sách sân" → Chọn sân → Chọn ngày giờ → Đặt sân\n\n2️⃣ **Quy trình:**\n   • Chọn sân phù hợp\n   • Chọn ngày và khung giờ\n   • Điền thông tin liên hệ\n   • Thanh toán online\n   • Nhận xác nhận qua email/SMS\n\n3️⃣ **Lưu ý:** Đặt trước ít nhất 2 tiếng để đảm bảo có sân!';
+        if (input.includes('đặt sân')) {
+            return 'Để đặt sân:\n1️⃣ Chọn sân → Chọn ngày giờ → Đặt sân\n2️⃣ Thanh toán online\n3️⃣ Nhận xác nhận\n\nĐặt trước ít nhất 2 tiếng nhé!';
         }
 
-        if (input.includes('hủy') || input.includes('cancel')) {
-            return '**Chính sách hủy đặt sân:**\n\n✅ **Miễn phí hủy:** Trước 24h\n💰 **Phí 50%:** Hủy trong vòng 24h\n❌ **Không hoàn tiền:** Hủy trong vòng 2h\n\n**Cách hủy:**\n• Vào "Lịch đặt của tôi"\n• Chọn lịch cần hủy\n• Nhấn "Hủy đặt"\n• Xác nhận hủy\n\nTiền sẽ được hoàn lại trong 3-5 ngày làm việc!';
-        }
-
-        if (input.includes('giá') || input.includes('price')) {
-            return '**Bảng giá thuê sân:**\n\n🏸 **Cầu lông:**\n   • Sân thường: 60,000đ/giờ\n   • Sân VIP: 80,000đ/giờ\n\n⚽ **Bóng đá mini:**\n   • Sân 5v5: 200,000đ/giờ\n   • Sân 7v7: 300,000đ/giờ\n\n🎾 **Tennis:** 150,000đ/giờ\n🏀 **Bóng rổ:** 120,000đ/giờ\n\n💡 **Ưu đãi:** Giảm 10% khi đặt từ 3 giờ trở lên!';
-        }
-
-        if (input.includes('liên hệ') || input.includes('support')) {
-            return '**Thông tin liên hệ:**\n\n📞 **Hotline:** 1900-xxxx (24/7)\n📧 **Email:** support@sportsfacility.com\n💬 **Chat:** Ngay tại đây!\n\n**Địa chỉ các sân:**\n🏢 Chi nhánh 1: Quận 1, TP.HCM\n🏢 Chi nhánh 2: Quận 7, TP.HCM\n🏢 Chi nhánh 3: Quận 3, TP.HCM\n\nBạn muốn tôi kết nối với nhân viên hỗ trợ không?';
-        }
-
-        return 'Cảm ơn bạn đã liên hệ! Tôi hiểu bạn đang cần hỗ trợ về "' + userInput + '".\n\nTôi có thể giúp bạn về:\n• Thông tin sân thể thao\n• Hướng dẫn đặt sân\n• Chính sách và quy định\n• Giá cả và khuyến mãi\n\nHoặc bạn có thể chọn một trong các câu hỏi phổ biến bên dưới, hoặc gõ "nhân viên" để kết nối với nhân viên hỗ trợ!';
-    };
-
-    const handleQuickQuestion = (question) => {
-        setInputMessage(question);
-        setTimeout(() => handleSendMessage(), 100);
-    };
-
-    const connectToHuman = () => {
-        setChatMode('human');
-        const humanMessage = {
-            id: Date.now(),
-            type: 'system',
-            content: 'Đang kết nối với nhân viên hỗ trợ... Vui lòng chờ trong giây lát.',
-            timestamp: dayjs()
-        };
-        setMessages(prev => [...prev, humanMessage]);
-
-        setTimeout(() => {
-            const hostMessage = {
-                id: Date.now() + 1,
-                type: 'host',
-                content: 'Xin chào! Tôi là Minh - nhân viên hỗ trợ khách hàng. Tôi có thể giúp gì cho bạn?',
-                timestamp: dayjs(),
-                avatar: <CustomerServiceOutlined />
-            };
-            setMessages(prev => [...prev, hostMessage]);
-        }, 2000);
+        return `Cảm ơn bạn đã nhắn tin! Tôi đã nhận được: "${userInput}"\n\nTôi có thể hỗ trợ bạn về:\n• Thông tin sân thể thao\n• Hướng dẫn đặt sân\n• Chính sách và quy định\n• Kết nối nhân viên hỗ trợ`;
     };
 
     const handleKeyPress = (e) => {
@@ -149,224 +290,554 @@ const ChatInterface = ({ onClose }) => {
         }
     };
 
+    const filteredChats = chatList.filter(chat =>
+        chat.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    const renderChatItem = (chat) => (
+        <div
+            key={chat.id}
+            onClick={() => handleChatSelect(chat)}
+            style={{
+                padding: '12px 16px',
+                cursor: 'pointer',
+                backgroundColor: selectedChat?.id === chat.id ? '#e6f7ff' : 'transparent',
+                transition: 'all 0.2s',
+                borderBottom: '1px solid #f0f0f0'
+            }}
+            onMouseEnter={(e) => {
+                if (selectedChat?.id !== chat.id) {
+                    e.currentTarget.style.backgroundColor = '#f5f5f5';
+                }
+            }}
+            onMouseLeave={(e) => {
+                if (selectedChat?.id !== chat.id) {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                }
+            }}
+        >
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                <Badge dot={chat.online} offset={[-2, 2]}>
+                    <Avatar
+                        style={{ 
+                            backgroundColor: chat.avatarColor,
+                            flexShrink: 0
+                        }}
+                        size={48}
+                    >
+                        {typeof chat.avatar === 'string' ? chat.avatar : chat.avatar}
+                    </Avatar>
+                </Badge>
+                
+                <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                        <Text strong style={{ fontSize: '14px' }}>
+                            {chat.name}
+                            {chat.type === 'group' && (
+                                <Text type="secondary" style={{ fontSize: '12px', marginLeft: 4 }}>
+                                    ({chat.memberCount})
+                                </Text>
+                            )}
+                        </Text>
+                        <Text type="secondary" style={{ fontSize: '11px' }}>
+                            {chat.lastTime.fromNow()}
+                        </Text>
+                    </div>
+                    
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Text 
+                            type="secondary" 
+                            style={{ 
+                                fontSize: '13px',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                                flex: 1,
+                                fontWeight: chat.unreadCount > 0 ? 'bold' : 'normal'
+                            }}
+                        >
+                            {chat.lastMessage}
+                        </Text>
+                        {chat.unreadCount > 0 && (
+                            <Badge count={chat.unreadCount} size="small" style={{ marginLeft: 8 }} />
+                        )}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+
     const renderMessage = (message) => {
-        const isUser = message.type === 'user';
-        const isSystem = message.type === 'system';
+        const isMe = message.type === 'me';
+        const isBot = message.type === 'bot';
+        const isAdmin = message.type === 'admin';
 
         return (
             <div
                 key={message.id}
                 style={{
                     display: 'flex',
-                    justifyContent: isUser ? 'flex-end' : 'flex-start',
+                    justifyContent: isMe ? 'flex-end' : 'flex-start',
                     marginBottom: 16,
-                    padding: '0 16px'
+                    padding: isMe ? '0 20px 0 60px' : '0 60px 0 20px',
+                    alignItems: 'flex-end'
                 }}
             >
-                {!isUser && !isSystem && (
+                {!isMe && (
                     <Avatar
-                        icon={message.avatar}
                         style={{
-                            backgroundColor: message.type === 'host' ? '#52c41a' : '#1890ff',
+                            backgroundColor: isBot ? '#1890ff' : isAdmin ? '#52c41a' : '#87d068',
                             marginRight: 8,
                             flexShrink: 0
                         }}
-                        size="small"
-                    />
+                        size={32}
+                    >
+                        {typeof message.avatar === 'string' ? message.avatar : message.avatar}
+                    </Avatar>
                 )}
 
-                <div
-                    style={{
-                        maxWidth: '75%',
-                        padding: '10px 14px',
-                        borderRadius: '12px',
-                        backgroundColor: isUser ? '#1890ff' : isSystem ? '#f0f0f0' : '#f6f6f6',
-                        color: isUser ? 'white' : 'black',
-                        wordBreak: 'break-word'
-                    }}
-                >
-                    <div style={{ whiteSpace: 'pre-line', lineHeight: '1.4' }}>
-                        {message.content}
+                <div style={{ maxWidth: '70%' }}>
+                    {!isMe && selectedChat?.type === 'group' && (
+                        <Text style={{ 
+                            fontSize: '12px', 
+                            color: '#666', 
+                            marginBottom: 4, 
+                            display: 'block',
+                            marginLeft: '12px',
+                            fontWeight: 'bold'
+                        }}>
+                            {message.sender}
+                        </Text>
+                    )}
+                    <div
+                        style={{
+                            padding: '10px 14px',
+                            borderRadius: isMe ? '18px 18px 6px 18px' : '18px 18px 18px 6px',
+                            backgroundColor: isMe ? '#1890ff' : '#f0f0f0',
+                            color: isMe ? 'white' : 'black',
+                            wordBreak: 'break-word',
+                            boxShadow: '0 1px 2px rgba(0,0,0,0.1)'
+                        }}
+                    >
+                        <div style={{ whiteSpace: 'pre-line', lineHeight: '1.5', fontSize: '14px' }}>
+                            {message.content}
+                        </div>
                     </div>
                     <div
                         style={{
-                            fontSize: '10px',
-                            opacity: 0.7,
-                            marginTop: 4,
-                            textAlign: isUser ? 'right' : 'left'
+                            fontSize: '11px',
+                            color: '#999',
+                            marginTop: 6,
+                            marginLeft: isMe ? 0 : '12px',
+                            textAlign: isMe ? 'right' : 'left'
                         }}
                     >
                         {message.timestamp.format('HH:mm')}
                     </div>
                 </div>
 
-                {isUser && (
+                {isMe && (
                     <Avatar
                         icon={<UserOutlined />}
-                        style={{ backgroundColor: '#87d068', marginLeft: 8, flexShrink: 0 }}
-                        size="small"
+                        style={{ 
+                            backgroundColor: '#87d068', 
+                            marginLeft: 8, 
+                            flexShrink: 0 
+                        }}
+                        size={32}
                     />
                 )}
             </div>
         );
     };
 
-    return (
+    // Mobile: Show chat list or selected chat
+    if (isMobile) {
+        return (
+            <div style={{
+                height: '100vh',
+                display: 'flex',
+                flexDirection: 'column',
+                background: '#fff',
+                fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+            }}>
+                {!selectedChat ? (
+                    // Mobile Chat List View
+                    <>
+                        {/* Header */}
+                        <div style={{
+                            padding: '16px',
+                            background: '#fff',
+                            borderBottom: '1px solid #e8e8e8',
+                            flexShrink: 0
+                        }}>
+                            <Text strong style={{ fontSize: '24px', display: 'block', marginBottom: 16 }}>
+                                Đoạn chat
+                            </Text>
+                            <Input
+                                placeholder="Tìm kiếm trên Messenger"
+                                prefix={<SearchOutlined />}
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                style={{ borderRadius: '20px' }}
+                            />
+                        </div>
+                        
+                        {/* Chat List */}
+                        <div style={{ 
+                            flex: 1, 
+                            overflowY: 'auto',
+                            background: '#fff'
+                        }}>
+                            {filteredChats.map(renderChatItem)}
+                        </div>
+                    </>
+                ) : (
+                    // Mobile Chat View
+                    <>
+                        {/* Chat Header */}
+                        <div style={{
+                            padding: '12px 16px',
+                            background: '#fff',
+                            borderBottom: '1px solid #e8e8e8',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            flexShrink: 0
+                        }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                <Button
+                                    type="text"
+                                    icon={<ArrowLeftOutlined />}
+                                    onClick={() => setSelectedChat(null)}
+                                    size="large"
+                                />
+                                
+                                <Badge dot={selectedChat.online} offset={[-2, 2]}>
+                                    <Avatar
+                                        style={{ backgroundColor: selectedChat.avatarColor }}
+                                        size={40}
+                                    >
+                                        {selectedChat.avatar}
+                                    </Avatar>
+                                </Badge>
+                                <div>
+                                    <Text strong style={{ fontSize: '16px' }}>{selectedChat.name}</Text>
+                                    <div style={{ fontSize: '12px', color: '#999' }}>
+                                        {selectedChat.online ? 'Đang hoạt động' : `Hoạt động ${selectedChat.lastTime.fromNow()}`}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <Space>
+                                {selectedChat.type === 'user' && (
+                                    <>
+                                        <Button type="text" icon={<PhoneOutlined />} size="large" />
+                                        <Button type="text" icon={<VideoCameraOutlined />} size="large" />
+                                    </>
+                                )}
+                                <Button type="text" icon={<InfoCircleOutlined />} size="large" />
+                            </Space>
+                        </div>
+
+                        {/* Messages */}
+                        <div style={{
+                            flex: 1,
+                            overflowY: 'auto',
+                            padding: '16px 0',
+                            background: '#fafafa'
+                        }}>
+                            {(messages[selectedChat.id] || []).map(renderMessage)}
+
+                            {isTyping && (
+                                <div style={{
+                                    display: 'flex',
+                                    alignItems: 'flex-end',
+                                    marginBottom: 16,
+                                    padding: '0 20px'
+                                }}>
+                                    <Avatar
+                                        style={{ backgroundColor: selectedChat.avatarColor, marginRight: 8, flexShrink: 0 }}
+                                        size={32}
+                                    >
+                                        {selectedChat.avatar}
+                                    </Avatar>
+                                    <div style={{
+                                        padding: '12px 16px',
+                                        backgroundColor: '#f0f0f0',
+                                        borderRadius: '18px 18px 18px 6px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        boxShadow: '0 1px 2px rgba(0,0,0,0.1)'
+                                    }}>
+                                        <Spin size="small" style={{ marginRight: 8 }} />
+                                        <Text style={{ fontSize: '13px', color: '#666' }}>Đang nhập...</Text>
+                                    </div>
+                                </div>
+                            )}
+
+                            <div ref={messagesEndRef} />
+                        </div>
+
+                        {/* Input */}
+                        <div style={{
+                            padding: '12px 16px',
+                            background: '#fff',
+                            borderTop: '1px solid #e8e8e8',
+                            flexShrink: 0
+                        }}>
+                            <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+                                <Button
+                                    type="text"
+                                    icon={<PaperClipOutlined />}
+                                    size="large"
+                                />
+                                
+                                <div style={{ flex: 1 }}>
+                                    <TextArea
+                                        value={inputMessage}
+                                        onChange={(e) => setInputMessage(e.target.value)}
+                                        onKeyPress={handleKeyPress}
+                                        placeholder="Aa"
+                                        autoSize={{ minRows: 1, maxRows: 4 }}
+                                        style={{
+                                            borderRadius: '20px',
+                                            resize: 'none',
+                                            fontSize: '16px'
+                                        }}
+                                    />
+                                </div>
+
+                                <Button
+                                    type="text"
+                                    icon={<SmileOutlined />}
+                                    size="large"
+                                />
+                                
+                                <Button
+                                    type="primary"
+                                    icon={<SendOutlined />}
+                                    onClick={handleSendMessage}
+                                    disabled={!inputMessage.trim()}
+                                    size="large"
+                                    style={{ borderRadius: '50%' }}
+                                />
+                            </div>
+                        </div>
+                    </>
+                )}
+            </div>
+        );
+    }
+
+    // Desktop view
+return (
+    <div style={{
+        height: '100%',
+        display: 'flex',
+        background: '#fff',
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+        overflow: 'hidden'
+    }}>
+        {/* Desktop Sidebar */}
         <div style={{
-            height: '100%',
+            width: '320px',
+            borderRight: '1px solid #e8e8e8',
             display: 'flex',
             flexDirection: 'column',
-            background: '#fafafa'
+            height: '100%',
+            overflow: 'hidden'
         }}>
-            {/* Chat mode indicator */}
+            {/* Header - Fixed - Đã bỏ vì Drawer có title riêng */}
             <div style={{
-                padding: '12px 16px',
+                padding: '16px 16px 8px 16px',
                 background: '#fff',
-                borderBottom: '1px solid #f0f0f0'
+                borderBottom: '1px solid #e8e8e8',
+                flexShrink: 0
             }}>
-                <Space>
-                    <Tag color={chatMode === 'bot' ? 'blue' : 'default'}>
-                        🤖 AI Assistant
-                    </Tag>
-                    <Tag color={chatMode === 'human' ? 'green' : 'default'}>
-                        👨‍💼 Nhân viên hỗ trợ
-                    </Tag>
-                </Space>
+                <Input
+                    placeholder="Tìm kiếm cuộc trò chuyện..."
+                    prefix={<SearchOutlined />}
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    style={{ borderRadius: '20px' }}
+                    size="small"
+                />
             </div>
 
-            {/* Messages area */}
-            <div
-                style={{
-                    flex: 1,
-                    overflowY: 'auto',
-                    padding: '16px 0'
-                }}
-            >
-                {messages.map(renderMessage)}
-
-                {isTyping && (
-                    <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        marginBottom: 16,
-                        padding: '0 16px'
-                    }}>
-                        <Avatar
-                            icon={<RobotOutlined />}
-                            style={{ backgroundColor: '#1890ff', marginRight: 8 }}
-                            size="small"
-                        />
-                        <div style={{
-                            padding: '8px 12px',
-                            backgroundColor: '#f6f6f6',
-                            borderRadius: '12px',
-                            display: 'flex',
-                            alignItems: 'center'
-                        }}>
-                            <Spin size="small" style={{ marginRight: 8 }} />
-                            <Text style={{ fontSize: '13px' }}>Đang trả lời...</Text>
-                        </div>
-                    </div>
-                )}
-
-                <div ref={messagesEndRef} />
+            {/* Chat List - Scrollable */}
+            <div style={{
+                flex: 1,
+                overflowY: 'auto',
+                overflowX: 'hidden',
+                background: '#fafafa',
+                minHeight: 0
+            }}>
+                {filteredChats.map(renderChatItem)}
             </div>
+        </div>
 
-            {/* Quick questions */}
-            {messages.length <= 1 && (
+        {/* Chat Content */}
+        {selectedChat ? (
+            <div style={{ 
+                flex: 1, 
+                display: 'flex', 
+                flexDirection: 'column', 
+                height: '100%',
+                overflow: 'hidden',
+                position: 'relative'
+            }}>
+                {/* Chat Header - Simplified vì đã có header của Drawer */}
                 <div style={{
                     padding: '12px 16px',
                     background: '#fff',
-                    borderTop: '1px solid #f0f0f0'
+                    borderBottom: '1px solid #e8e8e8',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexShrink: 0,
+                    zIndex: 10
                 }}>
-                    <Text strong style={{ marginBottom: 8, display: 'block', fontSize: '13px' }}>
-                        <QuestionCircleOutlined /> Câu hỏi thường gặp:
-                    </Text>
-                    <Space wrap size={[4, 4]}>
-                        {quickQuestions.map((question, index) => (
-                            <Button
-                                key={index}
-                                size="small"
-                                type="text"
-                                onClick={() => handleQuickQuestion(question)}
-                                style={{
-                                    fontSize: '12px',
-                                    height: 'auto',
-                                    padding: '4px 8px',
-                                    border: '1px solid #d9d9d9',
-                                    borderRadius: '12px'
-                                }}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <Badge dot={selectedChat.online} offset={[-2, 2]}>
+                            <Avatar
+                                style={{ backgroundColor: selectedChat.avatarColor }}
+                                size={32}
                             >
-                                {question}
-                            </Button>
-                        ))}
+                                {selectedChat.avatar}
+                            </Avatar>
+                        </Badge>
+                        <div>
+                            <Text strong style={{ fontSize: '14px' }}>{selectedChat.name}</Text>
+                            <div style={{ fontSize: '11px', color: '#999' }}>
+                                {selectedChat.online ? 'Đang hoạt động' : `Hoạt động ${selectedChat.lastTime.fromNow()}`}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <Space size="small">
+                        {selectedChat.type === 'user' && (
+                            <>
+                                <Button type="text" icon={<PhoneOutlined />} size="small" />
+                                <Button type="text" icon={<VideoCameraOutlined />} size="small" />
+                            </>
+                        )}
+                        <Button type="text" icon={<MoreOutlined />} size="small" />
                     </Space>
                 </div>
-            )}
 
-            {/* Input area */}
-            <div style={{
-                padding: '16px',
-                background: '#fff',
-                borderTop: '1px solid #f0f0f0'
-            }}>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
-                    <div style={{ flex: 1 }}>
-                        <TextArea
-                            value={inputMessage}
-                            onChange={(e) => setInputMessage(e.target.value)}
-                            onKeyPress={handleKeyPress}
-                            placeholder="Nhập tin nhắn... (Enter để gửi, Shift+Enter để xuống hàng)"
-                            autoSize={{ minRows: 1, maxRows: 4 }}
-                            style={{
-                                borderRadius: '20px',
-                                resize: 'none'
-                            }}
-                        />
-                    </div>
+                {/* Messages - Scrollable */}
+                <div style={{
+                    flex: 1,
+                    overflowY: 'auto',
+                    overflowX: 'hidden',
+                    padding: '16px 0',
+                    background: '#fafafa',
+                    minHeight: 0
+                }}>
+                    {(messages[selectedChat.id] || []).map(renderMessage)}
 
-                    <div style={{ display: 'flex', gap: 4 }}>
+                    {isTyping && (
+                        <div style={{
+                            display: 'flex',
+                            alignItems: 'flex-end',
+                            marginBottom: 16,
+                            padding: '0 20px'
+                        }}>
+                            <Avatar
+                                style={{ backgroundColor: selectedChat.avatarColor, marginRight: 8, flexShrink: 0 }}
+                                size={32}
+                            >
+                                {selectedChat.avatar}
+                            </Avatar>
+                            <div style={{
+                                padding: '12px 16px',
+                                backgroundColor: '#f0f0f0',
+                                borderRadius: '18px 18px 18px 6px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                boxShadow: '0 1px 2px rgba(0,0,0,0.1)'
+                            }}>
+                                <Spin size="small" style={{ marginRight: 8 }} />
+                                <Text style={{ fontSize: '13px', color: '#666' }}>Đang nhập...</Text>
+                            </div>
+                        </div>
+                    )}
+
+                    <div ref={messagesEndRef} />
+                </div>
+
+                {/* Input - Fixed */}
+                <div style={{
+                    padding: '16px',
+                    background: '#fff',
+                    borderTop: '1px solid #e8e8e8',
+                    flexShrink: 0,
+                    zIndex: 10
+                }}>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
                         <Button
                             type="text"
                             icon={<PaperClipOutlined />}
-                            size="small"
+                            size="large"
                             style={{ borderRadius: '50%' }}
-                            title="Đính kèm file"
                         />
+                        
+                        <div style={{ flex: 1 }}>
+                            <TextArea
+                                value={inputMessage}
+                                onChange={(e) => setInputMessage(e.target.value)}
+                                onKeyPress={handleKeyPress}
+                                placeholder="Aa"
+                                autoSize={{ minRows: 1, maxRows: 4 }}
+                                style={{
+                                    borderRadius: '20px',
+                                    resize: 'none',
+                                    fontSize: '14px'
+                                }}
+                            />
+                        </div>
+
                         <Button
                             type="text"
                             icon={<SmileOutlined />}
-                            size="small"
+                            size="large"
                             style={{ borderRadius: '50%' }}
-                            title="Emoji"
                         />
+                        
                         <Button
                             type="primary"
                             icon={<SendOutlined />}
                             onClick={handleSendMessage}
                             disabled={!inputMessage.trim()}
+                            size="large"
                             style={{ borderRadius: '50%' }}
-                            title="Gửi tin nhắn"
                         />
                     </div>
                 </div>
-
-                {chatMode === 'bot' && (
-                    <div style={{ marginTop: 8, textAlign: 'center' }}>
-                        <Button
-                            type="link"
-                            size="small"
-                            icon={<CustomerServiceOutlined />}
-                            onClick={connectToHuman}
-                            style={{ fontSize: '12px' }}
-                        >
-                            Kết nối với nhân viên hỗ trợ
-                        </Button>
-                    </div>
-                )}
             </div>
-        </div>
-    );
+        ) : (
+            <div style={{
+                flex: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: '#fafafa',
+                padding: '20px'
+            }}>
+                <Card style={{ textAlign: 'center', maxWidth: 400 }}>
+                    <Avatar size={64} icon={<MessageOutlined />} style={{ marginBottom: 16 }} />
+                    <Text strong style={{ fontSize: '18px', display: 'block', marginBottom: 8 }}>
+                        Chọn một cuộc trò chuyện
+                    </Text>
+                    <Text type="secondary">
+                        Chọn từ danh sách bên trái để bắt đầu trò chuyện
+                    </Text>
+                </Card>
+            </div>
+        )}
+    </div>
+);
 };
 
-export default ChatInterface;
+export default MessengerChatInterface;

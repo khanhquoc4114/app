@@ -78,7 +78,8 @@ class Facility(Base):
     court_layout = Column(JSON, nullable=True)   # lưu layout sân dưới dạng JSON
     description = Column(Text)
     price_per_hour = Column(Float, nullable=False)
-    image_url = Column(String)
+    image_url = Column(String, nullable=True)                     # ảnh đại diện
+    status = Column(String, default="active")     # active, inactive, maintenance
     location = Column(String)                     # thêm địa chỉ
     rating = Column(Float, default=0.0)           # điểm trung bình
     reviews_count = Column(Integer, default=0)    # số review

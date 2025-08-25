@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { Button, Badge, Drawer, Typography, Space, Avatar } from 'antd';
 import {
     MessageOutlined,
@@ -10,10 +10,17 @@ import ChatInterface from '../ChatInterface/ChatInterface';
 
 const { Text } = Typography;
 
-const ChatBubble = () => {
+const ChatBubble = forwardRef((props, ref) => {
     const [isOpen, setIsOpen] = useState(false);
     const [hasNewMessage, setHasNewMessage] = useState(false);
     const [isVisible, setIsVisible] = useState(true);
+
+    // Expose các hàm mở/đóng bubble ra bên ngoài thông qua ref
+    useImperativeHandle(ref, () => ({
+        openBubble: () => setIsOpen(true),
+        closeBubble: () => setIsOpen(false),
+        toggleBubble: () => setIsOpen(prev => !prev)
+    }));
 
     // Simulate new message notification
     useEffect(() => {
@@ -154,14 +161,14 @@ const ChatBubble = () => {
                 title={
                     <Space>
                         <CustomerServiceOutlined />
-                        <span>Hỗ trợ khách hàng</span>
-                        <Badge status="success" text="Trực tuyến" />
+                        <span>Tin nhắn</span>
                     </Space>
                 }
                 placement="right"
                 onClose={handleClose}
                 open={isOpen}
-                width={400}
+                width={800}
+                height="100vh"
                 styles={{
                     body: { padding: 0 }
                 }}
@@ -208,13 +215,13 @@ const ChatBubble = () => {
                 /* Mobile responsive */
                 @media (max-width: 768px) {
                     .chat-bubble-container {
-                        bottom: 80px !important; /* Above mobile navigation if any */
+                        bottom: 80px !important;
                         right: 16px !important;
                     }
                 }
             `}</style>
         </>
     );
-};
+});
 
 export default ChatBubble;

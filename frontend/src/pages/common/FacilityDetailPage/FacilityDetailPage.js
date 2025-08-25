@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState , useRef} from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Card, Typography, Tag, Rate, Button, Avatar, Divider, Row, Col, message, Spin, Modal, Form, DatePicker, Space, Breadcrumb, Tabs, Image, Carousel, Statistic, Timeline, Badge, Tooltip, Progress } from 'antd';
-import { EnvironmentOutlined, UserOutlined, ArrowLeftOutlined, HeartOutlined, HeartFilled, HomeOutlined, PhoneOutlined, ShareAltOutlined, CalendarOutlined, DollarOutlined, StarOutlined, CheckCircleOutlined, WifiOutlined, CarOutlined, SafetyOutlined, CoffeeOutlined, ToolOutlined, TeamOutlined, TrophyOutlined, ClockCircleOutlined } from '@ant-design/icons';
+import { Card, Typography, Tag, Rate, Button, Avatar, Divider, Row, Col, message, Spin, Modal, Form, DatePicker, Space, Breadcrumb, Tabs, Image, Statistic, Timeline, Badge, Progress } from 'antd';
+import { EnvironmentOutlined, UserOutlined, ArrowLeftOutlined, HeartOutlined, HeartFilled, HomeOutlined, PhoneOutlined, ShareAltOutlined, CalendarOutlined, DollarOutlined, StarOutlined, CheckCircleOutlined, WifiOutlined, CarOutlined, SafetyOutlined, CoffeeOutlined, ToolOutlined, TeamOutlined, MailOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
+import ChatBubble from '../../../components/ChatBubble/ChatBubble';
 
 const { Title, Text, Paragraph } = Typography;
 const { TabPane } = Tabs;
@@ -33,6 +34,7 @@ const FacilityDetailPage = () => {
   const courtCount = facility?.court_layout?.find?.(c => c.sport_type === selectedSportType)?.count || 0;  const [shareModalVisible, setShareModalVisible] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
   const API_URL = process.env.REACT_APP_API_URL;
+  const chatBubbleRef = useRef();
 
   // Load favorites from localStorage
   useEffect(() => {
@@ -252,8 +254,10 @@ const FacilityDetailPage = () => {
     }
   }, []);
 
+  // fetch facility details
   useEffect(() => {
     async function fetchData() {
+      const token = localStorage.getItem('token');
       if (!API_URL) {
         message.error('Cấu hình API không hợp lệ');
         setLoading(false);
@@ -263,7 +267,12 @@ const FacilityDetailPage = () => {
       setLoading(true);
       try {
         // Lấy thông tin sân
-        const res = await fetch(`${API_URL}/api/facilities/${id}`);
+        const res = await fetch(`${API_URL}/api/facilities/${id}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
         if (!res.ok) {
           throw new Error('Không thể tải thông tin sân');
         }
@@ -279,15 +288,15 @@ const FacilityDetailPage = () => {
         });
         
         // Lấy thông tin chủ sân
-        if (data.owner_id) {
-          const ownerRes = await fetch(`${API_URL}/api/users/${data.owner_id}`);
+        if (data.owner_user_id) {
+          const ownerRes = await fetch(`${API_URL}/api/users/${data.owner_user_id}`);
           if (ownerRes.ok) {
             setOwner(await ownerRes.json());
           }
         }
 
         // Lấy các sân liên quan (cùng chủ hoặc cùng khu vực)
-        const relatedRes = await fetch(`${API_URL}/api/facilities?owner_id=${data.owner_id}&exclude_id=${id}`);
+        const relatedRes = await fetch(`${API_URL}/api/facilities?owner_user_id=${data.owner_user_id}&exclude_id=${id}`);
         if (relatedRes.ok) {
           setRelatedFacilities(await relatedRes.json());
         }
@@ -318,6 +327,10 @@ const FacilityDetailPage = () => {
     }
 
     setBookingModalVisible(true);
+  };
+
+  const handleContactOwner = () => {
+    chatBubbleRef.current.openBubble();
   };
 
   const handleToggleFavorite = () => {
@@ -428,6 +441,7 @@ const FacilityDetailPage = () => {
               <Image
                 alt={facility.name}
                 src={facility.image_url}
+                fallback="/default-image.jpg"
                 style={{ width: '100%', maxHeight: 350, objectFit: 'cover', borderRadius: 8 }}
                 preview={{
                   mask: <div style={{ background: 'rgba(0,0,0,0.5)', color: 'white', padding: '8px' }}>Xem ảnh lớn</div>
@@ -511,6 +525,10 @@ const FacilityDetailPage = () => {
             <Button type="primary" size="large" icon={<CalendarOutlined />} onClick={handleBookFacility}>
               Đặt Sân Ngay
             </Button>
+            <Button size="large" icon={<MailOutlined />} onClick={handleContactOwner}>
+              Liên hệ
+            </Button>
+            <ChatBubble ref={chatBubbleRef} />
             <Button
               size="large"
               icon={isFavorite ? <HeartFilled style={{ color: '#ff4d4f' }} /> : <HeartOutlined />}
@@ -996,7 +1014,7 @@ const FacilityDetailPage = () => {
             <Card
               hoverable
               onClick={() => navigate(`/facilities/${f.id}`)}
-              cover={f.image_url && <img alt={f.name} src={f.image_url} style={{ height: 120, objectFit: 'cover' }} />}
+              cover={f.image_url && <img alt={f.name} src={f.image_url} style={{ height: 120, objectFit: 'cover' }} onError={(e) => { e.currentTarget.src = '/default-image.jpg'; }}/>}
             >
               <Card.Meta
                 title={f.name}

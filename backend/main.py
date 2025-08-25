@@ -19,6 +19,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query
 from typing import Dict
 
+
 # Create tables
 Base.metadata.create_all(bind=engine)
 
