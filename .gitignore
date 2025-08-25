@@ -329,6 +329,8 @@ site/
 # Analytics
 .analytics/
 
+uploads/
+
 command.txt
 
 trash.js

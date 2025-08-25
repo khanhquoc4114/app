@@ -1,11 +1,12 @@
 from datetime import datetime
 from models import *
+from sqlalchemy import or_, and_
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from database import get_db
 from auth import get_current_user, get_current_user_ws  
 from services.connection_manager import manager
-from fastapi import WebSocket
+from fastapi import Query
 from pydantic import BaseModel
 
 router = APIRouter(prefix="/api/messages", tags=["Messages"])
@@ -16,14 +17,14 @@ class MessageSendRequest(BaseModel):
 
 class MessageResponse(BaseModel):
     id: int
-    conversation_id: int
     sender_id: int
+    receiver_id: int
     content: str
     created_at: datetime
 
     class Config:
         orm_mode = True
-        
+                
 class MessageCreate(BaseModel):
     conversation_id: int
     content: str
@@ -34,63 +35,78 @@ def send_message(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    # 1. check receiver tồn tại
     receiver = db.query(User).filter(User.id == payload.receiver_id).first()
     if not receiver:
         raise HTTPException(404, "Receiver not found")
 
-    # 2. tìm conversation đã có giữa 2 user chưa
-    subq = (
-        db.query(Conversation.id)
-        .join(ConversationParticipant)
-        .filter(ConversationParticipant.user_id.in_([current_user.id, payload.receiver_id]))
-        .group_by(Conversation.id)
-        .having(func.count(Conversation.id) == 2)  # cả 2 user đều nằm trong
-        .subquery()
-    )
-    conversation = db.query(Conversation).filter(Conversation.id.in_(subq)).first()
-
-    # 3. nếu chưa có thì tạo mới
-    if not conversation:
-        conversation = Conversation()
-        db.add(conversation)
-        db.commit()
-        db.refresh(conversation)
-
-        db.add_all([
-            ConversationParticipant(conversation_id=conversation.id, user_id=current_user.id),
-            ConversationParticipant(conversation_id=conversation.id, user_id=payload.receiver_id)
-        ])
-        db.commit()
-
-    # 4. tạo message
     msg = Message(
-        conversation_id=conversation.id,
         sender_id=current_user.id,
+        receiver_id=payload.receiver_id,
         content=payload.content
     )
     db.add(msg)
     db.commit()
     db.refresh(msg)
-
     return msg
       
-async def notify_users_in_conversation(conversation_id: int, msg: Message, db: Session):
-    # Lấy tất cả participants
-    participants = db.query(ConversationParticipant).filter(
-        ConversationParticipant.conversation_id == conversation_id
-    ).all()
+@router.get("/history/{user_id}")
+def get_chat_history(
+    user_id: int,
+    limit: int = Query(50, le=100),
+    offset: int = Query(0, ge=0),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    # Kiểm tra user target
+    target_user = db.query(User).filter(User.id == user_id).first()
+    if not target_user:
+        raise HTTPException(404, "User not found")
 
-    # Tạo payload gửi đi
-    payload = {
-        "conversation_id": conversation_id,
-        "message_id": msg.id,
-        "sender_id": msg.sender_id,
-        "content": msg.content,
-        "created_at": str(msg.created_at)
-    }
+    messages = (
+        db.query(Message)
+        .filter(
+            or_(
+                and_(
+                    Message.sender_id == current_user.id,
+                    Message.receiver_id == user_id
+                ),
+                and_(
+                    Message.sender_id == user_id,
+                    Message.receiver_id == current_user.id
+                )
+            )
+        )
+        .order_by(Message.created_at.asc())  # ASC để có thứ tự đúng
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
+    
+    # Convert to dict để frontend dễ xử lý
+    return [
+        {
+            "id": msg.id,
+            "sender_id": msg.sender_id,
+            "receiver_id": msg.receiver_id,
+            "content": msg.content,
+            "created_at": msg.created_at.isoformat(),
+            "is_read": msg.is_read
+        }
+        for msg in messages
+    ]
 
-    # Gửi tới tất cả participants qua WebSocket
-    for p in participants:
-        if p.user_id != msg.sender_id:  # không gửi lại cho chính sender
-            await manager.send_personal_message(payload, p.user_id)
+@router.put("/mark-read/{user_id}")
+def mark_messages_as_read(
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    db.query(Message).filter(
+        Message.sender_id == user_id,
+        Message.receiver_id == current_user.id,
+        Message.is_read == False
+    ).update({"is_read": True})
+    
+    db.commit()
+    return {"message": "Messages marked as read"}
+

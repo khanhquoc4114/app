@@ -330,7 +330,11 @@ const FacilityDetailPage = () => {
   };
 
   const handleContactOwner = () => {
-    chatBubbleRef.current.openBubble();
+    if (owner) {
+      chatBubbleRef.current.openChatWithUser(owner.id);
+    } else {
+      chatBubbleRef.current.openBubble();
+    }
   };
 
   const handleToggleFavorite = () => {
