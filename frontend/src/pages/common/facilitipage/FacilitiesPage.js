@@ -5,6 +5,7 @@ import { EnvironmentOutlined, ClockCircleOutlined, HomeOutlined, HeartOutlined, 
 import { useLocation, useNavigate } from 'react-router-dom';
 import AdvancedSearch from '../../../components/AdvancedSearch/AdvancedSearch';
 import FacilityStats from '../../../components/FacilityStats/FacilityStats';
+import { getSportName } from '../../../utils/sportsName';
 
 const { Title, Text, Paragraph } = Typography;
 const { Meta } = Card;
@@ -330,15 +331,7 @@ const FacilitiesPage = () => {
         return icons[sportType] || '🏃';
     };
 
-    const getSportName = (sportType) => {
-        const names = {
-            badminton: 'Cầu lông',
-            football: 'Bóng đá',
-            tennis: 'Tennis',
-            basketball: 'Bóng rổ'
-        };
-        return names[sportType] || sportType;
-    };
+
 
     const handleToggleFavorite = async (facilityId, e) => {
         e.stopPropagation();

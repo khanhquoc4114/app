@@ -10,6 +10,9 @@ import {
 
 import dayjs from 'dayjs';
 import { handleCancelBooking, formatPrice, getStatusColor, getStatusText, handleReviewBooking, handleSubmitReview } from './bookingLogic';
+import { getSportName } from '../../../utils/sportsName';
+
+
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -61,110 +64,141 @@ const MyBookingsPage = () => {
             });
     }, []);
 
-    // Định nghĩa các cột cho bảng Table
-    const columns = [
-        {
-            title: 'Mã đặt',
-            dataIndex: 'id',
-            key: 'id',
-            width: 100
-        },
-        {
-            title: 'Sân',
-            key: 'facility',
-            render: (_, record) => (
-                <div>
-                    <Text strong>{record.facility}</Text>
-                    <br />
-                    <Tag color="blue" size="small">{record.sport}</Tag>
-                    <br />
-                    <Text type="secondary" style={{ fontSize: '12px' }}>
-                        {record.location}
-                    </Text>
-                </div>
-            )
-        },
-        {
-            title: 'Thời gian',
-            key: 'datetime',
-            render: (_, record) => (
-                <div>
-                    <div>
-                        <CalendarOutlined style={{ marginRight: 4 }} />
-                        {dayjs(record.start_time).format('DD/MM/YYYY')}
-                    </div>
-                    <div>
-                        <ClockCircleOutlined style={{ marginRight: 4 }} />
-                        {dayjs(record.start_time).format('HH:mm')} - {dayjs(record.end_time).format('HH:mm')}
-                    </div>
-                </div>
-            )
-        },
-        {
-            title: 'Số tiền',
-            dataIndex: 'total_price',
-            key: 'total_price',
-            render: (total_price) => (
-                <Text strong style={{ color: '#1890ff' }}>
-                    {formatPrice(total_price)}
-                </Text>
-            )
-        },
-        {
-            title: 'Trạng thái',
-            dataIndex: 'status',
-            key: 'status',
-            render: (status, record) => (
-                <div>
-                    <Tag color={getStatusColor(status)}>
-                        {getStatusText(status)}
-                    </Tag>
-                    {record.refunded && (
-                        <Tag color="green" size="small">Đã hoàn tiền</Tag>
-                    )}
-                    {record.reviewed && (
-                        <Tag color="gold" size="small">Đã đánh giá</Tag>
-                    )}
-                </div>
-            )
-        },
-        {
-            title: 'Thao tác',
-            key: 'action',
-            render: (_, record) => (
-                <Space direction="vertical" size="small">
-                    {record.canCancel && (
-                        <Button
-                            size="small"
-                            danger
-                            icon={<DeleteOutlined />}
-                            onClick={() => handleCancelBooking(record)}
-                        >
-                            Hủy đặt
-                        </Button>
-                    )}
-                    {record.canReview && (
-                        <Button
-                            size="small"
-                            type="primary"
-                            icon={<StarOutlined />}
-                            onClick={() => handleReviewBooking(record, setSelectedBooking, setReviewModalVisible)}
-                        >
-                            Đánh giá
-                        </Button>
-                    )}
-                    {activeTab === 'upcoming' && record.status === 'confirmed' && (
-                        <Button
-                            size="small"
-                            icon={<EditOutlined />}
-                        >
-                            Đổi lịch
-                        </Button>
-                    )}
-                </Space>
-            ),
-        }
-    ];
+    // Component bảng HTML thuần thay thế Ant Design Table
+    const CustomTable = ({ data, title }) => (
+        <div style={{ overflowX: 'auto' }}>
+            <table style={{ 
+                width: '100%', 
+                borderCollapse: 'collapse',
+                backgroundColor: '#fff',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+            }}>
+                <thead>
+                    <tr style={{ backgroundColor: '#fafafa', borderBottom: '2px solid #f0f0f0' }}>
+                        <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 'bold', color: '#262626' }}>
+                            Mã đặt
+                        </th>
+                        <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 'bold', color: '#262626' }}>
+                            Thông tin sân
+                        </th>
+                        <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 'bold', color: '#262626' }}>
+                            Thời gian
+                        </th>
+                        <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 'bold', color: '#262626' }}>
+                            Số tiền
+                        </th>
+                        <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 'bold', color: '#262626' }}>
+                            Trạng thái
+                        </th>
+                        <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 'bold', color: '#262626' }}>
+                            Thao tác
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {data.map((record, index) => (
+                        <tr key={record.id} style={{ 
+                            borderBottom: '1px solid #f0f0f0',
+                            backgroundColor: index % 2 === 0 ? '#fff' : '#fafafa'
+                        }}>
+                            <td style={{ padding: '12px 16px', verticalAlign: 'top' }}>
+                                <Text strong>{record.id}</Text>
+                            </td>
+                            <td style={{ padding: '12px 16px', verticalAlign: 'top' }}>
+                                <div>
+                                    <div style={{ fontWeight: 'bold', marginBottom: 4, color: '#262626' }}>
+                                        {record.facility}
+                                    </div>
+                                    <div style={{ marginBottom: 2 }}>
+                                        <span style={{
+                                            fontSize: '11px',
+                                            backgroundColor: '#e6f7ff',
+                                            color: '#1890ff',
+                                            padding: '2px 6px',
+                                            borderRadius: '4px',
+                                            border: '1px solid #91d5ff',
+                                            display: 'inline-block'
+                                        }}>
+                                         {getSportName(record.sport_type)}
+                                        </span>
+                                    </div>
+                                    <div style={{ fontSize: '12px', color: '#8c8c8c' }}>
+                                        📍 {record.location}
+                                    </div>
+                                </div>
+                            </td>
+                            <td style={{ padding: '12px 16px', verticalAlign: 'top' }}>
+                                <div>
+                                    <div style={{ marginBottom: 4 }}>
+                                        <CalendarOutlined style={{ marginRight: 4, color: '#1890ff' }} />
+                                        {dayjs(record.start_time).format('DD/MM/YYYY')}
+                                    </div>
+                                    <div>
+                                        <ClockCircleOutlined style={{ marginRight: 4, color: '#1890ff' }} />
+                                        {dayjs(record.start_time).format('HH:mm')} - {dayjs(record.end_time).format('HH:mm')}
+                                    </div>
+                                </div>
+                            </td>
+                            <td style={{ padding: '12px 16px', verticalAlign: 'top' }}>
+                                <Text strong style={{ color: '#1890ff', fontSize: '14px' }}>
+                                    {formatPrice(record.total_price)}
+                                </Text>
+                            </td>
+                            <td style={{ padding: '12px 16px', verticalAlign: 'top' }}>
+                                <div>
+                                    <Tag color={getStatusColor(record.status)}>
+                                        {getStatusText(record.status)}
+                                    </Tag>
+                                    {record.refunded && (
+                                        <Tag color="green" size="small" style={{ marginTop: 4, display: 'block', width: 'fit-content' }}>
+                                            Đã hoàn tiền
+                                        </Tag>
+                                    )}
+                                    {record.reviewed && (
+                                        <Tag color="gold" size="small" style={{ marginTop: 4, display: 'block', width: 'fit-content' }}>
+                                            Đã đánh giá
+                                        </Tag>
+                                    )}
+                                </div>
+                            </td>
+                            <td style={{ padding: '12px 16px', verticalAlign: 'top' }}>
+                                <Space direction="vertical" size="small">
+                                    {record.canCancel && (
+                                        <Button
+                                            size="small"
+                                            danger
+                                            icon={<DeleteOutlined />}
+                                            onClick={() => handleCancelBooking(record)}
+                                        >
+                                            Hủy đặt
+                                        </Button>
+                                    )}
+                                    {record.canReview && (
+                                        <Button
+                                            size="small"
+                                            type="primary"
+                                            icon={<StarOutlined />}
+                                            onClick={() => handleReviewBooking(record, setSelectedBooking, setReviewModalVisible)}
+                                        >
+                                            Đánh giá
+                                        </Button>
+                                    )}
+                                    {activeTab === 'upcoming' && record.status === 'confirmed' && (
+                                        <Button
+                                            size="small"
+                                            icon={<EditOutlined />}
+                                        >
+                                            Đổi lịch
+                                        </Button>
+                                    )}
+                                </Space>
+                            </td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        </div>
+    );
 
     // Hiển thị thống kê số lượng booking theo từng trạng thái
     const renderBookingStats = () => {
@@ -224,12 +258,7 @@ const MyBookingsPage = () => {
                 <Tabs activeKey={activeTab} onChange={setActiveTab}>
                     <TabPane tab="Sắp tới" key="upcoming">
                         {bookings.upcoming.length > 0 ? (
-                            <Table
-                                columns={columns}
-                                dataSource={bookings.upcoming} // Hiển thị các booking sắp tới
-                                pagination={false}
-                                scroll={{ x: 800 }}
-                            />
+                            <CustomTable data={bookings.upcoming} title="Sắp tới" />
                         ) : (
                             <Empty description="Không có lịch đặt sân nào sắp tới" />
                         )}
@@ -237,12 +266,7 @@ const MyBookingsPage = () => {
 
                     <TabPane tab="Đã hoàn thành" key="completed">
                         {bookings.completed.length > 0 ? (
-                            <Table
-                                columns={columns}
-                                dataSource={bookings.completed} // Hiển thị các booking đã hoàn thành
-                                pagination={false}
-                                scroll={{ x: 800 }}
-                            />
+                            <CustomTable data={bookings.completed} title="Đã hoàn thành" />
                         ) : (
                             <Empty description="Chưa có lịch đặt sân nào hoàn thành" />
                         )}
@@ -250,12 +274,7 @@ const MyBookingsPage = () => {
 
                     <TabPane tab="Đã hủy" key="cancelled">
                         {bookings.cancelled.length > 0 ? (
-                            <Table
-                                columns={columns}
-                                dataSource={bookings.cancelled} // Hiển thị các booking đã hủy
-                                pagination={false}
-                                scroll={{ x: 800 }}
-                            />
+                            <CustomTable data={bookings.cancelled} title="Đã hủy" />
                         ) : (
                             <Empty description="Không có lịch đặt sân nào bị hủy" />
                         )}
