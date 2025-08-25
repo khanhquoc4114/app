@@ -51,6 +51,10 @@ app.include_router(me.router)
 app.include_router(admin.router)
 app.include_router(messages.router)
 
+# Import and register payment router
+from routes import payment
+app.include_router(payment.router, prefix="/api/payment", tags=["payment"])
+
 # Health check endpoint
 @app.get("/api/health")
 async def health_check():

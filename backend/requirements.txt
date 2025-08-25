@@ -11,6 +11,7 @@ python-dotenv==1.0.0
 python-jose[cryptography]
 passlib[bcrypt]
 slowapi==0.1.9
-Authlib==1.2.1
+authlib==1.2.1
 httpx
 itsdangerous
+requests

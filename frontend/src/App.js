@@ -26,6 +26,7 @@ import AuthCallback from './components/AuthCallback';
 // User Pages
 import MyBookingsPage from './pages/user/bookingpage/MyBookingsPage';
 import ProfilePage from './pages/user/profilepage/ProfilePage';
+import PaymentPage from './pages/user/paymentPage/PaymentPage';
 
 // host Pages
 import HostDashboard from './pages/host/HostDashboard/HostDashboard';
@@ -86,7 +87,7 @@ const AppRoutes = () => {
     const { isAuthenticated, userRole } = useAuth();
 
     return (
-        
+
         <Routes>
             {/* Public Routes */}
             <Route
@@ -221,9 +222,9 @@ const AppRoutes = () => {
                 path="/my-facilities"
                 element={
                     <ProtectedRoute requiredRoles={["host", "staff"]}>
-                    <LayoutWrapper userRole={userRole}>
-                        <MyFacilitiesPage />
-                    </LayoutWrapper>
+                        <LayoutWrapper userRole={userRole}>
+                            <MyFacilitiesPage />
+                        </LayoutWrapper>
                     </ProtectedRoute>
                 }
             />

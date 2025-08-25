@@ -4,7 +4,7 @@ import { Card, Typography, Tag, Rate, Button, Avatar, Divider, Row, Col, message
 import { EnvironmentOutlined, UserOutlined, ArrowLeftOutlined, HeartOutlined, HeartFilled, HomeOutlined, PhoneOutlined, ShareAltOutlined, CalendarOutlined, DollarOutlined, StarOutlined, CheckCircleOutlined, WifiOutlined, CarOutlined, SafetyOutlined, CoffeeOutlined, ToolOutlined, TeamOutlined, MailOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import ChatBubble from '../../../components/ChatBubble/ChatBubble';
-
+import { getSportName } from '../../../utils/sportsName';
 const { Title, Text, Paragraph } = Typography;
 const { TabPane } = Tabs;
 
@@ -469,10 +469,10 @@ const FacilityDetailPage = () => {
           <div style={{ marginBottom: 12 }}>
               {Array.isArray(facility.sport_type)
                 ? facility.sport_type.map(type => (
-                    <Tag color="blue" key={type}>{type}</Tag>
+                    <Tag color="blue" key={type}>{getSportName(type)}</Tag>
                   ))
-                : <Tag color="blue">{facility.sport_types}</Tag>
-              }           
+                : <Tag color="blue">{getSportName(facility.sport_type)}</Tag>
+              }
             <Rate disabled defaultValue={facility.rating} style={{ fontSize: 16, marginLeft: 8 }} />
             <Text type="secondary" style={{ marginLeft: 8 }}>
               {facility.rating} ({facility.reviews_count} đánh giá)
@@ -660,12 +660,12 @@ const FacilityDetailPage = () => {
                         }, 0);
                       }}                    
                   >
-                    {type}
+                    {getSportName(type)}
                   </Tag>
                 ))
               : (
                   <Tag color="blue" style={{ fontSize: 14, padding: '2px 12px' }}>
-                    {facility.sport_type}
+                    {getSportName(facility.sport_type)}
                   </Tag>
                 )
             }
@@ -850,7 +850,7 @@ const FacilityDetailPage = () => {
                 <Title level={4} style={{ marginTop: 24 }}>Thông tin chi tiết</Title>
                 <Row gutter={[16, 8]}>
                   <Col span={12}>
-                    <Text strong>Loại sân:</Text> {facility.sport_type}
+                    <Text strong>Loại sân:</Text> {Array.isArray(facility.sport_type) ? facility.sport_type.map(type => getSportName(type)).join(', ') : getSportName(facility.sport_type)}
                   </Col>
                   <Col span={12}>
                     <Text strong>Giá/giờ:</Text> {facility.price_per_hour?.toLocaleString()} VND
@@ -1023,7 +1023,12 @@ const FacilityDetailPage = () => {
               <Card.Meta
                 title={f.name}
                 description={<>
-                  <Tag color="blue">{f.sport_type}</Tag>
+                  {Array.isArray(f.sport_type)
+                    ? f.sport_type.map(type => (
+                        <Tag color="blue" key={type}>{getSportName(type)}</Tag>
+                      ))
+                    : <Tag color="blue">{getSportName(f.sport_type)}</Tag>
+                  }
                   <div><EnvironmentOutlined /> {f.location}</div>
                   <div>Giá: {f.price_per_hour?.toLocaleString()} VND/giờ</div>
                 </>}
