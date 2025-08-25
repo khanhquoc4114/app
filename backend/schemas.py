@@ -12,6 +12,9 @@ class BookingCreate(BaseModel):
     time_slots: List[str]
     total_price: float
     notes: Optional[str] = None
+    payment_method: Optional[str] = None
+    transaction_id: Optional[str] = None
+    status: Optional[str] = None
 
 class UserCreate(BaseModel):
     username: str
