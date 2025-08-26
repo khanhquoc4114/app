@@ -3,7 +3,7 @@ from auth import get_admin_user
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from database import get_db
-from models import User
+from models import *
 from datetime import datetime
 from services.notification import create_notification
 
@@ -107,7 +107,20 @@ def reject_upgrade_request(
     req.status = "rejected"
     req.rejection_reason = body.reason
     req.updated_at = datetime.utcnow()
-    # req.rejected_by = admin.username  # nếu bạn muốn lưu ai từ chối
+
+    user = db.get(User, req.user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User không tồn tại")
+
+    create_notification(
+        db=db,
+        user_id=user.id,
+        type="system",
+        title="Kết quả đơn nâng cấp role",
+        message=f"Yêu cầu nâng cấp tài khoản {user.username} bị từ chối. Lý do: {body.reason}",
+        priority="high",
+        data={}
+    )
 
     db.commit()
     db.refresh(req)

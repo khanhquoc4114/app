@@ -23,6 +23,7 @@ import {
     CheckOutlined,
     ReloadOutlined
 } from '@ant-design/icons';
+import dayjs from 'dayjs';
 
 const { Text } = Typography;
 const { TextArea } = Input;
@@ -50,19 +51,14 @@ const ChatInterface = ({ defaultChatUser, onClose }) => {
     const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:8000';
     const WS_BASE = API_BASE.replace('http', 'ws');
     const currentUserRef = useRef(null);
+    const selectedChatRef = useRef(null);
+    useEffect(() => {
+        selectedChatRef.current = selectedChat;
+    }, [selectedChat]);
 
     useEffect(() => {
     currentUserRef.current = currentUser;
     }, [currentUser]);
-
-    // useEffect(() => {
-    //     if (defaultChatUser && !selectedChat && users.length > 0) {
-    //         const targetUser = users.find((user) => user.id === defaultChatUser);
-    //         if (targetUser) {
-    //             handleChatSelect(targetUser);
-    //         }
-    //     }
-    // }, [defaultChatUser, users, selectedChat]);
 
     // Check if mobile
 
@@ -144,7 +140,7 @@ useEffect(() => {
     const fetchUsers = async () => {
         try {
             setLoading(true);
-            const response = await fetch(`${API_BASE}/api/users/all-chatted`, {
+            const response = await fetch(`${API_BASE}/api/messages/all-chatted`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             
@@ -201,152 +197,171 @@ useEffect(() => {
     }, [websocketRef.current]);
 
     // WebSocket connection
-    let retries = 0;
-    const connectWebSocket = useCallback(() => {
-        if (!token || websocketRef.current) return;
+let retries = 0;
 
-        try {
-            setConnecting(true);
-            const wsUrl = `${WS_BASE}/chat?token=${encodeURIComponent(token)}`;
-            const ws = new WebSocket(wsUrl);
-            
-            ws.onopen = () => {
-                console.log('WebSocket connected');
-                setConnecting(false);
-                websocketRef.current = ws;
-                
-                if (reconnectTimeoutRef.current) {
-                    clearTimeout(reconnectTimeoutRef.current);
-                    reconnectTimeoutRef.current = null;
-                }
-            };
+const connectWebSocket = useCallback(() => {
+  if (!token || websocketRef.current) return;
 
-            ws.onmessage = (event) => {
-                try {
-                    const data = JSON.parse(event.data);
-                    handleWebSocketMessage(data);
-                } catch (error) {
-                    console.error('Error parsing WebSocket message:', error);
-                }
-            };
+  try {
+    setConnecting(true);
+    const wsUrl = `${WS_BASE}/api/messages/chat?token=${encodeURIComponent(token)}`;
+    const ws = new WebSocket(wsUrl);
 
-        ws.onclose = (event) => {
-            websocketRef.current = null;
-            setConnecting(false);
+    ws.onopen = () => {
+      console.log("WebSocket connected");
+      setConnecting(false);
+      websocketRef.current = ws;
 
-            if (event.code !== 1000 && token) {
-                const timeout = Math.min(10000, 1000 * 2 ** retries); // max 10s
-                reconnectTimeoutRef.current = setTimeout(() => {
-                    retries++;
-                    connectWebSocket();
-                }, timeout);
-            } else {
-                retries = 0; // reset khi thành công
-            }
-        };
-
-            ws.onerror = (error) => {
-                console.error('WebSocket error:', error);
-                setConnecting(false);
-            };
-            
-        } catch (error) {
-            console.error('Failed to connect WebSocket:', error);
-            setConnecting(false);
-        }
-    }, [token, WS_BASE]);
-    
-    const handleWebSocketMessage = (data) => {
-        const user = currentUserRef.current;
-        if (!user) {
-            console.warn("Bỏ qua message vì currentUser chưa set:", data);
-            return;
-        }
-
-        const { id, from, message: content, created_at, to } = data;
-        let targetUserId, newMessage;
-
-        if (from === user.id) {
-            // Tin nhắn mình gửi
-            targetUserId = to;
-            newMessage = {
-                id,
-                sender_id: user.id,
-                receiver_id: to,
-                content,
-                created_at,
-                is_read: false
-            };
-
-            setMessages(prev => {
-            const userMessages = prev[targetUserId] || [];
-            const filtered = userMessages.filter(msg => !(msg.sending && msg.content === content));
-            if (filtered.some(msg => msg.id === id)) return prev;
-            return { ...prev, [targetUserId]: [...filtered, newMessage] };
-            });
-        } else {
-            // Tin nhắn nhận
-            targetUserId = from;
-            newMessage = {
-                id,
-                sender_id: from,
-                receiver_id: user.id,
-                content,
-                created_at,
-                is_read: selectedChat?.id === from
-            };
-
-            setMessages(prev => {
-            const userMessages = prev[from] || [];
-            if (userMessages.some(msg => msg.id === id)) return prev;
-            return { ...prev, [from]: [...userMessages, newMessage] };
-            });
-
-            if (selectedChat?.id !== from) {
-            setUnreadCounts(prev => ({ ...prev, [from]: (prev[from] || 0) + 1 }));
-            } else {
-            setTimeout(() => markAsRead(from), 500);
-            }
-        }
-
-        // Update sidebar
-        setUsers(prev => {
-            let existingUser = prev.find(u => u.id === targetUserId);
-            if (!existingUser) {
-                // Nếu chưa có, bạn có thể tạo thông tin tạm (nên fetch chi tiết nếu cần)
-                existingUser = { id: targetUserId, name: "User " + targetUserId };
-            }
-            return [existingUser, ...prev.filter(u => u.id !== targetUserId)];
-        });
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
+      }
     };
 
-    const sendMessage = useCallback((receiverId, content) => {
-        if (!websocketRef.current || !content.trim()) return;
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        handleWebSocketMessage(data);
+      } catch (error) {
+        console.error("Error parsing WebSocket message:", error);
+      }
+    };
 
-        const messageData = {
-            receiver_id: receiverId,
-            content: content.trim()
+    ws.onclose = (event) => {
+      websocketRef.current = null;
+      setConnecting(false);
+
+      if (event.code !== 1000 && token) {
+        const timeout = Math.min(10000, 1000 * 2 ** retries);
+        reconnectTimeoutRef.current = setTimeout(() => {
+          retries++;
+          connectWebSocket();
+        }, timeout);
+      } else {
+        retries = 0;
+      }
+    };
+
+    ws.onerror = (error) => {
+      console.error("WebSocket error:", error);
+      setConnecting(false);
+    };
+  } catch (error) {
+    console.error("Failed to connect WebSocket:", error);
+    setConnecting(false);
+  }
+}, [token, WS_BASE]);
+
+const handleWebSocketMessage = (data) => {
+  const user = currentUserRef.current;
+  if (!user) {
+    console.warn("Bỏ qua message vì currentUser chưa set:", data);
+    return;
+  }
+
+  const { id, from, to, message: content, created_at, temp_id } = data;
+  let targetUserId, newMessage;
+
+  if (from === user.id) {
+    // Tin nhắn mình gửi
+    targetUserId = to;
+    newMessage = {
+      id,
+      sender_id: user.id,
+      receiver_id: to,
+      content,
+      created_at,
+      is_read: false,
+      sending: false,
+    };
+
+    setMessages((prev) => {
+      const userMessages = prev[targetUserId] || [];
+
+      if (temp_id) {
+        // Replace temp message bằng tin nhắn thật
+        return {
+          ...prev,
+          [targetUserId]: userMessages.map((m) =>
+            m.id === temp_id ? newMessage : m
+          ),
         };
+      }
 
-        // Thêm message vào UI ngay lập tức
-        const tempMessage = {
-            id: `temp_${Date.now()}`,
-            sender_id: currentUser.id,
-            receiver_id: receiverId,
-            content: content.trim(),
-            created_at: new Date().toISOString(),
-            is_read: false,
-            sending: true
-        };
+      if (userMessages.some((msg) => msg.id === id)) return prev;
+      return { ...prev, [targetUserId]: [...userMessages, newMessage] };
+    });
+  } else {
+    // Tin nhắn nhận
+    targetUserId = from;
+    newMessage = {
+      id,
+      sender_id: from,
+      receiver_id: user.id,
+      content,
+      created_at,
+      is_read: selectedChatRef.current?.id === from,
+    };
 
-        setMessages(prev => ({
-            ...prev,
-            [receiverId]: [...(prev[receiverId] || []), tempMessage]
-        }));
+    setMessages((prev) => {
+      const userMessages = prev[from] || [];
+      if (userMessages.some((msg) => msg.id === id)) return prev;
+      return { ...prev, [from]: [...userMessages, newMessage] };
+    });
 
-        // Gửi qua WebSocket
-        websocketRef.current.send(JSON.stringify(messageData));
-    }, [currentUser]);
+    if (selectedChat?.id !== from) {
+      setUnreadCounts((prev) => ({
+        ...prev,
+        [from]: (prev[from] || 0) + 1,
+      }));
+    } else {
+      setTimeout(() => markAsRead(from), 500);
+    }
+  }
+
+  // Update sidebar
+  setUsers((prev) => {
+    let existingUser = prev.find((u) => u.id === targetUserId);
+    if (!existingUser) {
+      existingUser = { id: targetUserId, name: "User " + targetUserId };
+    }
+    return [existingUser, ...prev.filter((u) => u.id !== targetUserId)];
+  });
+};
+
+const sendMessage = useCallback(
+  (receiverId, content) => {
+    if (!websocketRef.current || !content.trim()) return;
+
+    const tempId = `temp_${Date.now()}`;
+
+    const messageData = {
+      receiver_id: receiverId,
+      content: content.trim(),
+      temp_id: tempId,
+    };
+
+    // Hiển thị ngay tin nhắn tạm
+    const tempMessage = {
+      id: tempId,
+      sender_id: currentUser.id,
+      receiver_id: receiverId,
+      content: content.trim(),
+      created_at: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+      is_read: false,
+      sending: true,
+    };
+
+    setMessages((prev) => ({
+      ...prev,
+      [receiverId]: [...(prev[receiverId] || []), tempMessage],
+    }));
+
+    websocketRef.current.send(JSON.stringify(messageData));
+  },
+  [currentUser]
+);
+
 
     // Fetch chat history
     const fetchChatHistory = async (userId) => {
@@ -392,12 +407,11 @@ useEffect(() => {
     };
 
     // Handle send message
-    const handleSendMessage = () => {
+    const handleSendMessage = async () => {
         if (!inputMessage.trim() || !selectedChat) return;
-
         sendMessage(selectedChat.id, inputMessage);
         setInputMessage('');
-        fetchChatHistory(selectedChat.id);
+        await fetchChatHistory(selectedChat.id);
         setUsers(prev => [selectedChat, ...prev.filter(u => u.id !== selectedChat.id)]);
     };
 
@@ -495,7 +509,8 @@ useEffect(() => {
                     }}>
                         {new Date(message.created_at).toLocaleTimeString('vi-VN', { 
                             hour: '2-digit', 
-                            minute: '2-digit' 
+                            minute: '2-digit',
+                            second: '2-digit'
                         })}
                         {isMe && message.is_read && <CheckOutlined style={{ color: '#1890ff' }} />}
                     </div>

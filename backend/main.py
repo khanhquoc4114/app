@@ -68,7 +68,7 @@ ALGORITHM = "HS256"
 def root():
     return {"message": "Auth API đang chạy"}
  
-@app.get("/api/users/all-chatted", response_model=List[UserOut])
+@app.get("/api/messages/all-chatted", response_model=List[UserOut])
 def get_users_talked_to(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -180,13 +180,14 @@ async def request_host_upgrade(
 # ws://localhost:8000/chat?token=<token>
 active_connections: dict[int, WebSocket] = {}
 
-@app.websocket("/chat")
+@app.websocket("/api/messages/chat")
 async def websocket_endpoint(websocket: WebSocket, token: str = Query(...), db: Session = Depends(get_db)):
     try:
         user = decode_token(token)
         user_id = user["id"]
         await websocket.accept()
         active_connections[user_id] = websocket
+
     except Exception as e:
         await websocket.close(code=1008)
         return
@@ -224,7 +225,9 @@ async def websocket_endpoint(websocket: WebSocket, token: str = Query(...), db: 
             # Gửi cho cả sender và receiver
             message_data = {
                 "id": msg.id,
+                "temp_id": data.get("temp_id"),
                 "from": user_id,
+                "to": receiver_id,
                 "message": content,
                 "created_at": msg.created_at.isoformat()
             }

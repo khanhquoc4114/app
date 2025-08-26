@@ -57,7 +57,7 @@ const AdminDashboard = () => {
     };
 
     const [roleRequests, setRoleRequests] = useState([]);
-    const [setLoading] = useState(false);
+    const [loading, setLoading] = useState(false);
 
     const fetchRoleRequests = useCallback(async () => {
         setLoading(true);
@@ -87,7 +87,7 @@ const AdminDashboard = () => {
     useEffect(() => {
         const fetchUsers = async () => {
             try {
-                const res = await fetch(`${process.env.REACT_APP_API_URL}/api/users/all`);
+                const res = await fetch(`${process.env.REACT_APP_API_URL}/api/users`);
                 const data = await res.json();
                 setUsers(data);
             } catch (err) {
