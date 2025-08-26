@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
-    Card, Row, Col, Typography, Button, Radio, Input, Form, Modal, QRCode,
-    Steps, Alert, Spin, message, Divider, Space, Tag
+    Card, Row, Col, Typography, Button, Radio, Form, Modal, QRCode,
+    Steps, Alert, Spin, message, Divider, Space,
 } from 'antd';
 import {
     CreditCardOutlined, MobileOutlined, BankOutlined,
-    CheckCircleOutlined, ClockCircleOutlined, QrcodeOutlined
+    CheckCircleOutlined, ClockCircleOutlined
 } from '@ant-design/icons';
 import { useLocation, useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';

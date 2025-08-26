@@ -1,5 +1,5 @@
 // Trang dashboard quản trị hệ thống
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Row, Col, Card, Statistic, Table, Typography, Space, Tag, Button, Modal, Form, Input, Select, Tabs, DatePicker, Upload, message, Avatar, Tooltip, Badge } from 'antd';
 import { DollarOutlined, UserOutlined, ShopOutlined, CalendarOutlined, PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined, UploadOutlined, LockOutlined, UnlockOutlined, CheckOutlined, CloseOutlined, FileTextOutlined, IdcardOutlined, PhoneOutlined, MailOutlined, BankOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
@@ -57,7 +57,7 @@ const AdminDashboard = () => {
     };
 
     const [roleRequests, setRoleRequests] = useState([]);
-    const [loading, setLoading] = useState(false);
+    const [setLoading] = useState(false);
 
     const fetchRoleRequests = useCallback(async () => {
         setLoading(true);

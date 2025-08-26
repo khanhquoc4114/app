@@ -221,7 +221,7 @@ async def websocket_endpoint(websocket: WebSocket, token: str = Query(...), db: 
             db.commit()
             db.refresh(msg)
 
-            # FIX: Gửi cho cả sender và receiver
+            # Gửi cho cả sender và receiver
             message_data = {
                 "id": msg.id,
                 "from": user_id,
@@ -236,7 +236,7 @@ async def websocket_endpoint(websocket: WebSocket, token: str = Query(...), db: 
                 except:
                     active_connections.pop(receiver_id, None)
             
-            # 2. FIX: Gửi confirmation lại cho người gửi
+            # 2. Gửi confirmation lại cho người gửi
             try:
                 await websocket.send_json({
                     "id": msg.id,

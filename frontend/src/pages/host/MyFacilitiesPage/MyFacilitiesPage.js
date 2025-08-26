@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Row, Col, Card, Table, Typography, Space, Tag, Button, Modal, Form, Input, Select, Upload, Statistic, Rate } from 'antd';
 import {
     PlusOutlined,
@@ -10,11 +10,9 @@ import {
     DollarOutlined,
     CalendarOutlined,
     ShopOutlined,
-    StarOutlined,
     EnvironmentOutlined
 } from '@ant-design/icons';
 
-import FacilityItem from './FacilityItem';
 import {
     getSportName,
     formatPrice,

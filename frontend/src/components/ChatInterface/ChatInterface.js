@@ -328,7 +328,7 @@ useEffect(() => {
             content: content.trim()
         };
 
-        // FIX: Thêm message vào UI ngay lập tức (optimistic update)
+        // Thêm message vào UI ngay lập tức
         const tempMessage = {
             id: `temp_${Date.now()}`,
             sender_id: currentUser.id,
@@ -414,7 +414,7 @@ useEffect(() => {
         return users.find(user => user.id === id);
     };
 
-    // FIX: Auto scroll to bottom ngay lập tức
+    // Auto scroll to bottom ngay lập tức
     useEffect(() => {
         if (selectedChat) {
             scrollToBottom();
