@@ -57,7 +57,7 @@ const AdminDashboard = () => {
     };
 
     const [roleRequests, setRoleRequests] = useState([]);
-    const [setLoading] = useState(false);
+    const [loading, setLoading] = useState(false);
 
     const fetchRoleRequests = useCallback(async () => {
         setLoading(true);

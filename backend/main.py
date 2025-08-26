@@ -68,10 +68,45 @@ ALGORITHM = "HS256"
 def root():
     return {"message": "Auth API đang chạy"}
  
-@app.get("/api/users/all", response_model=List[UserOut])
-def get_users(db: Session = Depends(get_db)):
+@app.get("/api/users/all-chatted", response_model=List[UserOut])
+def get_users_talked_to(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    # Lấy tất cả message liên quan đến current_user
+    messages = db.query(Message).filter(
+        (Message.sender_id == current_user.id) | 
+        (Message.receiver_id == current_user.id)
+    ).all()
+
+    # Tạo set chứa ID người dùng đã trò chuyện với current_user
+    user_ids = set()
+    for msg in messages:
+        if msg.sender_id != current_user.id:
+            user_ids.add(msg.sender_id)
+        if msg.receiver_id != current_user.id:
+            user_ids.add(msg.receiver_id)
+
+    # Truy vấn lại user từ các ID đã thu thập
+    users = db.query(User).filter(User.id.in_(user_ids)).all()
+    return users
+
+@app.get("/api/users", response_model=List[UserOut])
+def get_all_users(db: Session = Depends(get_db)):
     users = db.query(User).all()
     return users
+
+# 2. Lấy user cụ thể theo id
+@app.get("/api/users/{user_id}", response_model=UserOut)
+def get_user_by_id(user_id: int, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User không tồn tại")
+    return user
+
+@app.get("/users/me", response_model=UserResponse)
+async def read_users_me(current_user: User = Depends(get_current_user)):
+    return current_user
 
 @app.post("/request-host-upgrade")
 async def request_host_upgrade(
@@ -142,31 +177,82 @@ async def request_host_upgrade(
         print(f"Traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
-active_connections: Dict[int, WebSocket] = {}
+# ws://localhost:8000/chat?token=<token>
+active_connections: dict[int, WebSocket] = {}
 
-# test: ws://localhost:8000/chat?token=<token>
 @app.websocket("/chat")
-async def websocket_endpoint(websocket: WebSocket, token: str = Query(...)):
-    # Giải mã token -> user_id
-    user = decode_token(token)  # bạn phải viết hàm này
-    await websocket.accept()
+async def websocket_endpoint(websocket: WebSocket, token: str = Query(...), db: Session = Depends(get_db)):
+    try:
+        user = decode_token(token)
+        user_id = user["id"]
+        await websocket.accept()
+        active_connections[user_id] = websocket
+    except Exception as e:
+        await websocket.close(code=1008)
+        return
 
-    active_connections[user["id"]] = websocket
     try:
         while True:
             data = await websocket.receive_json()
+            
+            # Handle ping/pong
+            if data.get("type") == "ping":
+                continue
+            
+            # Validate data
+            if "receiver_id" not in data or "content" not in data:
+                continue
+                
             receiver_id = data["receiver_id"]
-            content = data["content"]
+            content = data["content"].strip()
+            
+            if not content:
+                continue
+            
+            # Kiểm tra receiver tồn tại
+            receiver = db.query(User).filter(User.id == receiver_id).first()
+            if not receiver:
+                await websocket.send_json({"error": "Receiver not found"})
+                continue
 
-            # Gửi message cho receiver nếu đang online
+            # Lưu vào DB
+            msg = Message(sender_id=user_id, receiver_id=receiver_id, content=content)
+            db.add(msg)
+            db.commit()
+            db.refresh(msg)
+
+            # FIX: Gửi cho cả sender và receiver
+            message_data = {
+                "id": msg.id,
+                "from": user_id,
+                "message": content,
+                "created_at": msg.created_at.isoformat()
+            }
+
+            # 1. Gửi cho người nhận
             if receiver_id in active_connections:
-                await active_connections[receiver_id].send_json({
-                    "from": user["id"],
-                    "message": content
+                try:
+                    await active_connections[receiver_id].send_json(message_data)
+                except:
+                    active_connections.pop(receiver_id, None)
+            
+            # 2. FIX: Gửi confirmation lại cho người gửi
+            try:
+                await websocket.send_json({
+                    "id": msg.id,
+                    "from": user_id,
+                    "to": receiver_id,
+                    "message": content,
+                    "created_at": msg.created_at.isoformat()
                 })
-
+            except:
+                pass
+                    
     except WebSocketDisconnect:
-        active_connections.pop(user["id"], None)
+        active_connections.pop(user_id, None)
+    except Exception as e:
+        print(f"WebSocket error: {e}")
+        active_connections.pop(user_id, None)
 
 def decode_token(token: str):
     try:
