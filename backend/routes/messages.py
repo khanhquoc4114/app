@@ -50,49 +50,30 @@ def send_message(
     return msg
       
 @router.get("/history/{user_id}")
-def get_chat_history(
-    user_id: int,
-    limit: int = Query(50, le=100),
-    offset: int = Query(0, ge=0),
-    db: Session = Depends(get_db),
+async def get_chat_history(
+    user_id: int, 
+    limit: int = 50,
     current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
-    # Kiểm tra user target
-    target_user = db.query(User).filter(User.id == user_id).first()
-    if not target_user:
-        raise HTTPException(404, "User not found")
-
-    messages = (
-        db.query(Message)
-        .filter(
-            or_(
-                and_(
-                    Message.sender_id == current_user.id,
-                    Message.receiver_id == user_id
-                ),
-                and_(
-                    Message.sender_id == user_id,
-                    Message.receiver_id == current_user.id
-                )
-            )
+    messages = db.query(Message).filter(
+        or_(
+            and_(Message.sender_id == current_user.id, Message.receiver_id == user_id),
+            and_(Message.sender_id == user_id, Message.receiver_id == current_user.id)
         )
-        .order_by(Message.created_at.asc())  # ASC để có thứ tự đúng
-        .offset(offset)
-        .limit(limit)
-        .all()
-    )
+    ).order_by(Message.created_at.desc()).limit(limit).all()
     
-    # Convert to dict để frontend dễ xử lý
+    # Reverse để có thứ tự từ cũ đến mới
     return [
         {
             "id": msg.id,
             "sender_id": msg.sender_id,
             "receiver_id": msg.receiver_id,
             "content": msg.content,
-            "created_at": msg.created_at.isoformat(),
-            "is_read": msg.is_read
+            "is_read": msg.is_read,
+            "created_at": msg.created_at.isoformat()
         }
-        for msg in messages
+        for msg in reversed(messages)
     ]
 
 @router.put("/mark-read/{user_id}")

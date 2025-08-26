@@ -45,20 +45,55 @@ const ChatInterface = ({ defaultChatUser, onClose }) => {
     const messagesEndRef = useRef(null);
     const reconnectTimeoutRef = useRef(null);
 
+
     // API Base URL
     const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:8000';
     const WS_BASE = API_BASE.replace('http', 'ws');
+    const currentUserRef = useRef(null);
 
     useEffect(() => {
-        if (defaultChatUser && !selectedChat && users.length > 0) {
-            const targetUser = users.find((user) => user.id === defaultChatUser);
-            if (targetUser) {
-                handleChatSelect(targetUser);
-            }
-        }
-    }, [defaultChatUser, users, selectedChat]);
+    currentUserRef.current = currentUser;
+    }, [currentUser]);
+
+    // useEffect(() => {
+    //     if (defaultChatUser && !selectedChat && users.length > 0) {
+    //         const targetUser = users.find((user) => user.id === defaultChatUser);
+    //         if (targetUser) {
+    //             handleChatSelect(targetUser);
+    //         }
+    //     }
+    // }, [defaultChatUser, users, selectedChat]);
 
     // Check if mobile
+
+useEffect(() => {
+    if (defaultChatUser && !selectedChat) {
+        let targetUser = users.find(user => user.id === defaultChatUser);
+        if (!targetUser) {
+            // Nếu không tìm thấy trong danh sách đã chat, fetch thông tin user từ API
+            fetch(`${API_BASE}/api/users/${defaultChatUser}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
+            .then(res => {
+                if (res.ok) return res.json();
+                throw new Error('User not found');
+            })
+            .then(userData => {
+                targetUser = userData;
+                // Khi đã có targetUser, mở chat với họ
+                handleChatSelect(targetUser);
+                // Đồng thời, cập nhật danh sách users nếu cần
+                setUsers(prev => [...prev, targetUser]);
+            })
+            .catch(error => {
+                console.error('Failed to fetch user detail:', error);
+            });
+        } else {
+            handleChatSelect(targetUser);
+        }
+    }
+}, [defaultChatUser, users, selectedChat]);
+
     useEffect(() => {
         const checkMobile = () => {
             setIsMobile(window.innerWidth <= 768);
@@ -82,24 +117,69 @@ const ChatInterface = ({ defaultChatUser, onClose }) => {
                 const user = await response.json();
                 setCurrentUser(user);
                 await fetchUsers();
-                connectWebSocket();
             }
         } catch (error) {
             console.error('Failed to fetch user:', error);
         }
     };
 
-    // Fetch users list
+    useEffect(() => {
+    if (token) {
+        fetchCurrentUser();
+    }
+    }, [token]);
+
+    // Chỉ connect khi currentUser đã có
+    useEffect(() => {
+    if (token && currentUser && !websocketRef.current) {
+        connectWebSocket();
+    }
+    return () => {
+        if (websocketRef.current) websocketRef.current.close();
+        if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
+    };
+    }, [token, currentUser]);
+
+    // Fetch users list và preload recent conversations
     const fetchUsers = async () => {
         try {
             setLoading(true);
-            const response = await fetch(`${API_BASE}/api/users/all`, {
+            const response = await fetch(`${API_BASE}/api/users/all-chatted`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             
             if (response.ok) {
-                const usersData = await response.json();
-                setUsers(usersData.filter(user => user.id !== currentUser?.id));
+                const allUsers = await response.json();
+                const filteredUsers = allUsers.filter(user => user.id !== currentUser?.id);
+                setUsers(filteredUsers);
+                
+                // Load recent conversations
+                await Promise.all(
+                    filteredUsers.map(async (user) => {
+                        try {
+                            const historyResponse = await fetch(`${API_BASE}/api/messages/history/${user.id}?limit=1`, {
+                                headers: { 'Authorization': `Bearer ${token}` }
+                            });
+                            
+                            if (historyResponse.ok) {
+                                const history = await historyResponse.json();
+                                if (history.length > 0) {
+                                    setMessages(prev => ({
+                                        ...prev,
+                                        [user.id]: history
+                                    }));
+                                }
+                            } else {
+                                setMessages(prev => ({
+                                    ...prev,
+                                    [user.id]: []
+                                }));
+                            }
+                        } catch (error) {
+                            console.error(`Failed to fetch history for user ${user.id}:`, error);
+                        }
+                    })
+                );
             }
         } catch (error) {
             antMessage.error('Không thể tải danh sách người dùng đã nói chuyện');
@@ -175,40 +255,71 @@ const ChatInterface = ({ defaultChatUser, onClose }) => {
             setConnecting(false);
         }
     }, [token, WS_BASE]);
-
-    // Handle WebSocket messages
+    
     const handleWebSocketMessage = (data) => {
-        if (!currentUser) {
-            console.warn("WebSocket message received but currentUser is not set yet:", data);
+        const user = currentUserRef.current;
+        if (!user) {
+            console.warn("Bỏ qua message vì currentUser chưa set:", data);
             return;
         }
-        const { id, from, message: content, created_at } = data;
-        
-        const newMessage = {
-            id,
-            sender_id: from,
-            receiver_id: currentUser.id,
-            content,
-            created_at,
-            is_read: selectedChat?.id === from
-        };
 
-        // Add message to state
-        setMessages(prev => ({
-            ...prev,
-            [from]: [...(prev[from] || []), newMessage]
-        }));
+        const { id, from, message: content, created_at, to } = data;
+        let targetUserId, newMessage;
 
-        // Update unread count if not current chat
-        if (selectedChat?.id !== from) {
-            setUnreadCounts(prev => ({
-                ...prev,
-                [from]: (prev[from] || 0) + 1
-            }));
+        if (from === user.id) {
+            // Tin nhắn mình gửi
+            targetUserId = to;
+            newMessage = {
+                id,
+                sender_id: user.id,
+                receiver_id: to,
+                content,
+                created_at,
+                is_read: false
+            };
+
+            setMessages(prev => {
+            const userMessages = prev[targetUserId] || [];
+            const filtered = userMessages.filter(msg => !(msg.sending && msg.content === content));
+            if (filtered.some(msg => msg.id === id)) return prev;
+            return { ...prev, [targetUserId]: [...filtered, newMessage] };
+            });
+        } else {
+            // Tin nhắn nhận
+            targetUserId = from;
+            newMessage = {
+                id,
+                sender_id: from,
+                receiver_id: user.id,
+                content,
+                created_at,
+                is_read: selectedChat?.id === from
+            };
+
+            setMessages(prev => {
+            const userMessages = prev[from] || [];
+            if (userMessages.some(msg => msg.id === id)) return prev;
+            return { ...prev, [from]: [...userMessages, newMessage] };
+            });
+
+            if (selectedChat?.id !== from) {
+            setUnreadCounts(prev => ({ ...prev, [from]: (prev[from] || 0) + 1 }));
+            } else {
+            setTimeout(() => markAsRead(from), 500);
+            }
         }
+
+        // Update sidebar
+        setUsers(prev => {
+            let existingUser = prev.find(u => u.id === targetUserId);
+            if (!existingUser) {
+                // Nếu chưa có, bạn có thể tạo thông tin tạm (nên fetch chi tiết nếu cần)
+                existingUser = { id: targetUserId, name: "User " + targetUserId };
+            }
+            return [existingUser, ...prev.filter(u => u.id !== targetUserId)];
+        });
     };
 
-    // Send message
     const sendMessage = useCallback((receiverId, content) => {
         if (!websocketRef.current || !content.trim()) return;
 
@@ -217,9 +328,7 @@ const ChatInterface = ({ defaultChatUser, onClose }) => {
             content: content.trim()
         };
 
-        websocketRef.current.send(JSON.stringify(messageData));
-        
-        // Add message to local state immediately
+        // FIX: Thêm message vào UI ngay lập tức (optimistic update)
         const tempMessage = {
             id: `temp_${Date.now()}`,
             sender_id: currentUser.id,
@@ -234,6 +343,9 @@ const ChatInterface = ({ defaultChatUser, onClose }) => {
             ...prev,
             [receiverId]: [...(prev[receiverId] || []), tempMessage]
         }));
+
+        // Gửi qua WebSocket
+        websocketRef.current.send(JSON.stringify(messageData));
     }, [currentUser]);
 
     // Fetch chat history
@@ -247,7 +359,7 @@ const ChatInterface = ({ defaultChatUser, onClose }) => {
                 const history = await response.json();
                 setMessages(prev => ({
                     ...prev,
-                    [userId]: history
+                    [userId]: history.length ? history : []
                 }));
             }
         } catch (error) {
@@ -285,6 +397,8 @@ const ChatInterface = ({ defaultChatUser, onClose }) => {
 
         sendMessage(selectedChat.id, inputMessage);
         setInputMessage('');
+        fetchChatHistory(selectedChat.id);
+        setUsers(prev => [selectedChat, ...prev.filter(u => u.id !== selectedChat.id)]);
     };
 
     // Handle key press
@@ -300,32 +414,19 @@ const ChatInterface = ({ defaultChatUser, onClose }) => {
         return users.find(user => user.id === id);
     };
 
-    // Auto scroll to bottom
+    // FIX: Auto scroll to bottom ngay lập tức
     useEffect(() => {
         if (selectedChat) {
-            setTimeout(() => scrollToBottom(), 100);
+            scrollToBottom();
         }
     }, [messages, selectedChat]);
 
     const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        if (messagesEndRef.current) {
+            messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+        }
     };
 
-    // Initialize
-    useEffect(() => {
-        if (token) {
-            fetchCurrentUser();
-        }
-        
-        return () => {
-            if (websocketRef.current) {
-                websocketRef.current.close();
-            }
-            if (reconnectTimeoutRef.current) {
-                clearTimeout(reconnectTimeoutRef.current);
-            }
-        };
-    }, []);
 
     // Render message
     const renderMessage = (message) => {
@@ -418,7 +519,8 @@ const ChatInterface = ({ defaultChatUser, onClose }) => {
 
     // Render user item
     const renderUserItem = (user) => {
-        const lastMessage = messages[user.id]?.slice(-1)[0];
+        const userMessages = messages[user.id] || [];
+        const lastMessage = userMessages[userMessages.length - 1];
         const unreadCount = unreadCounts[user.id] || 0;
 
         return (

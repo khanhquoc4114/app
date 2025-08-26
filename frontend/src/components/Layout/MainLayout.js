@@ -329,8 +329,8 @@ const MainLayout = ({ children, userRole = 'user' }) => {
                 }
             `}</style>
 
-            {/* Chat Bubble - only show for users, not host/admin */}
-            {userRole === 'user' && <ChatBubble />}
+            {/* Chat Bubble*/}
+            {['user', 'staff', 'host'].includes(userRole) && <ChatBubble />}
         </Layout >
     );
 };
