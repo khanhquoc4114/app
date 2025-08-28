@@ -21,6 +21,9 @@ const PaymentPage = () => {
     // Lấy thông tin booking từ navigation state
     const bookingData = location.state?.bookingData;
 
+    console.log('PaymentPage - Location state:', location.state);
+    console.log('PaymentPage - Booking data:', bookingData);
+
     const [paymentMethod, setPaymentMethod] = useState('bank');
     const [currentStep, setCurrentStep] = useState(0);
     const [loading, setLoading] = useState(false);

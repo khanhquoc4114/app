@@ -182,11 +182,6 @@ const FacilityDetailPage = () => {
       return;
     }
 
-    if (!API_URL) {
-      message.error('Cấu hình API không hợp lệ');
-      return;
-    }
-
     // Determine start and end time
     const sortedSlots = selectedTimeSlots.sort();
     const startHour = parseInt(sortedSlots[0].split(':')[0]);
@@ -195,12 +190,15 @@ const FacilityDetailPage = () => {
     const startTime = selectedDate.clone().hour(startHour).minute(0).second(0).millisecond(0);
     const endTime = selectedDate.clone().hour(endHour).minute(0).second(0).millisecond(0);
 
-    // Booking data to send to backend
+    // Booking data to pass to payment page
     const courtInfo = facility.total_courts > 1 ? ` - Sân ${selectedCourt + 1}` : '';
     const bookingData = {
       facility_id: facility.id,
+      facility: facility.name,
+      location: facility.full_address,
       sport_type: selectedSportType,
       court_id: selectedCourt, 
+      court_name: facility.total_courts > 1 ? `Sân ${selectedCourt + 1}` : facility.name,
       booking_date: selectedDate.format('YYYY-MM-DDT00:00:00'),
       start_time: startTime.format('YYYY-MM-DDTHH:mm:ss'),
       end_time: endTime.format('YYYY-MM-DDTHH:mm:ss'),
@@ -209,8 +207,21 @@ const FacilityDetailPage = () => {
       notes: `Đặt sân ${facility.name}${courtInfo} - ${sortedSlots.join(', ')}`
     };
 
-    console.log('Booking data:', bookingData); // Debug log
+    console.log('Booking data for payment:', bookingData);
 
+    // Đóng modal booking và reset state
+    setBookingModalVisible(false);
+    setSelectedTimeSlots([]);
+    setSelectedCourt(null);
+
+    // Hiển thị thông báo chuyển trang
+    message.success('Đang chuyển đến trang thanh toán...');
+
+    // Chuyển sang trang thanh toán
+    navigate('/payment', { state: { bookingData } });
+
+    // Comment lại phần ghi database - sẽ thực hiện trong payment page
+    /*
     try {
       const response = await fetch(`${API_URL}/api/bookings`, {
         method: 'POST',
@@ -230,12 +241,13 @@ const FacilityDetailPage = () => {
       message.success(`Đặt sân thành công! Mã đặt: ${result.booking_id}`);
       setBookingModalVisible(false);
       setSelectedTimeSlots([]);
-      setSelectedCourt(null); // Reset chọn sân
+      setSelectedCourt(null);
 
     } catch (err) {
       console.error('Booking error:', err);
       message.error(err.message || 'Có lỗi xảy ra khi đặt sân');
     }
+    */
   };
 
   useEffect(() => {
