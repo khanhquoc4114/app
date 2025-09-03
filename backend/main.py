@@ -18,7 +18,10 @@ import json
 from starlette.middleware.sessions import SessionMiddleware
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query
 from typing import Dict
-
+import os 
+from dotenv import load_dotenv
+from payos import PayOS, ItemData, PaymentData
+import asyncio
 
 # Create tables
 Base.metadata.create_all(bind=engine)
@@ -53,7 +56,7 @@ app.include_router(messages.router)
 
 # Import and register payment router
 from routes import payment
-app.include_router(payment.router, prefix="/api/payment", tags=["payment"])
+app.include_router(payment.router)
 
 # Health check endpoint
 @app.get("/api/health")
@@ -288,3 +291,24 @@ async def save_file(file: UploadFile) -> str:
         f.write(content)
 
     return file_path
+
+load_dotenv(dotenv_path="./.env")
+client_id = os.getenv("PAYOS_CLIENT_ID")
+api_key = os.getenv("PAYOS_API_KEY")
+checksum_key = os.getenv("PAYOS_CHECKSUM_KEY")
+ngrok_url = os.getenv("ngrok") + "/api/payment/webhook"
+
+payos = PayOS(client_id, api_key, checksum_key)
+
+async def confirm_webhook_task():
+    await asyncio.sleep(5)  # đợi server sẵn sàng
+    try:
+        result = await asyncio.to_thread(payos.confirmWebhook, ngrok_url)
+        print("✅ Webhook confirmed:", result)
+    except Exception as e:
+        print("❌ Webhook confirmation error:", e)
+
+
+@app.on_event("startup")
+async def startup_event():
+    asyncio.create_task(confirm_webhook_task())
