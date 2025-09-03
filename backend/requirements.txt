@@ -16,3 +16,6 @@ httpx
 itsdangerous
 requests
 qrcode[pil]
+payos
+python-socketio
+fastapi-socketio
