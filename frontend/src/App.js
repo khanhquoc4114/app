@@ -195,6 +195,17 @@ const AppRoutes = () => {
             />
 
             <Route
+                path="/payment"
+                element={
+                    <ProtectedRoute requiredRole="user">
+                        <LayoutWrapper userRole={userRole}>
+                            <PaymentPage />
+                        </LayoutWrapper>
+                    </ProtectedRoute>
+                }
+            />
+
+            <Route
                 path="/notifications"
                 element={
                     <ProtectedRoute>
