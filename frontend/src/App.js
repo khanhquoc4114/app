@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ConfigProvider, Spin } from 'antd';
 import viVN from 'antd/locale/vi_VN';
@@ -26,7 +26,6 @@ import AuthCallback from './components/AuthCallback';
 // User Pages
 import MyBookingsPage from './pages/user/bookingpage/MyBookingsPage';
 import ProfilePage from './pages/user/profilepage/ProfilePage';
-import PaymentPage from './pages/user/paymentPage/PaymentPage';
 
 // host Pages
 import HostDashboard from './pages/host/HostDashboard/HostDashboard';

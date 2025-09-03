@@ -1,8 +1,6 @@
-// Trang quản lý lịch sử đặt sân của người dùng
-// 1. Xử lý giao diện của page
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
-    Card, Table, Typography, Space, Tag, Button, Modal, Rate, Input, Tabs, Empty, Row, Col
+    Card, Typography, Space, Tag, Button, Modal, Rate, Input, Tabs, Empty, Row, Col
 } from 'antd';
 import {
     CalendarOutlined, ClockCircleOutlined, StarOutlined, DeleteOutlined, EditOutlined

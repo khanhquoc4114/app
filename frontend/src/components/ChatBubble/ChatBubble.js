@@ -14,12 +14,17 @@ const ChatBubble = forwardRef((props, ref) => {
     const [isOpen, setIsOpen] = useState(false);
     const [hasNewMessage, setHasNewMessage] = useState(false);
     const [isVisible, setIsVisible] = useState(true);
+    const [defaultChatUser, setDefaultChatUser] = useState(null);
 
     // Expose các hàm mở/đóng bubble ra bên ngoài thông qua ref
     useImperativeHandle(ref, () => ({
         openBubble: () => setIsOpen(true),
         closeBubble: () => setIsOpen(false),
-        toggleBubble: () => setIsOpen(prev => !prev)
+        toggleBubble: () => setIsOpen(prev => !prev),
+        openChatWithUser: (userId) => {
+            setDefaultChatUser(userId);
+            setIsOpen(true);
+        }
     }));
 
     // Simulate new message notification
@@ -47,13 +52,8 @@ const ChatBubble = forwardRef((props, ref) => {
     // Hide on mobile when keyboard is open (optional)
     useEffect(() => {
         const handleResize = () => {
-            if (window.innerHeight < 500) {
-                setIsVisible(false);
-            } else {
-                setIsVisible(true);
-            }
+            setIsVisible(window.innerHeight >= 500);
         };
-
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
     }, []);
@@ -62,7 +62,6 @@ const ChatBubble = forwardRef((props, ref) => {
 
     return (
         <>
-            {/* Chat Bubble */}
             <div
                 style={{
                     position: 'fixed',
@@ -75,7 +74,6 @@ const ChatBubble = forwardRef((props, ref) => {
                     gap: 8
                 }}
             >
-                {/* Welcome message (show when has new message) */}
                 {hasNewMessage && !isOpen && (
                     <div
                         style={{
@@ -114,7 +112,6 @@ const ChatBubble = forwardRef((props, ref) => {
                                 }}
                             />
                         </div>
-                        {/* Arrow pointing to bubble */}
                         <div
                             style={{
                                 position: 'absolute',
@@ -129,8 +126,6 @@ const ChatBubble = forwardRef((props, ref) => {
                         />
                     </div>
                 )}
-
-                {/* Main Chat Button */}
                 <Badge dot={hasNewMessage && !isOpen} offset={[-8, 8]}>
                     <Button
                         type="primary"
@@ -156,7 +151,6 @@ const ChatBubble = forwardRef((props, ref) => {
                 </Badge>
             </div>
 
-            {/* Chat Drawer */}
             <Drawer
                 title={
                     <Space>
@@ -169,9 +163,7 @@ const ChatBubble = forwardRef((props, ref) => {
                 open={isOpen}
                 width={800}
                 height="100vh"
-                styles={{
-                    body: { padding: 0 }
-                }}
+                styles={{ body: { padding: 0 } }}
                 extra={
                     <Button
                         type="text"
@@ -180,10 +172,9 @@ const ChatBubble = forwardRef((props, ref) => {
                     />
                 }
             >
-                <ChatInterface onClose={handleClose} />
+                <ChatInterface defaultChatUser={defaultChatUser} onClose={handleClose} />
             </Drawer>
 
-            {/* CSS Animation */}
             <style jsx={true}>{`
                 @keyframes slideInUp {
                     from {
@@ -195,7 +186,6 @@ const ChatBubble = forwardRef((props, ref) => {
                         transform: translateY(0);
                     }
                 }
-
                 @keyframes bounce {
                     0%, 20%, 50%, 80%, 100% {
                         transform: translateY(0);
@@ -207,12 +197,9 @@ const ChatBubble = forwardRef((props, ref) => {
                         transform: translateY(-5px);
                     }
                 }
-
                 .chat-bubble-bounce {
                     animation: bounce 2s infinite;
                 }
-
-                /* Mobile responsive */
                 @media (max-width: 768px) {
                     .chat-bubble-container {
                         bottom: 80px !important;
