@@ -19,16 +19,15 @@ from starlette.middleware.sessions import SessionMiddleware
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query
 from typing import Dict
 
-
 # Create tables
-Base.metadata.create_all(bind=engine)
+Base.metadata.create_all(bind=engine, checkfirst=True)
 
 app = FastAPI(title="Sports Facility Auth API")
 
 # CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

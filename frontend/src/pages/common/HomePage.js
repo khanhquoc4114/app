@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useEffect} from 'react';
 import { Row, Col, Card, Statistic, Button, Typography } from 'antd';
 import {
     ShopOutlined,
@@ -7,77 +7,70 @@ import {
     ArrowRightOutlined
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 
 const { Title, Paragraph } = Typography;
 
 const HomePage = () => {
     const navigate = useNavigate();
-    const [stats, setStats] = React.useState({
-        facilities: 0,
-        bookings: 0,
-        users: 0,
-    });
+    const [statItems, setStats] = React.useState([]);
     const [popularSports, setPopularSports] = React.useState([]);
 
-const sportMeta = React.useMemo(() => ({
-    badminton: { name: "Cầu lông", image: "🏸", description: "Sân cầu lông chất lượng cao" },
-    football: { name: "Bóng đá", image: "⚽", description: "Sân bóng đá cỏ nhân tạo" },
-    tennis: { name: "Tennis", image: "🎾", description: "Sân tennis tiêu chuẩn quốc tế" },
-    basketball: { name: "Bóng rổ", image: "🏀", description: "Sân bóng rổ trong nhà và ngoài trời" },
-}), []); // chỉ tạo 1 lần
-
-React.useEffect(() => {
-    const fetchPopularSports = async () => {
-        try {
-            const res = await fetch(`${process.env.REACT_APP_API_URL}/api/facilities/popular-sports`);
-            const data = await res.json();
-
-            const merged = data.map(item => ({
-                ...sportMeta[item.sportType],
-                sportType: item.sportType,
-                courts: item.courts
-            }));
-
-            setPopularSports(merged);
-        } catch (err) {
-            console.error("Lỗi fetch popular sports:", err);
-        }
-    };
-
-    fetchPopularSports();
-}, [sportMeta]);
+    const sportMeta = React.useMemo(() => ({
+        badminton: { name: "Cầu lông", image: "🏸", description: "Sân cầu lông chất lượng cao" },
+        football: { name: "Bóng đá", image: "⚽", description: "Sân bóng đá cỏ nhân tạo" },
+        tennis: { name: "Tennis", image: "🎾", description: "Sân tennis tiêu chuẩn quốc tế" },
+        basketball: { name: "Bóng rổ", image: "🏀", description: "Sân bóng rổ trong nhà và ngoài trời" },
+    }), []); // chỉ tạo 1 lần
 
     React.useEffect(() => {
-        const fetchStats = async () => {
+        const fetchPopularSports = async () => {
             try {
-                const res = await fetch(`${process.env.REACT_APP_API_URL}/api/facilities/count`);
+                const res = await fetch(`${process.env.REACT_APP_API_URL}/api/facilities/popular-sports`);
                 const data = await res.json();
-                setStats(prev => ({ ...prev, facilities: data.count }));
+
+                const merged = data.map(item => ({
+                    ...sportMeta[item.sportType],
+                    sportType: item.sportType,
+                    courts: item.courts
+                }));
+
+                setPopularSports(merged);
             } catch (err) {
-                console.error("Lỗi fetch stats:", err); 
+                console.error("Lỗi fetch popular sports:", err);
             }
         };
 
-        fetchStats();
-    }, []);
+        fetchPopularSports();
+    }, [sportMeta]);
 
-    const statItems = [
-        {
-            title: 'Tổng số sân',
-            value: stats.facilities,
-            icon: <ShopOutlined style={{ color: '#1890ff' }} />,
-        },
-        {
-            title: 'Lượt đặt hôm nay',
-            value: stats.bookings,
-            icon: <CalendarOutlined style={{ color: '#52c41a' }} />,
-        },
-        {
-            title: 'Người dùng hoạt động',
-            value: stats.users,
-            icon: <UserOutlined style={{ color: '#faad14' }} />,
-        },
-    ];
+    // Mock data
+    useEffect(() => {
+        axios.get(`${process.env.REACT_APP_API_URL}/api/admin/stats`)
+        .then(res => {
+            const data = res.data;
+            setStats([
+            {
+                title: 'Tổng người dùng',
+                value: data.totalUsers,
+                icon: <UserOutlined style={{ color: '#faad14' }} />
+            },
+            {
+                title: 'Tổng sân',
+                value: data.totalFacilities,
+                icon: <ShopOutlined style={{ color: '#1890ff' }} />
+            },
+            {
+                title: 'Đặt sân hôm nay',
+                value: data.todayBookings,
+                icon: <CalendarOutlined style={{ color: '#52c41a' }} />
+            }
+            ]);
+        })
+        .catch(err => {
+            console.error("Error fetching admin stats:", err);
+        });
+    }, []);
 
     const handleSportClick = (sport) => {
         // Navigate to facilities page with sport filter

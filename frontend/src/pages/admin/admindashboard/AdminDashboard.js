@@ -17,37 +17,51 @@ const AdminDashboard = () => {
     const [dateRange, setDateRange] = useState([dayjs().subtract(7, 'day'), dayjs()]);
     const [roleRequestDetailVisible, setRoleRequestDetailVisible] = useState(false);
     const [selectedRequest, setSelectedRequest] = useState(null);
+    const [adminStats, setStats] = useState([]);
 
-    // Mock data
-    const adminStats = [
-        {
-            title: 'Tổng doanh thu',
-            value: 45600000,
-            prefix: <DollarOutlined style={{ color: '#52c41a' }} />,
-            suffix: 'VNĐ'
-        },
-        {
-            title: 'Tổng người dùng',
-            value: 1247,
-            prefix: <UserOutlined style={{ color: '#1890ff' }} />
-        },
-        {
-            title: 'Tổng sân',
-            value: 28,
-            prefix: <ShopOutlined style={{ color: '#722ed1' }} />
-        },
-        {
-            title: 'Đặt sân hôm nay',
-            value: 156,
-            prefix: <CalendarOutlined style={{ color: '#faad14' }} />
-        }
-    ];
+    // Fetch thống kê tổng quan
+    useEffect(() => {
+        axios.get(`${process.env.REACT_APP_API_URL}/api/admin/stats`)
+        .then(res => {
+            const data = res.data;
+            setStats([
+            {
+                title: 'Tổng doanh thu',
+                value: data.totalRevenue,
+                prefix: <DollarOutlined style={{ color: '#52c41a' }} />,
+                suffix: 'VNĐ'
+            },
+            {
+                title: 'Tổng người dùng',
+                value: data.totalUsers,
+                prefix: <UserOutlined style={{ color: '#1890ff' }} />
+            },
+            {
+                title: 'Tổng sân',
+                value: data.totalFacilities,
+                prefix: <ShopOutlined style={{ color: '#722ed1' }} />
+            },
+            {
+                title: 'Đặt sân hôm nay',
+                value: data.todayBookings,
+                prefix: <CalendarOutlined style={{ color: '#faad14' }} />
+            }
+            ]);
+        })
+        .catch(err => {
+            console.error("Error fetching admin stats:", err);
+        });
+    }, []);
 
-    // Danh sách sân mẫu
-    const facilities = [
-        new AdminFacility(1, 'Sân cầu lông VIP 1', 'Cầu lông', 80000, 'active', 45, 3600000, 'Nguyễn Văn A'),
-        new AdminFacility(2, 'Sân bóng đá mini A', 'Bóng đá', 200000, 'maintenance', 23, 4600000, 'Trần Thị B')
-    ];
+    // Fetch danh sách sân với thống kê
+    const [facilities, setFacilities] = useState([]);
+
+    useEffect(() => {
+        axios
+        .get(`${process.env.REACT_APP_API_URL}/api/facilities/stats`)
+        .then((res) => setFacilities(res.data))
+        .catch((err) => console.error("Error fetching facilities:", err));
+    }, []);
 
     const [users, setUsers] = useState([]);
     const [roleFilter, setRoleFilter] = useState("all");
@@ -249,10 +263,13 @@ const AdminDashboard = () => {
             key: 'name'
         },
         {
-            title: 'Môn thể thao',
-            dataIndex: 'sport_type',
-            key: 'sport_type',
-            render: (sport) => <Tag color="blue">{sport}</Tag>
+            title: "Loại thể thao",
+            dataIndex: "sport_type",
+            key: "sport_type",
+            render: (sports) =>
+                Array.isArray(sports)
+                ? sports.map((s) => <Tag color="blue" key={s}>{s}</Tag>)
+                : <Tag color="blue">{sports}</Tag>,
         },
         {
             title: 'Giá/giờ',
@@ -523,20 +540,23 @@ const AdminDashboard = () => {
             </div>
 
             <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-                {adminStats.map((stat, index) => (
-                    <Col xs={24} sm={12} lg={6} key={index}>
-                        <Card>
-                            <Statistic
-                                title={stat.title}
-                                value={stat.value}
-                                prefix={stat.prefix}
-                                suffix={stat.suffix}
-                                valueStyle={{ color: '#3f8600' }}
-                            />
-                        </Card>
-                    </Col>
-                ))}
-            </Row>
+            {adminStats.map((stat, index) => (
+                <Col xs={24} sm={12} lg={6} key={index}>
+                <Card
+                    hoverable
+                    style={{ borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}
+                >
+                    <Statistic
+                    title={stat.title}
+                    value={stat.value}
+                    prefix={stat.prefix}
+                    suffix={stat.suffix}
+                    valueStyle={{ fontWeight: 'bold', fontSize: 20 }}
+                    />
+                </Card>
+                </Col>
+            ))}
+            </Row>  
 
             <Card>
                 <Tabs defaultActiveKey="facilities">

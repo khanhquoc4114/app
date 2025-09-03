@@ -242,16 +242,4 @@ async def google_callback(
     )
 
     return RedirectResponse(url=redirect_url, status_code=302)
-
-    # return {
-    #     "access_token": access_token,
-    #     "token_type": "bearer",
-    #     "user": {
-    #         "id": db_user.id,
-    #         "email": db_user.email,
-    #         "full_name": db_user.full_name,
-    #         "avatar": db_user.avatar,
-    #         "role": db_user.role
-    #     }
-    # }
     

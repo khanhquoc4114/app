@@ -159,8 +159,6 @@ class Staff(Base):
     host = relationship("User", foreign_keys=[host_id], back_populates="staff_members")
     user = relationship("User", foreign_keys=[user_id], back_populates="staff_of")
 
-
-# Models for Chat System
 class Message(Base):
     __tablename__ = "messages"
     

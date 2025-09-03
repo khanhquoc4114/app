@@ -3,9 +3,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from database import get_db
-from models import Facility, UserFavorite, User
+from models import Facility, UserFavorite, Booking, User
 from auth import verify_token, oauth2_scheme, get_current_user
-from typing import List, Optional
+from typing import List, Optional, Union
 from pydantic import BaseModel
 
 router = APIRouter(prefix="/api/facilities", tags=["Facilities"])
@@ -60,6 +60,36 @@ class FacilityResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class FacilityStats(BaseModel):
+    id: int
+    name: str
+    sport_type: list[str] | str
+    price_per_hour: float
+    status: str
+    bookings_count: int
+    revenue: float
+    owner_user_id: int | None
+
+@router.get("/stats", response_model=list[FacilityStats])
+def get_facilities_stats(db: Session = Depends(get_db)):
+    facilities = (
+        db.query(
+            Facility.id,
+            Facility.name,
+            Facility.sport_type,
+            Facility.price_per_hour,
+            Facility.status,
+            func.count(Booking.id).label("bookings_count"),
+            func.coalesce(func.sum(Booking.total_price), 0).label("revenue"),
+            Facility.owner_user_id
+        )
+        .outerjoin(Booking, Facility.id == Booking.facility_id)
+        .group_by(Facility.id)
+        .all()
+    )
+    return facilities
+
 
 @router.get("/")
 def get_facilities(db: Session = Depends(get_db)):
@@ -332,3 +362,4 @@ def remove_favorite(
     db.commit()
     return {"message": "Đã bỏ thích sân"}
 
+    

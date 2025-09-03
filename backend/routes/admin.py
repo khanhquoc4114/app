@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from database import get_db
 from models import *
-from datetime import datetime
+from datetime import datetime, date
 from services.notification import create_notification
 
 router = APIRouter(prefix="/api/admin", tags=["Admin"])
@@ -126,3 +126,19 @@ def reject_upgrade_request(
     db.refresh(req)
 
     return {"detail": "Đã từ chối", "request": {"id": req.id, "status": req.status, "reason": req.rejection_reason}}
+
+@router.get("/stats")
+def get_admin_stats(db: Session = Depends(get_db)):
+    total_revenue = 0
+    total_users = db.query(func.count(User.id)).scalar()
+    total_facilities = db.query(func.count(Facility.id)).scalar()
+    today_bookings = db.query(func.count(Booking.id)).filter(
+        func.date(Booking.created_at) == date.today()
+    ).scalar()
+
+    return {
+        "totalRevenue": total_revenue,
+        "totalUsers": total_users,
+        "totalFacilities": total_facilities,
+        "todayBookings": today_bookings
+    }
