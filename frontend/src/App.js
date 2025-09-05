@@ -26,6 +26,7 @@ import AuthCallback from './components/AuthCallback';
 // User Pages
 import MyBookingsPage from './pages/user/bookingpage/MyBookingsPage';
 import ProfilePage from './pages/user/profilepage/ProfilePage';
+import PaymentPage from './pages/user/paymentPage/PaymentPage';
 
 // host Pages
 import HostDashboard from './pages/host/HostDashboard/HostDashboard';

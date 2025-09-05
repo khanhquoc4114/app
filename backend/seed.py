@@ -214,8 +214,8 @@ def seed_bookings(db: Session):
         facility_map = {f.name: f.id for f in db.query(Facility).all()}
         bookings = [
             Booking(
-                user_id=user_map.get("nguyenvana"),
-                facility_id=facility_map.get("Sân cầu lông 54"),
+                user_id=1,
+                facility_id=3,
                 court_id=2,
                 booking_date=datetime(2025, 8, 21, 8, 0, 0),
                 start_time=datetime(2025, 8, 21, 8, 0, 0),
@@ -227,8 +227,8 @@ def seed_bookings(db: Session):
                 notes="Đặt sân sáng"
             ),
             Booking(
-                user_id=user_map.get("user"),
-                facility_id=facility_map.get("Sân bóng đá 2"),
+                user_id=2,
+                facility_id=2,
                 court_id=1,
                 booking_date=datetime(2025, 8, 22, 18, 0, 0),
                 start_time=datetime(2025, 8, 22, 18, 0, 0),
@@ -240,8 +240,8 @@ def seed_bookings(db: Session):
                 notes="Đặt sân chiều"
             ),
             Booking(
-                user_id=user_map.get("host"),
-                facility_id=facility_map.get("Sân tennis 1"),
+                user_id=3,
+                facility_id=1,
                 court_id=1,
                 booking_date=datetime(2025, 8, 23, 14, 0, 0),
                 start_time=datetime(2025, 8, 23, 14, 0, 0),
