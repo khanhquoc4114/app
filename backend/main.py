@@ -28,10 +28,15 @@ Base.metadata.create_all(bind=engine, checkfirst=True)
 
 app = FastAPI(title="Sports Facility Auth API")
 
+origins = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
+
 # CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

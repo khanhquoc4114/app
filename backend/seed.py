@@ -11,7 +11,7 @@ def seed_facilities(db: Session):
         facilities = [
             Facility(
                 name="Sân cầu lông 54",
-                owner_user_id=4,
+                owner_id=4,
                 sport_type= ["badminton", "football"],  # vẫn giữ để tương thích cũ
                 court_layout=[
                     {"sport_type": "badminton", "count": 6},
@@ -28,7 +28,7 @@ def seed_facilities(db: Session):
             ),
             Facility(
                 name="Sân bóng đá 2",
-                owner_user_id=4,
+                owner_id=4,
                 sport_type=["football"],
                 court_layout=[
                     {"sport_type": "football", "count": 2}
@@ -44,7 +44,7 @@ def seed_facilities(db: Session):
             ),
             Facility(
                 name="Sân tennis 1",
-                owner_user_id=4,
+                owner_id=4,
                 sport_type=["tennis"],
                 court_layout=[
                     {"sport_type": "tennis", "count": 1}
@@ -60,7 +60,7 @@ def seed_facilities(db: Session):
             ),
             Facility(
                 name="Sân bóng rổ",
-                owner_user_id=4,
+                owner_id=4,
                 sport_type=["basketball"],
                 court_layout=[
                     {"sport_type": "basketball", "count": 1}

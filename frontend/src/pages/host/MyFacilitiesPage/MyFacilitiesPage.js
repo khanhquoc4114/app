@@ -1,25 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Row, Col, Card, Table, Typography, Space, Tag, Button, Modal, Form, Input, Select, Upload, Statistic, Rate } from 'antd';
-import {
-    PlusOutlined,
-    EditOutlined,
-    DeleteOutlined,
-    ToolOutlined,
-    UploadOutlined,
-    EyeOutlined,
-    DollarOutlined,
-    CalendarOutlined,
-    ShopOutlined,
-    EnvironmentOutlined
+import {PlusOutlined,EditOutlined,DeleteOutlined,ToolOutlined,UploadOutlined,EyeOutlined,DollarOutlined,CalendarOutlined,ShopOutlined,EnvironmentOutlined
 } from '@ant-design/icons';
-
-import {
-    getSportName,
-    formatPrice,
-    handleDeleteFacility,
-    handleFacilitySubmit,
-    handleStatusSubmit
+import {getSportName,formatPrice,handleDeleteFacility,handleFacilitySubmit,handleStatusSubmit
 } from './MyFacilitiesPageLogic';
+import axios from "axios";
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -29,66 +14,27 @@ const MyFacilitiesPage = () => {
     const [facilityModalVisible, setFacilityModalVisible] = useState(false);
     const [selectedFacility, setSelectedFacility] = useState(null);
     const [statusModalVisible, setStatusModalVisible] = useState(false);
-    const [facilities, setFacilities] = useState([
-        {
-            id: 1,
-            name: 'Sân cầu lông VIP 1',
-            sport_type: ['badminton'],
-            description: 'Sân cầu lông chất lượng cao với sàn gỗ chuyên nghiệp',
-            price_per_hour: 80000,
-            image_url: '/images/badminton-1.jpg',
-            location: '123 Nguyễn Văn A, Quận 1, TP.HCM',
-            rating: 4.5,
-            reviews_count: 125,
-            amenities: ['Điều hòa', 'Wifi', 'Bãi đỗ xe', 'Phòng thay đồ'],
-            opening_hours: '06:00 - 22:00',
-            is_active: true,
-            court_layout: { rows: 2, cols: 1, total_courts: 2 },
-            // Mock data for statistics
-            bookings_today: 5,
-            revenue_today: 400000,
-            bookings_this_month: 45,
-            revenue_this_month: 3600000
-        },
-        {
-            id: 2,
-            name: 'Sân cầu lông VIP 2',
-            sport_type: ['badminton'],
-            description: 'Sân cầu lông tiêu chuẩn với hệ thống chiếu sáng LED',
-            price_per_hour: 80000,
-            image_url: '/images/badminton-2.jpg',
-            location: '456 Lê Văn B, Quận 2, TP.HCM',
-            rating: 4.2,
-            reviews_count: 89,
-            amenities: ['Điều hòa', 'Wifi', 'Phòng thay đồ'],
-            opening_hours: '05:30 - 23:00',
-            is_active: false, // maintenance
-            court_layout: { rows: 1, cols: 2, total_courts: 2 },
-            bookings_today: 0,
-            revenue_today: 0,
-            bookings_this_month: 32,
-            revenue_this_month: 2560000
-        },
-        {
-            id: 3,
-            name: 'Sân tennis ngoài trời',
-            sport_type: ['tennis'],
-            description: 'Sân tennis hard court tiêu chuẩn quốc tế',
-            price_per_hour: 150000,
-            image_url: '/images/tennis-1.jpg',
-            location: '789 Trần Văn C, Quận 3, TP.HCM',
-            rating: 4.8,
-            reviews_count: 203,
-            amenities: ['Bãi đỗ xe', 'Phòng thay đồ', 'Thuê vợt'],
-            opening_hours: '06:00 - 21:00',
-            is_active: true,
-            court_layout: { rows: 1, cols: 3, total_courts: 3 },
-            bookings_today: 3,
-            revenue_today: 450000,
-            bookings_this_month: 28,
-            revenue_this_month: 4200000
+    const [facilities, setFacilities] = useState([]);
+
+    useEffect(() => {
+    async function fetchFacilities() {
+        try {
+        const token = localStorage.getItem("token");
+        const { data } = await axios.get(`${process.env.REACT_APP_API_URL}/api/facilities/host`,
+            {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            }
+        );
+        setFacilities(data);
+        } catch (err) {
+            console.error("Error fetching facilities:", err);
         }
-    ]);
+    }
+
+    fetchFacilities();
+    }, []);
 
     const facilityStats = [
         {

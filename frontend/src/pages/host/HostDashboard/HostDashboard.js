@@ -1,17 +1,5 @@
-import React, { useState } from 'react';
-import {
-    Row,
-    Col,
-    Card,
-    Statistic,
-    Table,
-    Typography,
-    Space,
-    Tag,
-    Button,
-    DatePicker,
-    Tabs,
-    Radio
+import React, { useState, useEffect} from 'react';
+import {Row,Col,Card,Statistic,Table,Typography,Space,Tag,Button,DatePicker,Tabs,Radio
 } from 'antd';
 import {
     DollarOutlined,
@@ -23,6 +11,7 @@ import {
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { handleCheckIn, handleCancelBooking, formatPrice } from './HostDashboardLogic';
+import axios from "axios";
 
 const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
@@ -34,42 +23,61 @@ const HostDashboard = () => {
     const [reportDateRange, setReportDateRange] = useState([dayjs().subtract(7, 'days'), dayjs()]);
     const [selectedMonth, setSelectedMonth] = useState(dayjs());
     const [selectedYear, setSelectedYear] = useState(dayjs().year());
+    const [todayBookings, setTodayBookings] = useState([]);
 
-    const [todayBookings, setTodayBookings] = useState([
-        {
-            key: '1',
-            id: 'BK001',
-            customer: 'Nguyễn Văn A',
-            phone: '0901234567',
-            facility: 'Sân cầu lông VIP 1',
-            time: '08:00 - 10:00',
-            amount: 160000,
-            status: 'confirmed',
-            checkedIn: false
-        },
-        {
-            key: '2',
-            id: 'BK002',
-            customer: 'Trần Thị B',
-            phone: '0907654321',
-            facility: 'Sân cầu lông VIP 1',
-            time: '14:00 - 16:00',
-            amount: 160000,
-            status: 'pending',
-            checkedIn: false
-        },
-        {
-            key: '3',
-            id: 'BK003',
-            customer: 'Lê Văn C',
-            phone: '0912345678',
-            facility: 'Sân tennis cao cấp',
-            time: '16:00 - 18:00',
-            amount: 300000,
-            status: 'confirmed',
-            checkedIn: true
+    useEffect(() => {
+        async function fetchBookings() {
+        try {
+            const token = localStorage.getItem("token");
+            const { data } = await axios.get(`${process.env.REACT_APP_API_URL}/api/bookings/owner`, {
+            headers: {
+                Authorization: `Bearer ${token}`,
+            },
+            });
+            setTodayBookings(data);
+        } catch (err) {
+            console.error("Error fetching bookings:", err);
         }
-    ]);
+        }
+
+        fetchBookings();
+    }, []);
+
+    // const [todayBookings, setTodayBookings] = useState([
+    //     {
+    //         key: '1',
+    //         id: 'BK001',
+    //         customer: 'Nguyễn Văn A',
+    //         phone: '0901234567',
+    //         facility: 'Sân cầu lông VIP 1',
+    //         time: '08:00 - 10:00',
+    //         amount: 160000,
+    //         status: 'confirmed',
+    //         checkedIn: false
+    //     },
+    //     {
+    //         key: '2',
+    //         id: 'BK002',
+    //         customer: 'Trần Thị B',
+    //         phone: '0907654321',
+    //         facility: 'Sân cầu lông VIP 1',
+    //         time: '14:00 - 16:00',
+    //         amount: 160000,
+    //         status: 'pending',
+    //         checkedIn: false
+    //     },
+    //     {
+    //         key: '3',
+    //         id: 'BK003',
+    //         customer: 'Lê Văn C',
+    //         phone: '0912345678',
+    //         facility: 'Sân tennis cao cấp',
+    //         time: '16:00 - 18:00',
+    //         amount: 300000,
+    //         status: 'confirmed',
+    //         checkedIn: true
+    //     }
+    // ]);
 
     // Mock data cho báo cáo doanh thu theo ngày
     const dailyRevenueData = [
@@ -169,14 +177,14 @@ const HostDashboard = () => {
             )
         },
         {
-            title: 'Check-in',
+            title: 'Xác nhận',
             key: 'checkin',
             render: (_, record) => (
                 record.checkedIn ? (
-                    <Tag color="blue">Đã check-in</Tag>
+                    <Tag color="blue">Đã xác nhận</Tag>
                 ) : (
                     <Button size="small" type="primary" onClick={() => handleCheckIn(record, setTodayBookings)}>
-                        Check-in
+                        Xác nhận
                     </Button>
                 )
             )
@@ -376,7 +384,7 @@ const HostDashboard = () => {
         <div>
             <div style={{ marginBottom: 24 }}>
                 <Title level={2}>Dashboard chủ sân</Title>
-                <Text type="secondary">Quản lý đặt sân, doanh thu và check-in</Text>
+                <Text type="secondary">Quản lý đặt sân, doanh thu</Text>
             </div>
             <Row gutter={16} style={{ marginBottom: 24 }}>
                 {hostStats.map((stat, idx) => (

@@ -73,7 +73,7 @@ class Facility(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
-    owner_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # id user chủ sân
+    owner_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # id user chủ sân
     sport_type = Column(ARRAY(String), nullable=False)  # badminton, football, tennis, etc.
     court_layout = Column(JSON, nullable=True)   # lưu layout sân dưới dạng JSON
     description = Column(Text)
@@ -91,7 +91,7 @@ class Facility(Base):
     
     # Relationships
     bookings = relationship("Booking", back_populates="facility")
-    owner = relationship("User", foreign_keys=[owner_user_id])
+    owner = relationship("User", foreign_keys=[owner_id])
     liked_by = relationship("UserFavorite", back_populates="facility", cascade="all, delete-orphan")
 
 class UserFavorite(Base):

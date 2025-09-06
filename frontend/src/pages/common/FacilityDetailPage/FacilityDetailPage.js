@@ -279,7 +279,7 @@ const FacilityDetailPage = () => {
       setLoading(true);
       try {
         // Lấy thông tin sân
-        const res = await fetch(`${API_URL}/api/facilities/${id}`, {
+        const res = await fetch(`${API_URL}/api/facilities/detail/${id}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -300,15 +300,15 @@ const FacilityDetailPage = () => {
         });
         
         // Lấy thông tin chủ sân
-        if (data.owner_user_id) {
-          const ownerRes = await fetch(`${API_URL}/api/users/${data.owner_user_id}`);
+        if (data.owner_id) {
+          const ownerRes = await fetch(`${API_URL}/api/users/${data.owner_id}`);
           if (ownerRes.ok) {
             setOwner(await ownerRes.json());
           }
         }
 
         // Lấy các sân liên quan (cùng chủ hoặc cùng khu vực)
-        const relatedRes = await fetch(`${API_URL}/api/facilities?owner_user_id=${data.owner_user_id}&exclude_id=${id}`);
+        const relatedRes = await fetch(`${API_URL}/api/facilities?owner_id=${data.owner_id}&exclude_id=${id}`);
         if (relatedRes.ok) {
           setRelatedFacilities(await relatedRes.json());
         }

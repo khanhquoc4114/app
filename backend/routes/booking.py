@@ -44,7 +44,6 @@ def get_bookings(
         for b in bookings
     ]
 
-
 @router.post("/")
 def create_booking(
     booking_data: BookingCreate,
@@ -121,6 +120,40 @@ def search_bookings(
             "payment_status": b.payment_status,
             "payment_method": b.payment_method,
             "notes": b.notes
+        }
+        for b in bookings
+    ]
+    
+@router.get("/owner")
+def get_bookings_for_host(
+    token: str = Depends(oauth2_scheme),
+    db: Session = Depends(get_db)
+):
+    # Xác minh token
+    payload = verify_token(token)
+    if not payload:
+        raise HTTPException(status_code=401, detail="Token không hợp lệ")
+
+    owner_id = payload["id"]  # host id
+
+    # Join Booking với Facility để lọc theo owner_id
+    bookings = (
+        db.query(Booking)
+        .join(Facility, Booking.facility_id == Facility.id)
+        .filter(Facility.owner_id == owner_id)
+        .all()
+    )
+
+    return [
+        {
+            "id": b.id,
+            "customer": b.user.full_name if b.user else None,
+            "phone": b.user.phone if b.user else None,
+            "facility": b.facility.name if b.facility else None,
+            "time": f"{b.start_time.strftime('%H:%M')} - {b.end_time.strftime('%H:%M')}",
+            "amount": b.total_price,
+            "status": b.status,
+            "checkedIn": b.status == "completed"
         }
         for b in bookings
     ]

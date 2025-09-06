@@ -65,7 +65,6 @@ def approve_upgrade_request(
     try:
         user.role = "host"
         req.status = "approved"
-        # req.approved_by = admin.username  # nếu có field này
         
         create_notification(
             db=db,

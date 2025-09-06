@@ -79,12 +79,13 @@ const { Text } = Typography;
             priority: 'high',
             data: {
                 bookingId: 'BK001',
-                facilityName: 'Sân cầu lông VIP 1'
+                facilityName: 'Mock facility name',
             }
         }
     ];
 
-    const allNotifications = notificationList.length >= 0 ? notificationList : mockNotifications;
+    const allNotifications = notificationList;
+    // const allNotifications = notificationList.length >= 0 ? notificationList : mockNotifications;
 
     const getNotificationIcon = (type) => {
         const icons = {

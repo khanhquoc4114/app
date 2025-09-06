@@ -1,7 +1,7 @@
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, extract
 from database import get_db
 from models import Facility, UserFavorite, Booking, User
 from auth import verify_token, oauth2_scheme, get_current_user
@@ -43,7 +43,7 @@ class FacilityUpdate(BaseModel):
 class FacilityResponse(BaseModel):
     id: int
     name: str
-    owner_user_id: int
+    owner_id: int
     sport_type: List[str]
     court_layout: Optional[dict] = None
     description: str
@@ -69,7 +69,7 @@ class FacilityStats(BaseModel):
     status: str
     bookings_count: int
     revenue: float
-    owner_user_id: int | None
+    owner_id: int | None
 
 @router.get("/stats", response_model=list[FacilityStats])
 def get_facilities_stats(db: Session = Depends(get_db)):
@@ -82,13 +82,90 @@ def get_facilities_stats(db: Session = Depends(get_db)):
             Facility.status,
             func.count(Booking.id).label("bookings_count"),
             func.coalesce(func.sum(Booking.total_price), 0).label("revenue"),
-            Facility.owner_user_id
+            Facility.owner_id
         )
         .outerjoin(Booking, Facility.id == Booking.facility_id)
         .group_by(Facility.id)
         .all()
     )
     return facilities
+
+@router.get("/host")
+def get_facilities_for_host(
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2_scheme)
+):
+    payload = verify_token(token)
+    if not payload:
+        raise HTTPException(status_code=401, detail="Token không hợp lệ")
+    owner_id = payload["id"]
+
+    today = datetime.today().date()
+    now = datetime.today()
+
+    facilities = db.query(Facility).filter(Facility.owner_id == owner_id).all()
+
+    result = []
+    for f in facilities:
+        bookings_today = (
+            db.query(func.count(Booking.id))
+            .filter(Booking.facility_id == f.id)
+            .filter(func.date(Booking.start_time) == today)
+            .scalar()
+        )
+
+        revenue_today = (
+            db.query(func.coalesce(func.sum(Booking.total_price), 0))
+            .filter(Booking.facility_id == f.id)
+            .filter(func.date(Booking.start_time) == today)
+            .scalar()
+        )
+
+        bookings_this_month = (
+            db.query(func.count(Booking.id))
+            .filter(Booking.facility_id == f.id)
+            .filter(extract("month", Booking.start_time) == now.month)
+            .filter(extract("year", Booking.start_time) == now.year)
+            .scalar()
+        )
+
+        revenue_this_month = (
+            db.query(func.coalesce(func.sum(Booking.total_price), 0))
+            .filter(Booking.facility_id == f.id)
+            .filter(extract("month", Booking.start_time) == now.month)
+            .filter(extract("year", Booking.start_time) == now.year)
+            .scalar()
+        )
+
+        result.append({
+            "id": f.id,
+            "name": f.name,
+            "sport_type": f.sport_type,
+            "description": f.description,
+            "price_per_hour": f.price_per_hour,
+            "image_url": f.image_url,
+            "location": f.location,
+            "rating": f.rating,
+            "reviews_count": f.reviews_count,
+            "amenities": f.amenities,
+            "opening_hours": f.opening_hours,
+            "is_active": f.is_active,
+            "court_layout": f.court_layout,
+            "bookings_today": bookings_today,
+            "revenue_today": revenue_today,
+            "bookings_this_month": bookings_this_month,
+            "revenue_this_month": revenue_this_month,
+        })
+
+    return result
+
+
+
+
+
+
+
+
 
 
 @router.get("/")
@@ -134,7 +211,7 @@ async def create_facility(
     # Tạo facility mới
     new_facility = Facility(
         name=facility_data.name,
-        owner_user_id=current_user.id,
+        owner_id=current_user.id,
         sport_type=facility_data.sport_type,
         court_layout= facility_data.court_layout.dict() if facility_data.court_layout else None,
         description=facility_data.description,
@@ -178,7 +255,7 @@ async def update_facility(
         )
     
     # Kiểm tra quyền sửa
-    if facility.owner_user_id != current_user.id and current_user.role != "admin":
+    if facility.owner_id != current_user.id and current_user.role != "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Bạn không có quyền sửa sân này"
@@ -221,7 +298,7 @@ async def delete_facility(
         )
     
     # Kiểm tra quyền xóa
-    if facility.owner_user_id != current_user.id and current_user.role != "admin":
+    if facility.owner_id != current_user.id and current_user.role != "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Bạn không có quyền xóa sân này"
@@ -257,7 +334,7 @@ async def update_facility_status(
         )
     
     # Kiểm tra quyền
-    if facility.owner_user_id != current_user.id and current_user.role != "admin":
+    if facility.owner_id != current_user.id and current_user.role != "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Bạn không có quyền thay đổi trạng thái sân này"
@@ -276,7 +353,7 @@ async def update_facility_status(
         )
 
 # API lấy chi tiết sân theo id
-@router.get("/{facility_id}")
+@router.get("/detail/{facility_id}")
 def get_facility_detail(facility_id: int, db: Session = Depends(get_db)):
     facility = db.query(Facility).filter(Facility.id == facility_id, Facility.is_active == True).first()
     if not facility:
@@ -297,7 +374,7 @@ def get_facility_detail(facility_id: int, db: Session = Depends(get_db)):
         "is_active": facility.is_active,
         "created_at": facility.created_at,
         "updated_at": facility.updated_at,
-        "owner_user_id": facility.owner_user_id,
+        "owner_id": facility.owner_id,
     }
 
 @router.get("/count")
@@ -361,5 +438,3 @@ def remove_favorite(
     db.delete(favorite)
     db.commit()
     return {"message": "Đã bỏ thích sân"}
-
-    

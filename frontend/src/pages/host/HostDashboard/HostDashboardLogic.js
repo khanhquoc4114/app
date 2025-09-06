@@ -8,7 +8,7 @@ export const handleCheckIn = (record, setTodayBookings) => {
             item.key === record.key ? { ...item, checkedIn: true } : item
         )
     );
-    message.success(`Khách hàng ${record.customer} đã check-in thành công!`);
+    message.success(`Khách hàng ${record.customer} đã thanh toán thành công!`);
 };
 
 // Hàm xử lý huỷ booking
