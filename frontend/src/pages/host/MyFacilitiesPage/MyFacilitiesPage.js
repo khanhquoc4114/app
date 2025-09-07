@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Row, Col, Card, Table, Typography, Space, Tag, Button, Modal, Form, Input, Select, Upload, Statistic, Rate } from 'antd';
+import { Row, Col, Card, Table, Typography, Space, Tag, Button, Modal, Form, Input, Select, Upload, Statistic, Rate, message, Image, TimePicker } from 'antd';
 import {PlusOutlined,EditOutlined,DeleteOutlined,ToolOutlined,UploadOutlined,EyeOutlined,DollarOutlined,CalendarOutlined,ShopOutlined,EnvironmentOutlined
 } from '@ant-design/icons';
 import {getSportName,formatPrice,handleDeleteFacility,handleFacilitySubmit,handleStatusSubmit
@@ -15,6 +15,90 @@ const MyFacilitiesPage = () => {
     const [selectedFacility, setSelectedFacility] = useState(null);
     const [statusModalVisible, setStatusModalVisible] = useState(false);
     const [facilities, setFacilities] = useState([]);
+    const [uploadedFiles, setUploadedFiles] = useState({
+        field_images: [],
+    });
+    const [form] = Form.useForm();
+
+    useEffect(() => {
+        if (facilityModalVisible) {
+            if (selectedFacility) {
+                // Khi sửa: load ảnh từ database
+                const existingImages = selectedFacility.images ? selectedFacility.images.map((img, index) => ({
+                    uid: `existing-${index}`,
+                    name: `image-${index}.jpg`,
+                    status: 'done',
+                    url: img.startsWith('http') ? img : `${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/uploads/${img}`,
+                    isExisting: true // Flag để phân biệt ảnh cũ và ảnh mới
+                })) : [];
+                
+                setUploadedFiles({
+                    field_images: existingImages
+                });
+
+                form.setFieldsValue({
+                    ...selectedFacility,
+                    sport_type: selectedFacility.sport_type,
+                    court_layout_rows: selectedFacility.court_layout?.rows || 1,
+                    court_layout_cols: selectedFacility.court_layout?.cols || 1
+                });
+            } else {
+                // Khi thêm mới: reset
+                setUploadedFiles({
+                    field_images: [],
+                });
+                form.resetFields();
+            }
+        }
+    }, [facilityModalVisible, selectedFacility, form]);
+
+    const handleFileUpload = (fileType, info) => {
+        const { fileList } = info;
+        
+        // Xử lý fileList để đảm bảo có preview
+        const processedFileList = fileList.map(file => {
+            if (!file.url && !file.preview) {
+                if (file.originFileObj) {
+                    // Tạo preview URL cho file mới
+                    file.preview = URL.createObjectURL(file.originFileObj);
+                }
+            }
+            return file;
+        });
+
+        setUploadedFiles(prev => ({
+            ...prev,
+            [fileType]: processedFileList
+        }));
+    };
+
+    const uploadProps = (fileType, maxCount = 5) => ({
+        beforeUpload: (file) => {
+            const isImage = file.type.startsWith('image/');
+            if (!isImage) {
+                message.error('Chỉ được upload file ảnh!');
+                return false;
+            }
+            const isLt5M = file.size / 1024 / 1024 < 5;
+            if (!isLt5M) {
+                message.error('Ảnh phải nhỏ hơn 5MB!');
+                return false;
+            }
+            return false; // Prevent auto upload, sẽ xử lý manual
+        },
+        onChange: (info) => handleFileUpload(fileType, info),
+        fileList: uploadedFiles[fileType],
+        maxCount,
+        listType: 'picture-card',
+        accept: 'image/*',
+        multiple: maxCount > 1,
+        onRemove: (file) => {
+            // Cleanup preview URL nếu có
+            if (file.preview && file.preview.startsWith('blob:')) {
+                URL.revokeObjectURL(file.preview);
+            }
+        }
+    });
 
     useEffect(() => {
     async function fetchFacilities() {
@@ -160,6 +244,40 @@ const MyFacilitiesPage = () => {
         }
     ];
 
+    const handleSubmit = (values) => {
+        // Chuẩn bị data để gửi
+        const formattedValues = {
+            ...values,
+            court_layout: {
+                rows: values.court_layout_rows,
+                cols: values.court_layout_cols,
+                total_courts: values.court_layout_rows * values.court_layout_cols
+            },
+            // Thêm thông tin ảnh
+            images: uploadedFiles.field_images
+        };
+        
+        // Xóa các field không cần thiết
+        delete formattedValues.court_layout_rows;
+        delete formattedValues.court_layout_cols;
+
+        handleFacilitySubmit(formattedValues, setFacilities, setFacilityModalVisible, setSelectedFacility);
+    };
+
+    const handleCancel = () => {
+        // Cleanup preview URLs
+        uploadedFiles.field_images.forEach(file => {
+            if (file.preview && file.preview.startsWith('blob:')) {
+                URL.revokeObjectURL(file.preview);
+            }
+        });
+        
+        setFacilityModalVisible(false);
+        setSelectedFacility(null);
+        setUploadedFiles({ field_images: [] });
+        form.resetFields();
+    };
+
     return (
         <div>
             <div style={{ marginBottom: 24 }}>
@@ -204,166 +322,238 @@ const MyFacilitiesPage = () => {
             </Card>
 
             {/* Add/Edit Facility Modal */}
-            <Modal
-                title={selectedFacility ? 'Sửa thông tin sân' : 'Thêm sân mới'}
-                open={facilityModalVisible}
-                onCancel={() => setFacilityModalVisible(false)}
-                footer={null}
-                width={800}
+        <Modal
+            title={selectedFacility ? 'Sửa thông tin sân' : 'Thêm sân mới'}
+            open={facilityModalVisible}
+            onCancel={handleCancel}
+            footer={null}
+            width={800}
+            destroyOnClose
+        >
+            <Form
+                form={form}
+                layout="vertical"
+                onFinish={handleSubmit}
+                initialValues={{
+                    is_active: true,
+                    sport_type: [],
+                    court_layout_rows: 1,
+                    court_layout_cols: 1
+                }}
             >
-                <Form
-                    layout="vertical"
-                    initialValues={selectedFacility ? {
-                        ...selectedFacility,
-                        sport_type: selectedFacility.sport_type,
-                        court_layout_rows: selectedFacility.court_layout?.rows || 1,
-                        court_layout_cols: selectedFacility.court_layout?.cols || 1
-                    } : {
-                        is_active: true,
-                        sport_type: [],
-                        court_layout_rows: 1,
-                        court_layout_cols: 1
-                    }}
-                    onFinish={(values) => {
-                        const formattedValues = {
-                            ...values,
-                            court_layout: {
-                                rows: values.court_layout_rows,
-                                cols: values.court_layout_cols,
-                                total_courts: values.court_layout_rows * values.court_layout_cols
-                            }
-                        };
-                        delete formattedValues.court_layout_rows;
-                        delete formattedValues.court_layout_cols;
-                        handleFacilitySubmit(formattedValues, setFacilities, setFacilityModalVisible, setSelectedFacility);
-                    }}
+                <Row gutter={16}>
+                    <Col span={12}>
+                        <Form.Item
+                            name="name"
+                            label="Tên sân"
+                            rules={[{ required: true, message: 'Vui lòng nhập tên sân' }]}
+                        >
+                            <Input placeholder="Nhập tên sân" />
+                        </Form.Item>
+                    </Col>
+                    <Col span={12}>
+                        <Form.Item
+                            name="sport_type"
+                            label="Môn thể thao"
+                            rules={[{ required: true, message: 'Vui lòng chọn ít nhất một môn thể thao' }]}
+                        >
+                            <Select mode="multiple" placeholder="Chọn môn thể thao">
+                                <Option value="badminton">Cầu lông</Option>
+                                <Option value="football">Bóng đá</Option>
+                                <Option value="tennis">Tennis</Option>
+                                <Option value="basketball">Bóng rổ</Option>
+                                <Option value="volleyball">Bóng chuyền</Option>
+                                <Option value="pingpong">Bóng bàn</Option>
+                            </Select>
+                        </Form.Item>
+                    </Col>
+                </Row>
+
+                <Form.Item
+                    name="description"
+                    label="Mô tả"
+                    rules={[{ required: true, message: 'Vui lòng nhập mô tả' }]}
                 >
-                    <Row gutter={16}>
-                        <Col span={12}>
-                            <Form.Item
-                                name="name"
-                                label="Tên sân"
-                                rules={[{ required: true, message: 'Vui lòng nhập tên sân' }]}
-                            >
-                                <Input placeholder="Nhập tên sân" />
-                            </Form.Item>
-                        </Col>
-                        <Col span={12}>
-                            <Form.Item
-                                name="sport_type"
-                                label="Môn thể thao"
-                                rules={[{ required: true, message: 'Vui lòng chọn ít nhất một môn thể thao' }]}
-                            >
-                                <Select mode="multiple" placeholder="Chọn môn thể thao">
-                                    <Option value="badminton">Cầu lông</Option>
-                                    <Option value="football">Bóng đá</Option>
-                                    <Option value="tennis">Tennis</Option>
-                                    <Option value="basketball">Bóng rổ</Option>
-                                    <Option value="volleyball">Bóng chuyền</Option>
-                                    <Option value="pingpong">Bóng bàn</Option>
-                                </Select>
-                            </Form.Item>
-                        </Col>
-                    </Row>
+                    <TextArea rows={3} placeholder="Mô tả chi tiết về sân" />
+                </Form.Item>
 
-                    <Form.Item
-                        name="description"
-                        label="Mô tả"
-                        rules={[{ required: true, message: 'Vui lòng nhập mô tả' }]}
-                    >
-                        <TextArea rows={3} placeholder="Mô tả chi tiết về sân" />
-                    </Form.Item>
+                <Form.Item
+                    name="location"
+                    label="Địa chỉ"
+                    rules={[{ required: true, message: 'Vui lòng nhập địa chỉ' }]}
+                >
+                    <Input placeholder="Nhập địa chỉ đầy đủ" />
+                </Form.Item>
 
-                    <Form.Item
-                        name="location"
-                        label="Địa chỉ"
-                        rules={[{ required: true, message: 'Vui lòng nhập địa chỉ' }]}
-                    >
-                        <Input placeholder="Nhập địa chỉ đầy đủ" />
-                    </Form.Item>
+                <Row gutter={16}>
+                    <Col span={8}>
+                        <Form.Item
+                            name="price_per_hour"
+                            label="Giá thuê (VNĐ/giờ)"
+                            rules={[{ required: true, message: 'Vui lòng nhập giá thuê' }]}
+                        >
+                            <Input type="number" step={1000} min={0} placeholder="Nhập giá thuê" />
+                        </Form.Item>
+                    </Col>
+                    <Col span={8}>
+                        <Form.Item
+                        name="opening_hours"
+                        label="Giờ mở cửa"
+                        rules={[{ required: true, message: 'Vui lòng chọn giờ mở cửa' }]}
+                        >
+                        <TimePicker.RangePicker
+                            format="HH:mm"
+                            placeholder={['Giờ mở', 'Giờ đóng']}
+                            style={{ width: '100%' }}
+                            minuteStep={30}
+                        />
+                        </Form.Item>
+                    </Col>
+                    <Col span={8}>
+                        <Form.Item name="is_active" label="Trạng thái">
+                            <Select>
+                                <Option value={true}>Hoạt động</Option>
+                                <Option value={false}>Tạm ngưng</Option>
+                            </Select>
+                        </Form.Item>
+                    </Col>
+                </Row>
 
-                    <Row gutter={16}>
-                        <Col span={8}>
-                            <Form.Item
-                                name="price_per_hour"
-                                label="Giá thuê (VNĐ/giờ)"
-                                rules={[{ required: true, message: 'Vui lòng nhập giá thuê' }]}
-                            >
-                                <Input type="number" placeholder="Nhập giá thuê" />
-                            </Form.Item>
-                        </Col>
-                        <Col span={8}>
-                            <Form.Item
-                                name="opening_hours"
-                                label="Giờ mở cửa"
-                                rules={[{ required: true, message: 'Vui lòng nhập giờ mở cửa' }]}
-                            >
-                                <Input placeholder="VD: 06:00 - 22:00" />
-                            </Form.Item>
-                        </Col>
-                        <Col span={8}>
-                            <Form.Item name="is_active" label="Trạng thái" valuePropName="checked">
-                                <Select>
-                                    <Option value={true}>Hoạt động</Option>
-                                    <Option value={false}>Tạm ngưng</Option>
-                                </Select>
-                            </Form.Item>
-                        </Col>
-                    </Row>
+                <Row gutter={16}>
+                    <Col span={12}>
+                        <Form.Item
+                            name="court_layout_rows"
+                            label="Số hàng sân"
+                            rules={[{ required: true, message: 'Vui lòng nhập số hàng' }]}
+                        >
+                            <Input type="number" min={1} placeholder="Số hàng sân" />
+                        </Form.Item>
+                    </Col>
+                    <Col span={12}>
+                        <Form.Item
+                            name="court_layout_cols"
+                            label="Số cột sân"
+                            rules={[{ required: true, message: 'Vui lòng nhập số cột' }]}
+                        >
+                            <Input type="number" min={1} placeholder="Số cột sân" />
+                        </Form.Item>
+                    </Col>
+                </Row>
 
-                    <Row gutter={16}>
-                        <Col span={12}>
-                            <Form.Item
-                                name="court_layout_rows"
-                                label="Số hàng sân"
-                                rules={[{ required: true, message: 'Vui lòng nhập số hàng' }]}
-                            >
-                                <Input type="number" min={1} placeholder="Số hàng sân" />
-                            </Form.Item>
-                        </Col>
-                        <Col span={12}>
-                            <Form.Item
-                                name="court_layout_cols"
-                                label="Số cột sân"
-                                rules={[{ required: true, message: 'Vui lòng nhập số cột' }]}
-                            >
-                                <Input type="number" min={1} placeholder="Số cột sân" />
-                            </Form.Item>
-                        </Col>
-                    </Row>
+                {/* Upload nhiều ảnh - chỉ preview */}
+                <Form.Item name="images" label="Hình ảnh sân (tối đa 10 ảnh)">
+                    <Upload {...uploadProps("field_images", 10)} showUploadList={false}>
+                        {uploadedFiles.field_images.length < 10 && (
+                            <div>
+                                <PlusOutlined />
+                                <div style={{ marginTop: 8 }}>Chọn ảnh</div>
+                                <div style={{ fontSize: '12px', color: '#999' }}>Chỉ xem trước</div>
+                            </div>
+                        )}
+                    </Upload>
 
-                    <Form.Item name="image_url" label="Hình ảnh sân">
-                        <Upload>
-                            <Button icon={<UploadOutlined />}>Tải ảnh lên</Button>
-                        </Upload>
-                    </Form.Item>
+                    {/* Hiển thị preview ảnh dạng Image component */}
+                    {uploadedFiles.field_images.length > 0 && (
+                        <div style={{ marginTop: 12 }}>
+                            <div style={{ marginBottom: 12 }}>
+                                <span style={{ color: '#666', fontSize: '14px', fontWeight: 'bold' }}>
+                                    Đã chọn {uploadedFiles.field_images.length}/10 ảnh
+                                </span>
+                            </div>
+                            
+                            {/* Grid hiển thị ảnh */}
+                            <div style={{ 
+                                display: 'flex', 
+                                flexWrap: 'wrap', 
+                                gap: 8,
+                                padding: 8,
+                                backgroundColor: '#f5f5f5',
+                                borderRadius: 4
+                            }}>
+                                {uploadedFiles.field_images.map((file, index) => {
+                                    const imageUrl = file.url || file.preview || (file.originFileObj ? URL.createObjectURL(file.originFileObj) : null);
+                                    return (
+                                        <div key={file.uid} style={{ position: 'relative' }}>
+                                            <Image
+                                                src={imageUrl}
+                                                alt={`Preview ${index + 1}`}
+                                                style={{
+                                                    width: 120,
+                                                    height: 90,
+                                                    objectFit: 'cover',
+                                                    border: '2px solid #d9d9d9',
+                                                    borderRadius: 6
+                                                }}
+                                                preview={{
+                                                    mask: 'Xem'
+                                                }}
+                                                fallback="data:image/svg+xml,%3Csvg%20width='120'%20height='90'%20xmlns='http://www.w3.org/2000/svg'%3E%3Crect%20width='100%25'%20height='100%25'%20fill='%23f0f0f0'/%3E%3Ctext%20x='50%25'%20y='50%25'%20text-anchor='middle'%20dy='.3em'%20fill='%23999'%20font-size='12'%3ELỗi%3C/text%3E%3C/svg%3E"
+                                            />
+                                            {/* Nút xóa ảnh */}
+                                            <Button
+                                                type="primary"
+                                                danger
+                                                size="small"
+                                                icon={<DeleteOutlined />}
+                                                style={{
+                                                    position: 'absolute',
+                                                    top: -8,
+                                                    right: -8,
+                                                    width: 24,
+                                                    height: 24,
+                                                    borderRadius: '50%',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center'
+                                                }}
+                                                onClick={() => {
+                                                    // Xóa ảnh khỏi danh sách
+                                                    const newFileList = uploadedFiles.field_images.filter(f => f.uid !== file.uid);
+                                                    setUploadedFiles(prev => ({
+                                                        ...prev,
+                                                        field_images: newFileList
+                                                    }));
+                                                    
+                                                    // Cleanup preview URL
+                                                    if (file.preview && file.preview.startsWith('blob:')) {
+                                                        URL.revokeObjectURL(file.preview);
+                                                    }
+                                                }}
+                                            />
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+                </Form.Item>
 
-                    <Form.Item name="amenities" label="Tiện ích">
-                        <Select mode="multiple" placeholder="Chọn tiện ích">
-                            <Option value="Điều hòa">Điều hòa</Option>
-                            <Option value="Wifi">Wifi</Option>
-                            <Option value="Bãi đỗ xe">Bãi đỗ xe</Option>
-                            <Option value="Phòng thay đồ">Phòng thay đồ</Option>
-                            <Option value="Căng tin">Căng tin</Option>
-                            <Option value="Thuê vợt">Thuê vợt</Option>
-                            <Option value="Phòng tắm">Phòng tắm</Option>
-                            <Option value="Tủ khóa">Tủ khóa</Option>
-                            <Option value="Nước uống">Nước uống</Option>
-                        </Select>
-                    </Form.Item>
+                <Form.Item name="amenities" label="Tiện ích">
+                    <Select mode="multiple" placeholder="Chọn tiện ích">
+                        <Option value="Điều hòa">Điều hòa</Option>
+                        <Option value="Wifi">Wifi</Option>
+                        <Option value="Bãi đỗ xe">Bãi đỗ xe</Option>
+                        <Option value="Phòng thay đồ">Phòng thay đồ</Option>
+                        <Option value="Căng tin">Căng tin</Option>
+                        <Option value="Thuê vợt">Thuê vợt</Option>
+                        <Option value="Phòng tắm">Phòng tắm</Option>
+                        <Option value="Tủ khóa">Tủ khóa</Option>
+                        <Option value="Nước uống">Nước uống</Option>
+                    </Select>
+                </Form.Item>
 
-                    <Form.Item>
-                        <Space>
-                            <Button type="primary" htmlType="submit">
-                                {selectedFacility ? 'Cập nhật' : 'Thêm mới'}
-                            </Button>
-                            <Button onClick={() => setFacilityModalVisible(false)}>
-                                Hủy
-                            </Button>
-                        </Space>
-                    </Form.Item>
-                </Form>
-            </Modal>
+                <Form.Item>
+                    <Space>
+                        <Button type="primary" htmlType="submit">
+                            {selectedFacility ? 'Cập nhật' : 'Thêm mới'}
+                        </Button>
+                        <Button onClick={handleCancel}>
+                            Hủy
+                        </Button>
+                    </Space>
+                </Form.Item>
+            </Form>
+        </Modal>
 
             {/* Status Change Modal */}
             <Modal

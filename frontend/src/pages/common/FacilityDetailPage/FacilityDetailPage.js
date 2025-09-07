@@ -349,11 +349,45 @@ const FacilityDetailPage = () => {
     }
   };
 
-  const handleToggleFavorite = () => {
-    if (!facility) return;
-    const result = toggleFavoriteFacility(facility.id);
-    setIsFavorite(result.isFavorite);
-    message.success(result.message);
+  const handleToggleFavorite = async (facilityId, e) => {
+      e.stopPropagation();
+
+      const token = localStorage.getItem("token");
+      if (!token) {
+          message.error("Bạn cần đăng nhập để dùng tính năng này");
+          return;
+      }
+
+      const isFavorited = favorites.includes(facilityId);
+      console.log("Toggling favorite for facility:", facilityId, "Currently favorited:", isFavorited);
+
+      try {
+          const method = isFavorited ? "DELETE" : "POST";
+          const res = await fetch(`${API_URL}/api/facilities/${facilityId}/favorite`, {
+              method,
+              headers: {
+                  "Authorization": `Bearer ${token}`,
+                  "Content-Type": "application/json",
+              },
+          });
+
+          if (!res.ok) {
+              const errorText = await res.text();
+              console.error(`${method} favorite failed:`, res.status, errorText);
+              throw new Error(isFavorited ? "Không thể bỏ thích" : "Không thể thêm thích");
+          }
+
+          const responseData = await res.json();
+          const result = toggleFavoriteFacility(facility.id);
+          setIsFavorite(result.isFavorite);
+          console.log(`${method} favorite success:`, responseData);
+          
+          message.success(isFavorited ? "Đã bỏ khỏi danh sách yêu thích" : "Đã thêm vào danh sách yêu thích");
+
+      } catch (error) {
+          console.error("Favorite toggle error:", error);
+          message.error("Có lỗi xảy ra, thử lại sau");
+      }
   };
 
   const formatPrice = (price) => {
@@ -548,7 +582,7 @@ const FacilityDetailPage = () => {
             <Button
               size="large"
               icon={isFavorite ? <HeartFilled style={{ color: '#ff4d4f' }} /> : <HeartOutlined />}
-              onClick={handleToggleFavorite}
+              onClick={(e) => handleToggleFavorite(facility.id, e)}
             >
               {isFavorite ? 'Bỏ Yêu Thích' : 'Yêu Thích'}
             </Button>
