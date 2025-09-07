@@ -17,10 +17,9 @@ import {
 } from '@ant-design/icons';
 
 const { Panel } = Collapse;
-const { Title, Text } = Typography;
+const { Title, Text, Paragraph } = Typography;
 const { TabPane } = Tabs;
 const { TextArea } = Input;
-
 
 const ProfilePage = () => {
     // Khởi tạo form cho thông tin cá nhân và đổi mật khẩu
@@ -114,27 +113,27 @@ const ProfilePage = () => {
     };
 
     // Props cho Upload component
-const uploadProps = (fileType, maxCount = 1) => ({
-  beforeUpload: (file) => {
-    const isImage = file.type.startsWith('image/');
-    if (!isImage) {
-      message.error('Chỉ được upload file ảnh!');
-      return false;
-    }
-    const isLt5M = file.size / 1024 / 1024 < 5;
-    if (!isLt5M) {
-      message.error('Ảnh phải nhỏ hơn 5MB!');
-      return false;
-    }
-    return false; // Prevent auto upload
-  },
-  onChange: (info) => handleFileUpload(fileType, info),
-  fileList: uploadedFiles[fileType],
-  maxCount,
-  listType: 'picture-card',
-  accept: 'image/*',
-  multiple: true   // 👈 Cho phép chọn nhiều ảnh cùng lúc
-});
+    const uploadProps = (fileType, maxCount = 1) => ({
+    beforeUpload: (file) => {
+        const isImage = file.type.startsWith('image/');
+        if (!isImage) {
+        message.error('Chỉ được upload file ảnh!');
+        return false;
+        }
+        const isLt5M = file.size / 1024 / 1024 < 5;
+        if (!isLt5M) {
+        message.error('Ảnh phải nhỏ hơn 5MB!');
+        return false;
+        }
+        return false; // Prevent auto upload
+    },
+    onChange: (info) => handleFileUpload(fileType, info),
+    fileList: uploadedFiles[fileType],
+    maxCount,
+    listType: 'picture-card',
+    accept: 'image/*',
+    multiple: true   // 👈 Cho phép chọn nhiều ảnh cùng lúc
+    });
 
 
     // Xử lý gửi yêu cầu nâng cấp host

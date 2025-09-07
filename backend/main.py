@@ -22,6 +22,7 @@ import os
 from dotenv import load_dotenv
 from payos import PayOS, ItemData, PaymentData
 import asyncio
+from fastapi.staticfiles import StaticFiles
 
 # Create tables
 Base.metadata.create_all(bind=engine, checkfirst=True)
@@ -116,6 +117,28 @@ def get_user_by_id(user_id: int, db: Session = Depends(get_db)):
 async def read_users_me(current_user: User = Depends(get_current_user)):
     return current_user
 
+UPLOAD_DIR = "uploads"
+
+# Tạo folder nếu chưa tồn tại
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+
+async def save_file(file: UploadFile) -> str:
+    """
+    Lưu file upload vào server và trả về đường dẫn
+    """
+    # Tạo tên file unique để tránh trùng
+    ext = os.path.splitext(file.filename)[1]  # lấy phần đuôi file
+    unique_filename = f"{uuid4().hex}{ext}"
+    file_path = os.path.join(UPLOAD_DIR, unique_filename)
+
+    # Lưu file
+    with open(file_path, "wb") as f:
+        content = await file.read()
+        f.write(content)
+
+    return file_path
+
 @app.post("/request-host-upgrade")
 async def request_host_upgrade(
     business_name: str = Form(...),
@@ -132,17 +155,7 @@ async def request_host_upgrade(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    try:
-        print(f"Received form data:")
-        print(f"- business_name: {business_name}")
-        print(f"- business_address: {business_address}")
-        print(f"- business_license_number: {business_license_number}")
-        print(f"- experience: {experience}")
-        print(f"- reason: {reason}")
-        print(f"- bank_name: {bank_name}")
-        print(f"- bank_id: {bank_id}")
-        print(f"- Files received: cccd_front={len(cccd_front)}, cccd_back={len(cccd_back)}, business_license={len(business_license)}, facility_images={len(facility_images)}")
-        
+    try:        
         # Kiểm tra nếu user đã có request pending
         existing = db.query(UserUpgradeRequest).filter_by(
             user_id=current_user.id, status="pending"
@@ -275,27 +288,6 @@ def decode_token(token: str):
         return {"id": user_id, "role": role}
     except JWTError as e:
         raise ValueError(f"Invalid token: {e}")
-
-UPLOAD_DIR = "uploads"
-
-# Tạo folder nếu chưa tồn tại
-os.makedirs(UPLOAD_DIR, exist_ok=True)
-
-async def save_file(file: UploadFile) -> str:
-    """
-    Lưu file upload vào server và trả về đường dẫn
-    """
-    # Tạo tên file unique để tránh trùng
-    ext = os.path.splitext(file.filename)[1]  # lấy phần đuôi file
-    unique_filename = f"{uuid4().hex}{ext}"
-    file_path = os.path.join(UPLOAD_DIR, unique_filename)
-
-    # Lưu file
-    with open(file_path, "wb") as f:
-        content = await file.read()
-        f.write(content)
-
-    return file_path
 
 load_dotenv(dotenv_path="./.env")
 client_id = os.getenv("PAYOS_CLIENT_ID")

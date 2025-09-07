@@ -1,10 +1,10 @@
 // Trang dashboard quản trị hệ thống
 import { useState, useEffect, useCallback } from 'react';
-import { Row, Col, Card, Statistic, Table, Typography, Space, Tag, Button, Modal, Form, Input, Select, Tabs, DatePicker, Upload, message, Avatar, Tooltip, Badge } from 'antd';
-import { DollarOutlined, UserOutlined, ShopOutlined, CalendarOutlined, PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined, UploadOutlined, LockOutlined, UnlockOutlined, CheckOutlined, CloseOutlined, FileTextOutlined, IdcardOutlined, PhoneOutlined, MailOutlined, BankOutlined } from '@ant-design/icons';
+import { Row, Col, Card, Statistic, Table, Typography, Space, Tag, Button, Modal, Form, Input, Select, Tabs, DatePicker, Upload, message, Avatar, Tooltip, Badge, Image, Divider } from 'antd';
+import { DollarOutlined, UserOutlined, ShopOutlined, CalendarOutlined, PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined, UploadOutlined, LockOutlined, UnlockOutlined, CheckOutlined, CloseOutlined, FileTextOutlined, IdcardOutlined, PhoneOutlined, MailOutlined, BankOutlined, PictureOutlined  } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import AdminFacility from './AdminFacility';
 import axios from 'axios';
+import { ImagePreview, FacilityImages, CompactImagePreview, CompactFacilityImages } from "./AdminComponent";
 
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
@@ -647,9 +647,7 @@ const AdminDashboard = () => {
                         </div>
                         <Table
                             columns={roleRequestColumns}
-                            dataSource={        roleFilter === "all"
-            ? roleRequests
-            : roleRequests.filter(req => req.status === roleFilter)}
+                            dataSource={roleFilter === "all" ? roleRequests : roleRequests.filter(req => req.status === roleFilter)}
                             pagination={{ 
                                 pageSize: 10,
                                 showTotal: (total, range) => `${range[0]}-${range[1]} của ${total} yêu cầu`
@@ -666,30 +664,95 @@ const AdminDashboard = () => {
                                                         {record.experience}
                                                     </Paragraph>
                                                 </div>
-                                                <div>
+                                                <div style={{ marginBottom: 16 }}>
                                                     <Text strong>Lý do yêu cầu:</Text>
                                                     <Paragraph style={{ marginTop: 8 }}>
                                                         {record.reason}
                                                     </Paragraph>
                                                 </div>
+                                                <div>
+                                                    <Text strong><BankOutlined /> Tài khoản ngân hàng:</Text>
+                                                    <div style={{ marginTop: 8 }}>
+                                                        <Tag color="blue">{record.bank_name}</Tag>
+                                                        <Text code>{record.bank_id}</Text>
+                                                    </div>
+                                                </div>
                                             </Col>
                                             <Col span={12}>
                                                 <div style={{ marginBottom: 16 }}>
-                                                    <Text strong><BankOutlined /> Tài khoản ngân hàng:</Text>
-                                                    <div style={{ marginTop: 8 }}>{record.bank_account}</div>
-                                                </div>
-                                                <div>
-                                                    <Text strong><FileTextOutlined /> Tài liệu đính kèm:</Text>
+                                                    <Text strong><FileTextOutlined /> Thông tin doanh nghiệp:</Text>
                                                     <div style={{ marginTop: 8 }}>
-                                                        {record.documents?.map((doc, index) => (
-                                                            <Tag key={index} style={{ margin: 2 }}>
-                                                                <FileTextOutlined /> {doc}
-                                                            </Tag>
-                                                        ))}
+                                                        <p><strong>Tên:</strong> {record.business_name}</p>
+                                                        <p><strong>Địa chỉ:</strong> {record.business_address}</p>
+                                                        <p><strong>Giấy phép:</strong> {record.business_license}</p>
                                                     </div>
                                                 </div>
                                             </Col>
                                         </Row>
+
+                                        <Divider orientation="left">
+                                            <Space>
+                                                <PictureOutlined />
+                                                <Text strong>Hình ảnh đính kèm</Text>
+                                            </Space>
+                                        </Divider>
+
+                                        <Row gutter={16}>
+                                            {/* CCCD */}
+                                            <Col span={8}>
+                                                <Card size="small" title={<Space><IdcardOutlined />CCCD/CMND</Space>} bodyStyle={{ padding: 12 }}>
+                                                    <Space direction="vertical" align="center" style={{ width: '100%' }}>
+                                                        <CompactImagePreview 
+                                                            src={record.cccd_front_image}
+                                                            alt="CCCD mặt trước"
+                                                            title="Mặt trước"
+                                                        />
+                                                        <CompactImagePreview 
+                                                            src={record.cccd_back_image}
+                                                            alt="CCCD mặt sau"
+                                                            title="Mặt sau"
+                                                        />
+                                                    </Space>
+                                                </Card>
+                                            </Col>
+                                            
+                                            {/* Giấy phép kinh doanh */}
+                                            <Col span={8}>
+                                                <Card size="small" title={<Space><ShopOutlined />Giấy phép KD</Space>} bodyStyle={{ padding: 12 }}>
+                                                    <div style={{ textAlign: 'center' }}>
+                                                        <CompactImagePreview 
+                                                            src={record.business_license_image}
+                                                            alt="Giấy phép kinh doanh"
+                                                            title="Giấy phép KD"
+                                                            width={120}
+                                                            height={80}
+                                                        />
+                                                    </div>
+                                                </Card>
+                                            </Col>
+
+                                            {/* Hình ảnh cơ sở */}
+                                            <Col span={8}>
+                                                <Card size="small" title={<Space><BankOutlined />Hình ảnh cơ sở</Space>} bodyStyle={{ padding: 12 }}>
+                                                    <CompactFacilityImages images={record.facility_images} />
+                                                </Card>
+                                            </Col>
+                                        </Row>
+
+                                        {/* Nút xem chi tiết */}
+                                        <div style={{ textAlign: 'center', marginTop: 16 }}>
+                                            <Button 
+                                                type="primary" 
+                                                ghost 
+                                                icon={<PictureOutlined />}
+                                                onClick={() => {
+                                                    setSelectedRequest(record);
+                                                    setRoleRequestDetailVisible(true);
+                                                }}
+                                            >
+                                                Xem chi tiết đầy đủ
+                                            </Button>
+                                        </div>
                                     </div>
                                 )
                             }}
@@ -717,10 +780,11 @@ const AdminDashboard = () => {
                         </Button>
                     ]
                 }
-                width={800}
+                width={1200} // Tăng width để chứa hình ảnh
             >
                 {selectedRequest && (
                     <div>
+                        {/* Thông tin cơ bản */}
                         <Row gutter={16}>
                             <Col span={12}>
                                 <Card size="small" title="Thông tin cá nhân">
@@ -729,7 +793,7 @@ const AdminDashboard = () => {
                                     <p><strong>Email:</strong> {selectedRequest.user.email}</p>
                                     <p><strong>Số điện thoại:</strong> {selectedRequest.phone}</p>
                                     <p><strong>Role hiện tại:</strong> <Tag color="blue">{selectedRequest.user.role}</Tag></p>
-                                    <p><strong>Role yêu cầu:</strong> <Tag color="orange">Host{selectedRequest.requested_role}</Tag></p>
+                                    <p><strong>Role yêu cầu:</strong> <Tag color="orange">Host</Tag></p>
                                 </Card>
                             </Col>
                             <Col span={12}>
@@ -742,6 +806,7 @@ const AdminDashboard = () => {
                             </Col>
                         </Row>
                         
+                        {/* Kinh nghiệm và lý do */}
                         <Row gutter={16} style={{ marginTop: 16 }}>
                             <Col span={24}>
                                 <Card size="small" title="Kinh nghiệm và lý do">
@@ -761,23 +826,43 @@ const AdminDashboard = () => {
                             </Col>
                         </Row>
 
+                        <Divider orientation="left">
+                            <Space>
+                                <IdcardOutlined />
+                                <Text strong>Tài liệu và hình ảnh đính kèm</Text>
+                            </Space>
+                        </Divider>
+
+                        {/* Hình ảnh CCCD */}
                         <Row gutter={16} style={{ marginTop: 16 }}>
-                            <Col span={12}>
-                                <Card size="small" title="Tài liệu đính kèm">
-                                    <Space direction="vertical" style={{ width: '100%' }}>
-                                        {selectedRequest.documents?.map((doc, index) => (
-                                            <div key={index} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 8, border: '1px solid #f0f0f0', borderRadius: 4 }}>
-                                                <Space>
-                                                    <FileTextOutlined />
-                                                    <Text>{doc}</Text>
-                                                </Space>
-                                                <Button size="small" type="link">Tải xuống</Button>
-                                            </div>
-                                        ))}
-                                    </Space>
+                            <Col span={8}>
+                                <Card size="small" title={<Space><IdcardOutlined />CCCD/CMND</Space>} bodyStyle={{ textAlign: 'center' }}>
+                                    <ImagePreview 
+                                        src={selectedRequest.cccd_front_image}
+                                        alt="CCCD mặt trước"
+                                        title="Mặt trước"
+                                    />
+                                    <ImagePreview 
+                                        src={selectedRequest.cccd_back_image}
+                                        alt="CCCD mặt sau"
+                                        title="Mặt sau"
+                                    />
                                 </Card>
                             </Col>
-                            <Col span={12}>
+                            
+                            {/* Giấy phép kinh doanh */}
+                            <Col span={8}>
+                                <Card size="small" title={<Space><ShopOutlined />Giấy phép KD</Space>} bodyStyle={{ textAlign: 'center' }}>
+                                    <ImagePreview 
+                                        src={selectedRequest.business_license_image}
+                                        alt="Giấy phép kinh doanh"
+                                        title="Giấy phép kinh doanh"
+                                    />
+                                </Card>
+                            </Col>
+
+                            {/* Thông tin trạng thái */}
+                            <Col span={8}>
                                 <Card size="small" title="Thông tin yêu cầu">
                                     <p><strong>Ngày yêu cầu:</strong> {dayjs(selectedRequest.created_at).format('DD/MM/YYYY HH:mm')}</p>
                                     <p><strong>Trạng thái:</strong> 
@@ -786,7 +871,7 @@ const AdminDashboard = () => {
                                             selectedRequest.status === 'approved' ? 'green' : 'red'
                                         } style={{ marginLeft: 8 }}>
                                             {selectedRequest.status === 'pending' ? 'Chờ duyệt' :
-                                             selectedRequest.status === 'approved' ? 'Đã duyệt' : 'Từ chối'}
+                                            selectedRequest.status === 'approved' ? 'Đã duyệt' : 'Từ chối'}
                                         </Tag>
                                     </p>
                                     {selectedRequest.approved_date && (
@@ -804,6 +889,15 @@ const AdminDashboard = () => {
                                             )}
                                         </>
                                     )}
+                                </Card>
+                            </Col>
+                        </Row>
+
+                        {/* Hình ảnh cơ sở */}
+                        <Row gutter={16} style={{ marginTop: 16 }}>
+                            <Col span={24}>
+                                <Card size="small" title={<Space><BankOutlined />Hình ảnh cơ sở kinh doanh</Space>}>
+                                    <FacilityImages images={selectedRequest.facility_images} />
                                 </Card>
                             </Col>
                         </Row>
