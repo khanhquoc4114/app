@@ -1,12 +1,15 @@
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, status
+import os
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from sqlalchemy import func, extract
 from database import get_db
 from models import Facility, UserFavorite, Booking, User
 from auth import verify_token, oauth2_scheme, get_current_user
-from typing import List, Optional, Union
-from pydantic import BaseModel
+from typing import Annotated, List, Optional, Union
+from pydantic import BaseModel, Field, conint
+import json
+from utils import save_file
 
 router = APIRouter(prefix="/api/facilities", tags=["Facilities"])
 
@@ -25,7 +28,7 @@ class FacilityCreate(BaseModel):
     amenities: Optional[List[str]] = []
     opening_hours: str
     court_layout: Optional[CourtLayout] = None
-    image_url: Optional[str] = None
+    cover_image: Optional[str] = None
     is_active: bool = True
 
 class FacilityUpdate(BaseModel):
@@ -37,18 +40,22 @@ class FacilityUpdate(BaseModel):
     amenities: Optional[List[str]] = None
     opening_hours: Optional[str] = None
     court_layout: Optional[CourtLayout] = None
-    image_url: Optional[str] = None
+    cover_image: Optional[str] = None
     is_active: Optional[bool] = None
+
+class CourtLayoutItem(BaseModel):
+    sport_type: str
+    court_counts: Annotated[int, Field(ge=0)]
 
 class FacilityResponse(BaseModel):
     id: int
     name: str
     owner_id: int
     sport_type: List[str]
-    court_layout: Optional[dict] = None
+    court_layout: Optional[List[CourtLayoutItem]] = None
     description: str
     price_per_hour: float
-    image_url: Optional[str] = None
+    cover_image: Optional[str] = None
     location: str
     rating: float
     reviews_count: int
@@ -143,7 +150,7 @@ def get_facilities_for_host(
             "sport_type": f.sport_type,
             "description": f.description,
             "price_per_hour": f.price_per_hour,
-            "image_url": f.image_url,
+            "cover_image": f.cover_image,
             "location": f.location,
             "rating": f.rating,
             "reviews_count": f.reviews_count,
@@ -179,7 +186,7 @@ def get_facilities(db: Session = Depends(get_db)):
             "court_layout": f.court_layout,  
             "description": f.description,
             "price_per_hour": f.price_per_hour,
-            "image_url": f.image_url,
+            "cover_image": f.cover_image,
             "location": f.location,
             "rating": f.rating,
             "reviews_count": f.reviews_count,
@@ -193,49 +200,86 @@ def get_facilities(db: Session = Depends(get_db)):
     ]
 
 @router.post("/", response_model=FacilityResponse, status_code=status.HTTP_201_CREATED)
-async def create_facility(
-    facility_data: FacilityCreate,
+async def create_facility_with_upload(
+    name: str = Form(...),
+    sport_type: str = Form(...),              
+    description: Optional[str] = Form(None),
+    price_per_hour: float = Form(...),
+    location: Optional[str] = Form(None),
+    amenities: Optional[str] = Form(None),
+    opening_hours: Optional[str] = Form(None),
+    is_active: Optional[bool] = Form(True),
+    court_layout: Optional[str] = Form(None), 
+    image_cover: Optional[UploadFile] = File(None),          
+    facility_images: Union[UploadFile, List[UploadFile], None] = File(None),
+
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
-    """
-    Tạo sân mới - chỉ user có role 'host' hoặc 'admin' mới được tạo
-    """
-    # Kiểm tra quyền tạo sân
     if current_user.role not in ["host", "admin"]:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Chỉ chủ sân hoặc admin mới có thể tạo sân mới"
-        )
-    
-    # Tạo facility mới
+        raise HTTPException(status_code=403, detail="Chỉ chủ sân hoặc admin mới có thể tạo sân")
+
+    # Chuyển sport_type thành list (CSV)
+    sport_type_list = [s.strip() for s in sport_type.split(",") if s.strip()]
+    amenities_list = [s.strip() for s in amenities.split(",")] if amenities else []
+    court_layout_obj = json.loads(court_layout) if court_layout else None
+
+    # Lưu ảnh đại diện
+    cover_path: Optional[str] = None
+    if image_cover:
+        saved = await save_file(image_cover)
+        # chỉ lấy phần path "uploads/..."
+        cover_path = os.path.join("uploads", os.path.basename(saved))
+
+    # Lưu nhiều ảnh
+    if facility_images is None:
+        facility_images_list: List[UploadFile] = []
+    elif isinstance(facility_images, list):
+        facility_images_list = facility_images
+    else:
+        facility_images_list = [facility_images]
+
+    # ==== GIỜ MỚI LẶP ====
+    images_paths: List[str] = []
+    for f in facility_images_list:
+        saved = await save_file(f)
+        images_paths.append(os.path.join("uploads", os.path.basename(saved)))
+
+    # Nếu chưa có cover, dùng ảnh đầu tiên trong list
+    if not cover_path and images_paths:
+        cover_path = images_paths[0]
+
+    # Convert list ảnh thành chuỗi cách nhau bởi dấu phẩy
+    images_str = ",".join(images_paths) if images_paths else None
+
     new_facility = Facility(
-        name=facility_data.name,
+        name=name,
         owner_id=current_user.id,
-        sport_type=facility_data.sport_type,
-        court_layout= facility_data.court_layout.dict() if facility_data.court_layout else None,
-        description=facility_data.description,
-        price_per_hour=facility_data.price_per_hour,
-        image_url=facility_data.image_url,
-        location=facility_data.location,
-        amenities=facility_data.amenities,
-        opening_hours=facility_data.opening_hours,
-        is_active=facility_data.is_active
+        sport_type=sport_type_list,
+        court_layout=court_layout_obj,
+        description=description,
+        price_per_hour=price_per_hour,
+        cover_image=cover_path,
+        location=location,
+        amenities=amenities_list,
+        opening_hours=opening_hours,
+        is_active=is_active,
+        images = images_str,
     )
-    
+
     try:
         db.add(new_facility)
         db.commit()
         db.refresh(new_facility)
-        
         return new_facility
     except Exception as e:
         db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Lỗi khi tạo sân: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Lỗi khi tạo sân: {str(e)}")    
 
+
+
+
+    
 @router.put("/{facility_id}", response_model=FacilityResponse)
 async def update_facility(
     facility_id: int,
@@ -365,7 +409,7 @@ def get_facility_detail(facility_id: int, db: Session = Depends(get_db)):
         "court_layout": facility.court_layout,
         "description": facility.description,
         "price_per_hour": facility.price_per_hour,
-        "image_url": facility.image_url,
+        "cover_image": facility.cover_image,
         "location": facility.location,
         "rating": facility.rating,
         "reviews_count": facility.reviews_count,

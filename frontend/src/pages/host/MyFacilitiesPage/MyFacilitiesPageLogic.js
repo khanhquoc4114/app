@@ -51,25 +51,7 @@ const createAuthHeaders = () => {
     };
 };
 
-const createFacility = async (facilityData) => {
-    try {
-        const response = await fetch(`${API_BASE_URL}/api/facilities/`, {
-            method: 'POST',
-            headers: createAuthHeaders(),
-            body: JSON.stringify(facilityData)
-        });
 
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.detail || 'Lỗi khi tạo sân');
-        }
-
-        return await response.json();
-    } catch (error) {
-        console.error('Error creating facility:', error);
-        throw error;
-    }
-};
 
 // Cập nhật thông tin sân
 const updateFacility = async (facilityId, facilityData) => {
@@ -112,53 +94,120 @@ const getMyFacilities = async () => {
     }
 };
 
-// Hàm thêm/sửa sân
-export const handleFacilitySubmit = async (values, setFacilities, setFacilityModalVisible, setSelectedFacility) => {
-    try {
-        // Hiển thị loading message
-        const hideLoading = message.loading(
-            values.id ? 'Đang cập nhật thông tin sân...' : 'Đang tạo sân mới...', 
-            0
-        );
+const createFacility = async (facilityData) => {
+  try {
+    const fd = new FormData();
 
-        let result;
+    const appendIf = (k, v) => {
+      if (v !== undefined && v !== null && v !== "") fd.append(k, String(v));
+    };
 
-        if (values.id) {
-            // Cập nhật sân hiện có
-            result = await updateFacility(values.id, values);
-            
-            // Cập nhật state local
-            setFacilities(prev => prev.map(fac => 
-                fac.id === values.id ? { ...result } : fac
-            ));
-            
-            // Hiển thị thông báo thành công
-            hideLoading();
-            message.success(`Đã cập nhật thông tin sân ${result.name}`);
-        } else {
-            // Tạo sân mới
-            result = await createFacility(values);
-            
-            // Thêm sân mới vào state local
-            setFacilities(prev => [...prev, result]);
-            
-            // Hiển thị thông báo thành công
-            hideLoading();
-            message.success(`Đã thêm sân mới ${result.name}`);
-        }
+    // Helper: rút File/RcFile từ đối tượng Upload của AntD
+    const toFile = (item) => {
+      if (!item) return null;
+      if (item instanceof File || item instanceof Blob) return item;
+      // AntD UploadFile
+      if (item.originFileObj instanceof File || item.originFileObj instanceof Blob) {
+        return item.originFileObj;
+      }
+      return null;
+    };
 
-        // Đóng modal và reset form
-        setFacilityModalVisible(false);
-        setSelectedFacility(null);
-        
-    } catch (error) {
-        console.error('Error in handleFacilitySubmit:', error);
-        
-        // Hiển thị thông báo lỗi
-        message.error(error.message || 'Có lỗi xảy ra, vui lòng thử lại');
-        
-        // Không đóng modal để user có thể thử lại
+    // Basic fields
+    appendIf("name", facilityData.name);
+    appendIf("price_per_hour", facilityData.price_per_hour);
+
+    appendIf("description", facilityData.description);
+    appendIf("location", facilityData.location);
+
+    // sport_type & amenities: backend muốn string CSV
+    appendIf("sport_type", facilityData.sport_type); // đã CSV ở handleSubmit
+    appendIf("amenities", facilityData.amenities);   // đã CSV ở handleSubmit
+
+    appendIf("opening_hours", facilityData.opening_hours);
+
+    // court_layout: backend đọc JSON string → stringify
+    if (facilityData.court_layout) {
+      fd.append("court_layout", JSON.stringify(facilityData.court_layout));
     }
+
+    // Boolean
+    if (typeof facilityData.is_active === "boolean") {
+      fd.append("is_active", facilityData.is_active ? "true" : "false");
+    }
+
+    // Cover image: lấy từ UploadFile hoặc File
+    const coverFile = toFile(facilityData.image_cover);
+    if (coverFile) {
+      fd.append("image_cover", coverFile);
+    }
+
+    // Facility images: lấy originFileObj
+    const imgs = facilityData.images;
+    if (Array.isArray(imgs)) {
+      imgs.forEach((it) => {
+        const file = toFile(it);
+        if (file) fd.append("facility_images", file);
+      });
+    }
+
+    const headers = createAuthHeaders ? createAuthHeaders() : {};
+    // Để browser tự đặt boundary cho multipart
+    if (headers && headers["Content-Type"]) delete headers["Content-Type"];
+
+    const resp = await fetch(`${API_BASE_URL}/api/facilities/`, {
+      method: "POST",
+      headers,
+      body: fd,
+    });
+
+    if (!resp.ok) {
+      const err = await safeReadJson(resp);
+      throw new Error((err && err.detail) || `Lỗi khi tạo sân (HTTP ${resp.status})`);
+    }
+    return await resp.json();
+  } catch (error) {
+    console.error("Error creating facility:", error);
+    throw error;
+  }
+};
+
+async function safeReadJson(resp) {
+  try { return await resp.json(); } catch { return null; }
+}
+
+// Hàm thêm/sửa sân
+export const handleFacilitySubmit = async (
+  values,
+  setFacilities,
+  setFacilityModalVisible,
+  setSelectedFacility
+) => {
+  try {
+    const hideLoading = message.loading(
+      values.id ? "Đang cập nhật thông tin sân..." : "Đang tạo sân mới...",
+      0
+    );
+
+    const result = values.id
+      ? await updateFacility(values.id, values)
+      : await createFacility(values);
+
+    if (values.id) {
+      setFacilities((prev) => prev.map((f) => (f.id === values.id ? { ...result } : f)));
+      message.success(`Đã cập nhật thông tin sân ${result.name}`);
+    } else {
+      setFacilities((prev) => [...prev, result]);
+      message.success(`Đã thêm sân mới ${result.name}`);
+    }
+
+    hideLoading();
+    setFacilityModalVisible(false);
+    setSelectedFacility(null);
+  } catch (error) {
+    console.error("Error in handleFacilitySubmit:", error);
+    message.error(error.message || "Có lỗi xảy ra, vui lòng thử lại");
+  }
 };
 
 // Hàm tải lại danh sách sân từ server (optional, để đồng bộ dữ liệu)

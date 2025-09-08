@@ -39,7 +39,7 @@ class FacilityBase(BaseModel):
     sport_type: str
     description: Optional[str] = None
     price_per_hour: float
-    image_url: Optional[str] = None
+    cover_image: Optional[str] = None
     address: str
     ward: str
     district: str

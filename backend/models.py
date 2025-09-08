@@ -78,13 +78,15 @@ class Facility(Base):
     court_layout = Column(JSON, nullable=True)   # lưu layout sân dưới dạng JSON
     description = Column(Text)
     price_per_hour = Column(Float, nullable=False)
-    image_url = Column(Text, nullable=True)                     # ảnh đại diện
+    cover_image = Column(Text, nullable=True)       # ảnh đại diện
     status = Column(String, default="active")     # active, inactive, maintenance
     location = Column(String)                     # thêm địa chỉ
     rating = Column(Float, default=0.0)           # điểm trung bình
     reviews_count = Column(Integer, default=0)    # số review
     amenities = Column(ARRAY(String))             # mảng tiện ích (Postgres hỗ trợ ARRAY)
     opening_hours = Column(String)                # giờ mở cửa dạng text
+    images = Column(Text, nullable=True)       # ảnh đại diện
+    
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())

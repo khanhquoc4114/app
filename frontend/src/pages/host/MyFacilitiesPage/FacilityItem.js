@@ -1,6 +1,6 @@
 // Định nghĩa class FacilityItem giống như BookingItem
 class FacilityItem {
-    constructor(id, name, sport_type, description, price_per_hour, status, bookings_today, bookings_this_month, revenue_today, revenue_this_month, image_url, amenities, key) {
+    constructor(id, name, sport_type, description, price_per_hour, status, bookings_today, bookings_this_month, revenue_today, revenue_this_month, cover_image, amenities, key) {
         this.id = id;
         this.key = key || id;
         this.name = name;
@@ -12,7 +12,7 @@ class FacilityItem {
         this.bookings_this_month = bookings_this_month;
         this.revenue_today = revenue_today;
         this.revenue_this_month = revenue_this_month;
-        this.image_url = image_url;
+        this.cover_image = cover_image;
         this.amenities = amenities || [];
     }
 }

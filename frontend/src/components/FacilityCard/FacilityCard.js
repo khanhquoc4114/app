@@ -104,8 +104,8 @@ const FacilityCard = ({
                     <div
                         style={{
                             height: imageHeight[size],
-                            background: facility.image_url
-                                ? `url(${facility.image_url}) center/cover`
+                            background: facility.cover_image
+                                ? `url(${facility.cover_image}) center/cover`
                                 : 'linear-gradient(45deg, #f0f2f5, #d9d9d9)',
                             display: 'flex',
                             alignItems: 'center',
@@ -116,7 +116,7 @@ const FacilityCard = ({
                         }}
                         onClick={() => onViewDetails?.(facility)}
                     >
-                        {!facility.image_url && getSportIcon(facility.sport_type)}
+                        {!facility.cover_image && getSportIcon(facility.sport_type)}
 
                         {/* Rating overlay */}
                         {facility.rating && (

@@ -14,12 +14,12 @@ def seed_facilities(db: Session):
                 owner_id=4,
                 sport_type= ["badminton", "football"],  # vẫn giữ để tương thích cũ
                 court_layout=[
-                    {"sport_type": "badminton", "count": 6},
-                    {"sport_type": "football", "count": 4}
+                    {"sport_type": "badminton", "court_counts": 6},
+                    {"sport_type": "football", "court_counts": 4}
                 ],                
                 description="Sân cầu lông chất lượng cao với sàn gỗ chuyên nghiệp, hệ thống chiếu sáng LED hiện đại",
                 price_per_hour=80000,
-                image_url="/images/badminton-1.jpg",
+                cover_image="/images/badminton-1.jpg",
                 location="Quận 1, TP.HCM",
                 rating=4.8,
                 reviews_count=124,
@@ -31,11 +31,11 @@ def seed_facilities(db: Session):
                 owner_id=4,
                 sport_type=["football"],
                 court_layout=[
-                    {"sport_type": "football", "count": 2}
+                    {"sport_type": "football", "court_counts": 2}
                 ],              
                 description="Sân bóng đá mini 5v5 với cỏ nhân tạo cao cấp, hệ thống tưới nước tự động",
                 price_per_hour=200000,
-                image_url="/images/football-1.jpg",
+                cover_image="/images/football-1.jpg",
                 location="Quận 7, TP.HCM",
                 rating=4.6,
                 reviews_count=89,
@@ -47,11 +47,11 @@ def seed_facilities(db: Session):
                 owner_id=4,
                 sport_type=["tennis"],
                 court_layout=[
-                    {"sport_type": "tennis", "count": 1}
+                    {"sport_type": "tennis", "court_counts": 1}
                 ],
                 description="Sân tennis tiêu chuẩn quốc tế với mặt sân hard court, lưới chuyên nghiệp",
                 price_per_hour=150000,
-                image_url="/images/tennis-1.jpg",
+                cover_image="/images/tennis-1.jpg",
                 location="Quận 3, TP.HCM",
                 rating=4.9,
                 reviews_count=156,
@@ -63,11 +63,11 @@ def seed_facilities(db: Session):
                 owner_id=4,
                 sport_type=["basketball"],
                 court_layout=[
-                    {"sport_type": "basketball", "count": 1}
+                    {"sport_type": "basketball", "court_counts": 1}
                 ],
                 description="Sân bóng rổ trong nhà với sàn gỗ chuyên nghiệp, rổ chuẩn NBA",
                 price_per_hour=120000,
-                image_url="/images/basketball-1.jpg",
+                cover_image="/images/basketball-1.jpg",
                 location="Quận 10, TP.HCM",
                 rating=4.7,
                 reviews_count=78,

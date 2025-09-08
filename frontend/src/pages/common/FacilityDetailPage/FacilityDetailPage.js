@@ -31,7 +31,7 @@ const FacilityDetailPage = () => {
   const [favorites, setFavorites] = useState([]);
   const [reviews, setReviews] = useState([]);
   const [facilityStats, setFacilityStats] = useState({});
-  const courtCount = facility?.court_layout?.find?.(c => c.sport_type === selectedSportType)?.count || 0;  const [shareModalVisible, setShareModalVisible] = useState(false);
+  const courtCount = facility?.court_layout?.find?.(c => c.sport_type === selectedSportType)?.court_counts || 0;  const [shareModalVisible, setShareModalVisible] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
   const API_URL = process.env.REACT_APP_API_URL;
   const chatBubbleRef = useRef();
@@ -487,10 +487,10 @@ const FacilityDetailPage = () => {
           <Card
             style={{ boxShadow: '0 2px 8px #eee', minHeight: 350 }}
           >
-            {facility.image_url ? (
+            {facility.cover_image ? (
               <Image
                 alt={facility.name}
-                src={facility.image_url}
+                src={facility.cover_image}
                 fallback="/default-image.jpg"
                 style={{ width: '100%', maxHeight: 350, objectFit: 'cover', borderRadius: 8 }}
                 preview={{
@@ -1064,7 +1064,7 @@ const FacilityDetailPage = () => {
             <Card
               hoverable
               onClick={() => navigate(`/facilities/${f.id}`)}
-              cover={f.image_url && <img alt={f.name} src={f.image_url} style={{ height: 120, objectFit: 'cover' }} onError={(e) => { e.currentTarget.src = '/default-image.jpg'; }}/>}
+              cover={f.cover_image && <img alt={f.name} src={f.cover_image} style={{ height: 120, objectFit: 'cover' }} onError={(e) => { e.currentTarget.src = '/default-image.jpg'; }}/>}
             >
               <Card.Meta
                 title={f.name}

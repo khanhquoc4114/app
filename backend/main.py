@@ -23,6 +23,7 @@ from dotenv import load_dotenv
 from payos import PayOS, ItemData, PaymentData
 import asyncio
 from fastapi.staticfiles import StaticFiles
+from utils import save_file
 
 # Create tables
 Base.metadata.create_all(bind=engine, checkfirst=True)
@@ -123,22 +124,6 @@ UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
-async def save_file(file: UploadFile) -> str:
-    """
-    Lưu file upload vào server và trả về đường dẫn
-    """
-    # Tạo tên file unique để tránh trùng
-    ext = os.path.splitext(file.filename)[1]  # lấy phần đuôi file
-    unique_filename = f"{uuid4().hex}{ext}"
-    file_path = os.path.join(UPLOAD_DIR, unique_filename)
-
-    # Lưu file
-    with open(file_path, "wb") as f:
-        content = await file.read()
-        f.write(content)
-
-    return file_path
-
 @app.post("/request-host-upgrade")
 async def request_host_upgrade(
     business_name: str = Form(...),
@@ -152,6 +137,7 @@ async def request_host_upgrade(
     cccd_back: list[UploadFile] = Form(...),
     business_license: list[UploadFile] = Form(...),  # file field
     facility_images: list[UploadFile] = Form(...),
+    
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
