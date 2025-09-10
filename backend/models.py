@@ -85,7 +85,7 @@ class Facility(Base):
     reviews_count = Column(Integer, default=0)    # số review
     amenities = Column(ARRAY(String))             # mảng tiện ích (Postgres hỗ trợ ARRAY)
     opening_hours = Column(String)                # giờ mở cửa dạng text
-    images = Column(Text, nullable=True)       # ảnh đại diện
+    images = Column(Text, nullable=True)          # ảnh của sân
     
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

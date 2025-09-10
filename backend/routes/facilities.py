@@ -1,18 +1,17 @@
 from datetime import datetime
 import os
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, Request, status, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from sqlalchemy import func, extract
 from database import get_db
 from models import Facility, UserFavorite, Booking, User
 from auth import verify_token, oauth2_scheme, get_current_user
-from typing import Annotated, List, Optional, Union
-from pydantic import BaseModel, Field, conint
+from typing import Annotated, List, Optional, Union, Dict
+from pydantic import BaseModel, Field, ConfigDict
 import json
 from utils import save_file
 
 router = APIRouter(prefix="/api/facilities", tags=["Facilities"])
-
 
 class CourtLayout(BaseModel):
     rows: int
@@ -43,30 +42,6 @@ class FacilityUpdate(BaseModel):
     cover_image: Optional[str] = None
     is_active: Optional[bool] = None
 
-class CourtLayoutItem(BaseModel):
-    sport_type: str
-    court_counts: Annotated[int, Field(ge=0)]
-
-class FacilityResponse(BaseModel):
-    id: int
-    name: str
-    owner_id: int
-    sport_type: List[str]
-    court_layout: Optional[List[CourtLayoutItem]] = None
-    description: str
-    price_per_hour: float
-    cover_image: Optional[str] = None
-    location: str
-    rating: float
-    reviews_count: int
-    amenities: List[str]
-    opening_hours: str
-    is_active: bool
-    created_at: datetime
-    updated_at: Optional[datetime] = None
-
-    class Config:
-        from_attributes = True
 
 class FacilityStats(BaseModel):
     id: int
@@ -166,15 +141,6 @@ def get_facilities_for_host(
 
     return result
 
-
-
-
-
-
-
-
-
-
 @router.get("/")
 def get_facilities(db: Session = Depends(get_db)):
     facilities = db.query(Facility).filter(Facility.is_active == True).all()
@@ -199,8 +165,35 @@ def get_facilities(db: Session = Depends(get_db)):
         for f in facilities
     ]
 
+class CourtLayoutItem(BaseModel):
+    sport_type: str
+    court_counts: int
+
+class FacilityResponse(BaseModel):
+    id: int
+    name: str
+    owner_id: int
+    sport_type: List[str]
+    court_layout: Optional[List[CourtLayoutItem]] = None  
+    description: Optional[str] = None               
+    price_per_hour: float
+    cover_image: Optional[str] = None
+    location: Optional[str] = None                  
+    rating: float
+    reviews_count: int
+    amenities: List[str] = []                       
+    opening_hours: Optional[str] = None            
+    is_active: bool
+    images: List[str] = Field(default_factory=list)
+
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
 @router.post("/", response_model=FacilityResponse, status_code=status.HTTP_201_CREATED)
 async def create_facility_with_upload(
+    request: Request,  # ✅ Thêm Request để access raw form data
     name: str = Form(...),
     sport_type: str = Form(...),              
     description: Optional[str] = Form(None),
@@ -208,10 +201,9 @@ async def create_facility_with_upload(
     location: Optional[str] = Form(None),
     amenities: Optional[str] = Form(None),
     opening_hours: Optional[str] = Form(None),
-    is_active: Optional[bool] = Form(True),
     court_layout: Optional[str] = Form(None), 
-    image_cover: Optional[UploadFile] = File(None),          
-    facility_images: Union[UploadFile, List[UploadFile], None] = File(None),
+    cover_image: Optional[UploadFile] = File(None),          
+    # ✅ Bỏ facility_images parameter, sẽ lấy từ request
 
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -219,38 +211,43 @@ async def create_facility_with_upload(
     if current_user.role not in ["host", "admin"]:
         raise HTTPException(status_code=403, detail="Chỉ chủ sân hoặc admin mới có thể tạo sân")
 
-    # Chuyển sport_type thành list (CSV)
+    # ✅ Lấy tất cả facility_images từ raw form data
+    form_data = await request.form()
+    facility_images_list: List[UploadFile] = []
+    
+    # Lấy tất cả files có key là 'facility_images'
+    for key, value in form_data.multi_items():
+        if key == 'facility_images' and hasattr(value, 'filename'):
+            facility_images_list.append(value)
+    
+    print(f"Found {len(facility_images_list)} facility_images")
+    for i, img in enumerate(facility_images_list):
+        print(f"Image {i}: filename={img.filename}, size={img.size}")
+
     sport_type_list = [s.strip() for s in sport_type.split(",") if s.strip()]
     amenities_list = [s.strip() for s in amenities.split(",")] if amenities else []
     court_layout_obj = json.loads(court_layout) if court_layout else None
 
-    # Lưu ảnh đại diện
     cover_path: Optional[str] = None
-    if image_cover:
-        saved = await save_file(image_cover)
-        # chỉ lấy phần path "uploads/..."
+    if cover_image:
+        saved = await save_file(cover_image)
         cover_path = os.path.join("uploads", os.path.basename(saved))
 
-    # Lưu nhiều ảnh
-    if facility_images is None:
-        facility_images_list: List[UploadFile] = []
-    elif isinstance(facility_images, list):
-        facility_images_list = facility_images
-    else:
-        facility_images_list = [facility_images]
-
-    # ==== GIỜ MỚI LẶP ====
+    # Process facility_images
     images_paths: List[str] = []
-    for f in facility_images_list:
+    for i, f in enumerate(facility_images_list):
+        print(f"Saving image {i}: {f.filename}")
         saved = await save_file(f)
-        images_paths.append(os.path.join("uploads", os.path.basename(saved)))
+        path = os.path.join("uploads", os.path.basename(saved))
+        images_paths.append(path)
+        print(f"Saved image {i} to: {path}")
 
-    # Nếu chưa có cover, dùng ảnh đầu tiên trong list
+    print(f"Total images saved: {len(images_paths)}")
+
     if not cover_path and images_paths:
         cover_path = images_paths[0]
 
-    # Convert list ảnh thành chuỗi cách nhau bởi dấu phẩy
-    images_str = ",".join(images_paths) if images_paths else None
+    images_str = json.dumps(images_paths) if images_paths else None
 
     new_facility = Facility(
         name=name,
@@ -263,22 +260,35 @@ async def create_facility_with_upload(
         location=location,
         amenities=amenities_list,
         opening_hours=opening_hours,
-        is_active=is_active,
-        images = images_str,
+        images=images_str,
     )
 
     try:
         db.add(new_facility)
         db.commit()
         db.refresh(new_facility)
-        return new_facility
+        return FacilityResponse(
+            id=new_facility.id,
+            name=new_facility.name,
+            owner_id=new_facility.owner_id,
+            sport_type=new_facility.sport_type,
+            court_layout=new_facility.court_layout,
+            description=new_facility.description,
+            price_per_hour=new_facility.price_per_hour,
+            cover_image=new_facility.cover_image,
+            location=new_facility.location,
+            rating=new_facility.rating,
+            reviews_count=new_facility.reviews_count,
+            amenities=new_facility.amenities or [],
+            opening_hours=new_facility.opening_hours,
+            is_active=new_facility.is_active,
+            images=images_paths,
+            created_at=new_facility.created_at,
+            updated_at=new_facility.updated_at,
+        )
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail=f"Lỗi khi tạo sân: {str(e)}")    
-
-
-
-
+        raise HTTPException(status_code=500, detail=f"Lỗi khi tạo sân: {str(e)}")
     
 @router.put("/{facility_id}", response_model=FacilityResponse)
 async def update_facility(
@@ -324,6 +334,7 @@ async def update_facility(
             detail=f"Lỗi khi cập nhật sân: {str(e)}"
         )
 
+# Xóa sân
 @router.delete("/{facility_id}")
 async def delete_facility(
     facility_id: int,
@@ -359,6 +370,7 @@ async def delete_facility(
             detail=f"Lỗi khi xóa sân: {str(e)}"
         )
 
+# Cập nhật trạng thái sân
 @router.patch("/{facility_id}/status")
 async def update_facility_status(
     facility_id: int,
@@ -419,6 +431,7 @@ def get_facility_detail(facility_id: int, db: Session = Depends(get_db)):
         "created_at": facility.created_at,
         "updated_at": facility.updated_at,
         "owner_id": facility.owner_id,
+        "images": facility.images
     }
 
 @router.get("/count")

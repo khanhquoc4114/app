@@ -17,6 +17,8 @@ const MyFacilitiesPage = () => {
     const [facilities, setFacilities] = useState([]);
     const [uploadedFiles, setUploadedFiles] = useState({
         field_images: [],
+        cover_image: [],
+        images: []
     });
     const [form] = Form.useForm();
     const [selectedSports, setSelectedSports] = useState([]);
@@ -126,7 +128,7 @@ const MyFacilitiesPage = () => {
     };
     }, []);
 
-    const uploadProps = (fileType, maxCount = 5) => ({
+    const uploadProps = (fileType, maxCount = 10) => ({
         beforeUpload: (file) => {
             const isImage = file.type.startsWith('image/');
             if (!isImage) {
@@ -138,10 +140,13 @@ const MyFacilitiesPage = () => {
                 message.error('Ảnh phải nhỏ hơn 5MB!');
                 return false;
             }
-            return false; // Prevent auto upload, sẽ xử lý manual
+            return false;
         },
-        onChange: (info) => handleFileUpload(fileType, info),
-        fileList: uploadedFiles[fileType],
+        onChange: (info) => {
+            console.log(`Upload change for ${fileType}:`, info); // Debug
+            handleFileUpload(fileType, info);
+        },
+        fileList: uploadedFiles[fileType] || [], // ✅ Đảm bảo fallback
         maxCount,
         listType: 'picture-card',
         accept: 'image/*',
@@ -299,43 +304,54 @@ const MyFacilitiesPage = () => {
     ];
 
     const handleSubmit = (values) => {
-    // 1) sport_type & amenities: gửi CSV
-    const sportTypeCsv = Array.isArray(values.sport_type)
-        ? values.sport_type.join(",")
-        : (values.sport_type ?? "");
+    const selected = Array.isArray(values.sport_type)
+        ? values.sport_type
+        : (Array.isArray(selectedSports) ? selectedSports : []);
+
+    const courtCountsObj = values.court_counts || {};
+    const courtLayoutArray = selected
+        .map((sport) => {
+        const raw = courtCountsObj[sport];             // có thể là "1" (string)
+        const n = Number(raw);                          // ép kiểu
+        const court_counts = Number.isFinite(n) ? n : 0;
+        return { sport_type: sport, court_counts };
+        })
+        // bỏ những môn chưa nhập hoặc <= 0
+        .filter((item) => item.court_counts > 0);
+
+    // 3) CSV cho sport_type & amenities
+    const sportTypeCsv = selected.length ? selected.join(",") :
+        (Array.isArray(values.sport_type) ? values.sport_type.join(",") : (values.sport_type ?? ""));
 
     const amenitiesCsv = Array.isArray(values.amenities)
         ? values.amenities.join(",")
         : (values.amenities ?? "");
 
-    // 2) court_layout: đúng key + JSON stringify đúng format bạn muốn
-    // Ví dụ: [{ "sport_type": "badminton", "court_counts": 6 }, ...]
-    // Nếu bạn đã có values.court_layout theo cấu trúc trên thì dùng thẳng:
-    const courtLayoutArray = values.court_layout ?? []; 
-    // hoặc tự build từ form (tùy UI của bạn)
+    // 4) opening_hours từ RangePicker (dayjs)
+    const openingHours =
+        values.opening_hours && Array.isArray(values.opening_hours)
+        ? `${values.opening_hours[0].format("HH:mm")} - ${values.opening_hours[1].format("HH:mm")}`
+        : null;
 
+    // 5) Gom formattedValues
     const formattedValues = {
         id: values.id,
         name: values.name?.trim(),
-        sport_type: sportTypeCsv,               // CSV string
+        sport_type: sportTypeCsv,                // backend expects CSV
         description: values.description?.trim(),
-        price_per_hour: values.price_per_hour,
+        price_per_hour: Number(values.price_per_hour),
         location: values.location?.trim(),
-        amenities: amenitiesCsv,                // CSV string
-        opening_hours: values.opening_hours
-        ? `${values.opening_hours[0].format('HH:mm')}-${values.opening_hours[1].format('HH:mm')}`
-        : null,
-        is_active: typeof values.is_active === "boolean"
-        ? values.is_active
-        : String(values.is_active).toLowerCase() === "true",
+        amenities: amenitiesCsv,                 // backend expects CSV
+        opening_hours: openingHours,
 
-        // KHÔNG gửi images/covers ở đây dưới dạng URL/mảng – sẽ append file ở createFacility
-        image_cover: uploadedFiles?.field_cover ?? null, // có thể là UploadFile hoặc File
-        images: uploadedFiles?.field_images ?? [],       // mảng UploadFile/File
+        cover_image: uploadedFiles?.cover_image ?? null,
+        images: uploadedFiles?.images ?? [],
 
-        // Gửi court_layout đúng key, còn stringify trong createFacility
-        court_layout: courtLayoutArray, 
+        court_layout: courtLayoutArray,
     };
+
+    console.log('Final images:', formattedValues.images); // Debug
+    console.log('Images length:', formattedValues.images.length); // Debug
 
     handleFacilitySubmit(
         formattedValues,
@@ -467,21 +483,23 @@ const MyFacilitiesPage = () => {
                                     return (
                                         <Col span={8} key={sport}>
                                             <Form.Item
-                                                name={['court_counts', sport]}
-                                                label={`Số sân ${sportLabel}`}
-                                                rules={[{ 
-                                                    required: true, 
-                                                    message: `Vui lòng nhập số sân ${sportLabel}` 
-                                                }]}
+                                            name={['court_counts', sport]}
+                                            label={`Số sân ${sportLabel}`}
+                                            rules={[{ required: true, message: `Vui lòng nhập số sân ${sportLabel}` }]}
+                                            getValueFromEvent={(e) => {
+                                                const v = e?.target?.value;
+                                                const n = Number(v);
+                                                return Number.isFinite(n) ? n : undefined;
+                                            }}
                                             >
-                                                <Input 
-                                                    type="number" 
-                                                    min={1} 
-                                                    max={50}
-                                                    placeholder={`Số sân ${sportLabel}`}
-                                                    addonAfter="sân"
-                                                    style={{ textAlign: "right" }}
-                                                />
+                                            <Input
+                                                type="number"
+                                                min={1}
+                                                max={50}
+                                                placeholder={`Số sân ${sportLabel}`}
+                                                addonAfter="sân"
+                                                style={{ textAlign: "right" }}
+                                            />
                                             </Form.Item>
                                         </Col>
                                     );
@@ -533,20 +551,90 @@ const MyFacilitiesPage = () => {
                                 />
                             </Form.Item>
                         </Col>
-                        <Col span={8}>
-                            <Form.Item name="is_active" label="Trạng thái">
-                                <Select>
-                                    <Option value={true}>Hoạt động</Option>
-                                    <Option value={false}>Tạm ngưng</Option>
-                                </Select>
-                            </Form.Item>
-                        </Col>
                     </Row>
 
-                    {/* Ảnh: images */}
+                    {/* Ảnh bìa: cover_image */}
+                    <Form.Item name="cover_image" label="Ảnh bìa sân">
+                        <Upload {...uploadProps('cover_image', 1)} showUploadList={false}>
+                            {((uploadedFiles?.cover_image?.length ?? 0) < 1) && (
+                                <div>
+                                    <PlusOutlined />
+                                    <div style={{ marginTop: 8 }}>Chọn ảnh bìa</div>
+                                    <div style={{ fontSize: 12, color: '#999' }}>Chỉ xem trước</div>
+                                </div>
+                            )}
+                        </Upload> 
+                        {(uploadedFiles?.cover_image?.length ?? 0) > 0 && (
+                        <div style={{ marginTop: 12 }}>
+                            <div style={{ marginBottom: 12 }}>
+                            <span style={{ color: '#666', fontSize: '14px', fontWeight: 'bold' }}>
+                                Ảnh bìa đã chọn
+                            </span>
+                            </div>
+
+                            <div
+                            style={{
+                                padding: 8,
+                                backgroundColor: '#f5f5f5',
+                                borderRadius: 4,
+                                display: 'inline-block',
+                            }}
+                            >
+                            {uploadedFiles.cover_image.map((file) => {
+                                const imageUrl = file.url || file.preview;
+                                return (
+                                <div key={file.uid} style={{ position: 'relative' }}>
+                                    <Image
+                                    src={imageUrl}
+                                    alt="Ảnh bìa"
+                                    style={{
+                                        width: 200,
+                                        height: 150,
+                                        objectFit: 'cover',
+                                        border: '2px solid #d9d9d9',
+                                        borderRadius: 6,
+                                    }}
+                                    preview={{ mask: 'Xem ảnh bìa' }}
+                                    fallback="data:image/svg+xml,%3Csvg%20width='200'%20height='150'%20xmlns='http://www.w3.org/2000/svg'%3E%3Crect%20width='100%25'%20height='100%25'%20fill='%23f0f0f0'/%3E%3Ctext%20x='50%25'%20y='50%25'%20text-anchor='middle'%20dy='.3em'%20fill='%23999'%20font-size='12'%3ELỗi%3C/text%3E%3C/svg%3E"
+                                    />
+                                    <Button
+                                    type="primary"
+                                    danger
+                                    size="small"
+                                    icon={<DeleteOutlined />}
+                                    style={{
+                                        position: 'absolute',
+                                        top: -8,
+                                        right: -8,
+                                        width: 24,
+                                        height: 24,
+                                        borderRadius: '50%',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                    }}
+                                    onClick={() => {
+                                        setUploadedFiles((prev) => ({
+                                        ...prev,
+                                        cover_image: [],
+                                        }));
+                                        if (file.preview?.startsWith('blob:')) {
+                                        URL.revokeObjectURL(file.preview);
+                                        }
+                                    }}
+                                    />
+                                </div>
+                                );
+                            })}
+                            </div>
+                        </div>
+                        )}
+                    </Form.Item>
+
+                    {/* images nhiều ảnh cho sân */}
                     <Form.Item name="images" label="Hình ảnh sân (tối đa 10 ảnh)">
-                        <Upload {...uploadProps("field_images", 10)} showUploadList={false}>
-                            {uploadedFiles.field_images.length < 10 && (
+                        <Upload {...uploadProps("images", 10)} showUploadList={false}>
+                            {(uploadedFiles.images?.length ?? 0) < 10 && (
                                 <div>
                                     <PlusOutlined />
                                     <div style={{ marginTop: 8 }}>Chọn ảnh</div>
@@ -555,16 +643,14 @@ const MyFacilitiesPage = () => {
                             )}
                         </Upload>
 
-                        {/* Hiển thị preview ảnh dạng Image component */}
-                        {uploadedFiles.field_images.length > 0 && (
+                        {(uploadedFiles.images?.length ?? 0) > 0 && (
                             <div style={{ marginTop: 12 }}>
                                 <div style={{ marginBottom: 12 }}>
                                     <span style={{ color: '#666', fontSize: '14px', fontWeight: 'bold' }}>
-                                        Đã chọn {uploadedFiles.field_images.length}/10 ảnh
+                                        Đã chọn {uploadedFiles.images.length}/10 ảnh
                                     </span>
                                 </div>
                                 
-                                {/* Grid hiển thị ảnh */}
                                 <div style={{ 
                                     display: 'flex', 
                                     flexWrap: 'wrap', 
@@ -573,7 +659,7 @@ const MyFacilitiesPage = () => {
                                     backgroundColor: '#f5f5f5',
                                     borderRadius: 4
                                 }}>
-                                    {uploadedFiles.field_images.map((file, index) => {
+                                    {uploadedFiles.images.map((file, index) => {
                                         const imageUrl = file.url || file.preview;
                                         return (
                                             <div key={file.uid} style={{ position: 'relative' }}>
@@ -587,12 +673,9 @@ const MyFacilitiesPage = () => {
                                                         border: '2px solid #d9d9d9',
                                                         borderRadius: 6
                                                     }}
-                                                    preview={{
-                                                        mask: 'Xem'
-                                                    }}
+                                                    preview={{ mask: 'Xem' }}
                                                     fallback="data:image/svg+xml,%3Csvg%20width='120'%20height='90'%20xmlns='http://www.w3.org/2000/svg'%3E%3Crect%20width='100%25'%20height='100%25'%20fill='%23f0f0f0'/%3E%3Ctext%20x='50%25'%20y='50%25'%20text-anchor='middle'%20dy='.3em'%20fill='%23999'%20font-size='12'%3ELỗi%3C/text%3E%3C/svg%3E"
                                                 />
-                                                {/* Nút xóa ảnh */}
                                                 <Button
                                                     type="primary"
                                                     danger
@@ -610,14 +693,13 @@ const MyFacilitiesPage = () => {
                                                         justifyContent: 'center'
                                                     }}
                                                     onClick={() => {
-                                                        // Xóa ảnh khỏi danh sách
-                                                        const newFileList = uploadedFiles.field_images.filter(f => f.uid !== file.uid);
+                                                        // ✅ Fixed: Thay field_images thành images
+                                                        const newFileList = uploadedFiles.images.filter(f => f.uid !== file.uid);
                                                         setUploadedFiles(prev => ({
                                                             ...prev,
-                                                            field_images: newFileList
+                                                            images: newFileList // ✅ Fixed key
                                                         }));
                                                         
-                                                        // Cleanup preview URL
                                                         if (file.preview && file.preview.startsWith('blob:')) {
                                                             URL.revokeObjectURL(file.preview);
                                                         }
