@@ -12,7 +12,7 @@ def seed_facilities(db: Session):
             Facility(
                 name="Sân cầu lông 54",
                 owner_id=4,
-                sport_type= ["badminton", "football"],  # vẫn giữ để tương thích cũ
+                sport_type= ["badminton", "football"],
                 court_layout=[
                     {"sport_type": "badminton", "court_counts": 6},
                     {"sport_type": "football", "court_counts": 4}

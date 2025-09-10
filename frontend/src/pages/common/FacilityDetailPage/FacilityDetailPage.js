@@ -1,4 +1,4 @@
-import React, { useEffect, useState , useRef} from 'react';
+import { useEffect, useState , useRef, useMemo} from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, Typography, Tag, Rate, Button, Avatar, Divider, Row, Col, message, Spin, Modal, Form, DatePicker, Space, Breadcrumb, Tabs, Image, Statistic, Timeline, Badge, Progress } from 'antd';
 import { EnvironmentOutlined, UserOutlined, ArrowLeftOutlined, HeartOutlined, HeartFilled, HomeOutlined, PhoneOutlined, ShareAltOutlined, CalendarOutlined, DollarOutlined, StarOutlined, CheckCircleOutlined, WifiOutlined, CarOutlined, SafetyOutlined, CoffeeOutlined, ToolOutlined, TeamOutlined, MailOutlined, ClockCircleOutlined } from '@ant-design/icons';
@@ -35,6 +35,55 @@ const FacilityDetailPage = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const API_URL = process.env.REACT_APP_API_URL;
   const chatBubbleRef = useRef();
+  const [selected, setSelected] = useState(0);
+
+  const parseImages = (facility) => {
+    const arr = [];
+    if (facility?.cover_image) arr.push(facility.cover_image);
+
+    let imgs = facility?.images ?? [];
+    if (typeof imgs === 'string') {
+      try {
+        const j = JSON.parse(imgs);
+        imgs = Array.isArray(j) ? j : imgs.split(',').map(s => s.trim()).filter(Boolean);
+      } catch {
+        imgs = imgs.split(',').map(s => s.trim()).filter(Boolean);
+      }
+    }
+    imgs.forEach(p => { if (p && !arr.includes(p)) arr.push(p); });
+    return arr;
+  };
+
+const resolveImageUrl = (p, baseUrl = API_URL) => {
+  if (!p) return undefined;
+
+  // Nếu đã là absolute (http/https/blob/data) thì trả nguyên
+  if (/^(https?:|blob:|data:)/i.test(p)) return p;
+
+  // Chuẩn hoá đường dẫn tương đối
+  let rel = String(p).trim();
+
+  // bỏ slash đầu nếu có
+  rel = rel.replace(/^\/+/, '');
+
+  // trường hợp dữ liệu cũ có "facilities/uploads/..."
+  if (rel.startsWith('facilities/uploads/')) {
+    rel = rel.replace(/^facilities\//, ''); // -> "uploads/..."
+  }
+
+  // đảm bảo luôn bắt đầu bằng "uploads/"
+  if (!rel.startsWith('uploads/')) {
+    rel = `uploads/${rel}`;
+  }
+
+  const base = (baseUrl || '').replace(/\/+$/, ''); // bỏ slash thừa
+  return `${base}/${rel}`; // -> http://localhost:8000/uploads/xxx.jpg
+};
+
+  const imgList = useMemo(() => parseImages(facility), [facility]);
+  const mainSrc = imgList.length
+  ? resolveImageUrl(imgList[Math.min(selected, imgList.length - 1)], API_URL)
+  : undefined;
 
   // Load favorites from localStorage
   useEffect(() => {
@@ -481,24 +530,54 @@ const FacilityDetailPage = () => {
       <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)} style={{ marginBottom: 16 }}>
         Quay lại
       </Button>
+
       <Row gutter={32} style={{ marginBottom: 32 }}>
         {/* Left: Image gallery */}
         <Col xs={24} md={10}>
-          <Card
-            style={{ boxShadow: '0 2px 8px #eee', minHeight: 350 }}
-          >
-            {facility.cover_image ? (
-              <Image
-                alt={facility.name}
-                src={facility.cover_image}
-                fallback="/default-image.jpg"
-                style={{ width: '100%', maxHeight: 350, objectFit: 'cover', borderRadius: 8 }}
-                preview={{
-                  mask: <div style={{ background: 'rgba(0,0,0,0.5)', color: 'white', padding: '8px' }}>Xem ảnh lớn</div>
-                }}
-              />
+          <Card style={{ boxShadow: '0 2px 8px #eee', minHeight: 350 }}>
+            {mainSrc ? (
+              <>
+                <Image
+                  alt={facility?.name}
+                  src={mainSrc}
+                  fallback="/default-image.jpg"
+                  style={{ width: '100%', maxHeight: 350, objectFit: 'cover', borderRadius: 8 }}
+                  preview={{
+                    mask: <div style={{ background: 'rgba(0,0,0,0.5)', color: '#fff', padding: 8 }}>Xem ảnh lớn</div>,
+                  }}
+                />
+                <Space wrap style={{ marginTop: 12, maxWidth: '100%' }}>
+                  {imgList.map((p, idx) => {
+                    const thumb = resolveImageUrl(p, API_URL);
+                    const active = idx === selected;
+                    return (
+                      <div
+                        key={`${p}-${idx}`}
+                        onClick={() => setSelected(idx)}
+                        style={{
+                          width: 64, height: 64,
+                          borderRadius: 6, overflow: 'hidden',
+                          border: active ? '2px solid #1890ff' : '1px solid #eee',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <Image
+                          src={thumb}
+                          alt={`thumb-${idx}`}
+                          preview={false}
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          fallback="/default-image.jpg"
+                        />
+                      </div>
+                    );
+                  })}
+                </Space>
+              </>
             ) : (
-              <div style={{ height: 350, background: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8 }}>
+              <div style={{
+                height: 350, background: '#f5f5f5',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8
+              }}>
                 <Text type="secondary">Chưa có hình ảnh</Text>
               </div>
             )}
@@ -546,11 +625,19 @@ const FacilityDetailPage = () => {
           <div style={{ marginBottom: 20 }}>
             <Text strong style={{ display: 'block', marginBottom: 8 }}>Tiện ích:</Text>
             <Space wrap>
-              {facility.amenities?.map(amenity => (
-                <Tag key={amenity} icon={getAmenityIcon(amenity)} style={{ padding: '4px 8px' }}>
-                  {amenity}
-                </Tag>
-              ))}
+              {Array.isArray(facility?.amenities) && facility.amenities.length > 0 ? (
+                facility.amenities.map((amenity) => (
+                  <Tag
+                    key={amenity}
+                    icon={getAmenityIcon(amenity)}
+                    style={{ padding: '4px 8px' }}
+                  >
+                    {amenity}
+                  </Tag>
+                ))
+              ) : (
+                <Tag key="no-amenities" style={{ padding: '4px 8px' }}>Không có tiện ích</Tag>
+              )}
             </Space>
           </div>
 

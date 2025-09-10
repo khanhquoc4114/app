@@ -19,22 +19,6 @@ export const formatPrice = (price) => {
     }).format(price);
 };
 
-// Hàm xác nhận xóa sân
-export const handleDeleteFacility = (record, setFacilities) => {
-    Modal.confirm({
-        title: 'Xác nhận xóa sân',
-        content: `Bạn có chắc muốn xóa sân "${record.name}"? Hành động này không thể hoàn tác.`,
-        okText: 'Xóa',
-        cancelText: 'Hủy',
-        okType: 'danger',
-        onOk: () => {
-            setFacilities(prev => prev.filter(fac => fac.id !== record.id));
-            message.success(`Đã xóa sân ${record.name}`);
-        }
-    });
-};
-
-
 const API_BASE_URL = 'http://localhost:8000'; // Thay đổi theo URL backend của bạn
 
 // Utility function to get token from localStorage
@@ -50,8 +34,6 @@ const createAuthHeaders = () => {
         ...(token && { 'Authorization': `Bearer ${token}` })
     };
 };
-
-
 
 // Cập nhật thông tin sân
 const updateFacility = async (facilityId, facilityData) => {
@@ -102,57 +84,73 @@ const createFacility = async (facilityData) => {
       if (v !== undefined && v !== null && v !== "") fd.append(k, String(v));
     };
 
-    // Helper: rút File/RcFile từ đối tượng Upload của AntD
     const toFile = (item) => {
+      console.log('toFile input:', item); // 🔍 Debug
       if (!item) return null;
       if (item instanceof File || item instanceof Blob) return item;
-      // AntD UploadFile
       if (item.originFileObj instanceof File || item.originFileObj instanceof Blob) {
         return item.originFileObj;
       }
+      console.log('toFile: không tìm thấy file hợp lệ', item); // 🔍 Debug
       return null;
     };
 
     // Basic fields
     appendIf("name", facilityData.name);
     appendIf("price_per_hour", facilityData.price_per_hour);
-
     appendIf("description", facilityData.description);
     appendIf("location", facilityData.location);
 
-    // sport_type & amenities: backend muốn string CSV
-    appendIf("sport_type", facilityData.sport_type); // đã CSV ở handleSubmit
-    appendIf("amenities", facilityData.amenities);   // đã CSV ở handleSubmit
-
+    // CSV strings
+    appendIf("sport_type", facilityData.sport_type);
+    appendIf("amenities", facilityData.amenities);
     appendIf("opening_hours", facilityData.opening_hours);
 
-    // court_layout: backend đọc JSON string → stringify
+    // court_layout
     if (facilityData.court_layout) {
       fd.append("court_layout", JSON.stringify(facilityData.court_layout));
     }
 
-    // Boolean
-    if (typeof facilityData.is_active === "boolean") {
-      fd.append("is_active", facilityData.is_active ? "true" : "false");
-    }
-
-    // Cover image: lấy từ UploadFile hoặc File
-    const coverFile = toFile(facilityData.image_cover);
+    // Ảnh cover
+    const coverFile = toFile(facilityData.cover_image);
     if (coverFile) {
-      fd.append("image_cover", coverFile);
+      fd.append("cover_image", coverFile);
     }
 
-    // Facility images: lấy originFileObj
+    // 🔍 Debug ảnh gallery
     const imgs = facilityData.images;
+    console.log('facilityData.images:', imgs); // Debug
+    console.log('imgs is Array:', Array.isArray(imgs)); // Debug
+    console.log('imgs length:', imgs?.length); // Debug
+
     if (Array.isArray(imgs)) {
-      imgs.forEach((it) => {
-        const file = toFile(it);
-        if (file) fd.append("facility_images", file);
+      console.log('Processing images array...'); // Debug
+      imgs.forEach((item, index) => {
+        console.log(`Processing image ${index}:`, item); // Debug
+        const file = toFile(item);
+        console.log(`Converted file ${index}:`, file); // Debug
+        if (file) {
+          console.log(`Appending facility_images ${index}:`, file.name || file); // Debug
+          fd.append("facility_images", file);
+        } else {
+          console.warn(`Failed to convert image ${index} to file`); // Debug
+        }
       });
+    } else {
+      console.warn('imgs is not an array:', typeof imgs); // Debug
+    }
+
+    // 🔍 Debug FormData contents
+    console.log('FormData entries:');
+    for (let [key, value] of fd.entries()) {
+      if (value instanceof File) {
+        console.log(`${key}: File(${value.name}, ${value.size} bytes)`);
+      } else {
+        console.log(`${key}: ${value}`);
+      }
     }
 
     const headers = createAuthHeaders ? createAuthHeaders() : {};
-    // Để browser tự đặt boundary cho multipart
     if (headers && headers["Content-Type"]) delete headers["Content-Type"];
 
     const resp = await fetch(`${API_BASE_URL}/api/facilities/`, {
@@ -210,6 +208,21 @@ export const handleFacilitySubmit = async (
   }
 };
 
+// Hàm xác nhận xóa sân
+export const handleDeleteFacility = (record, setFacilities) => {
+    Modal.confirm({
+        title: 'Xác nhận xóa sân',
+        content: `Bạn có chắc muốn xóa sân "${record.name}"? Hành động này không thể hoàn tác.`,
+        okText: 'Xóa',
+        cancelText: 'Hủy',
+        okType: 'danger',
+        onOk: () => {
+            setFacilities(prev => prev.filter(fac => fac.id !== record.id));
+            message.success(`Đã xóa sân ${record.name}`);
+        }
+    });
+};
+
 // Hàm tải lại danh sách sân từ server (optional, để đồng bộ dữ liệu)
 export const refreshFacilities = async (setFacilities) => {
     try {
@@ -253,7 +266,6 @@ export const handleStatusSubmit = async (values, selectedFacility, setFacilities
         message.error(error.message || 'Có lỗi khi cập nhật trạng thái');
     }
 };
-// MyFacilitiesPageLogic.js - Chứa các hàm xử lý logic cho MyFacilitiesPage
 
 // Hàm xử lý thêm mới hoặc cập nhật sân
 export const handleSaveFacility = (values, setFacilities, setFacilityModalVisible, setSelectedFacility) => {
@@ -273,8 +285,6 @@ export const handleSaveFacility = (values, setFacilities, setFacilityModalVisibl
     setSelectedFacility(null);
     message.success('Lưu thông tin sân thành công!');
 };
-
-// Hàm xử lý xoá sân
 
 // Hàm xử lý đổi trạng thái sân
 export const handleChangeStatus = (id, status, setFacilities) => {
