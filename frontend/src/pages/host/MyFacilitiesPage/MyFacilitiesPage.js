@@ -311,8 +311,8 @@ const MyFacilitiesPage = () => {
     const courtCountsObj = values.court_counts || {};
     const courtLayoutArray = selected
         .map((sport) => {
-        const raw = courtCountsObj[sport];             // có thể là "1" (string)
-        const n = Number(raw);                          // ép kiểu
+        const raw = courtCountsObj[sport];            
+        const n = Number(raw);                         
         const court_counts = Number.isFinite(n) ? n : 0;
         return { sport_type: sport, court_counts };
         })
@@ -320,8 +320,14 @@ const MyFacilitiesPage = () => {
         .filter((item) => item.court_counts > 0);
 
     // 3) CSV cho sport_type & amenities
-    const sportTypeCsv = selected.length ? selected.join(",") :
-        (Array.isArray(values.sport_type) ? values.sport_type.join(",") : (values.sport_type ?? ""));
+    // const sportTypeCsv = selected.length ? selected.join(",") :
+    //     (Array.isArray(values.sport_type) ? values.sport_type.join(",") : (values.sport_type ?? ""));
+
+    // Dạng Json
+    const sportTypeJson = selected.length ? selected : 
+    (Array.isArray(values.sport_type) ? values.sport_type : 
+    (values.sport_type ? values.sport_type.split(",").map(s => s.trim()).filter(s => s) : []));
+
 
     const amenitiesCsv = Array.isArray(values.amenities)
         ? values.amenities.join(",")
@@ -337,11 +343,11 @@ const MyFacilitiesPage = () => {
     const formattedValues = {
         id: values.id,
         name: values.name?.trim(),
-        sport_type: sportTypeCsv,                // backend expects CSV
+        sport_type: sportTypeJson,                
         description: values.description?.trim(),
         price_per_hour: Number(values.price_per_hour),
         location: values.location?.trim(),
-        amenities: amenitiesCsv,                 // backend expects CSV
+        amenities: amenitiesCsv,                
         opening_hours: openingHours,
 
         cover_image: uploadedFiles?.cover_image ?? null,

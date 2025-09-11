@@ -2,11 +2,13 @@ from datetime import datetime
 import os
 from fastapi import APIRouter, Depends, HTTPException, Request, status, UploadFile, File, Form
 from sqlalchemy.orm import Session
-from sqlalchemy import func, extract
+from sqlalchemy import func, extract, text
+from sqlalchemy.sql import true
+from sqlalchemy.dialects.postgresql import JSONB
 from database import get_db
 from models import Facility, UserFavorite, Booking, User
 from auth import verify_token, oauth2_scheme, get_current_user
-from typing import Annotated, List, Optional, Union, Dict
+from typing import List, Optional
 from pydantic import BaseModel, Field, ConfigDict
 import json
 from utils import save_file
@@ -224,7 +226,13 @@ async def create_facility_with_upload(
     for i, img in enumerate(facility_images_list):
         print(f"Image {i}: filename={img.filename}, size={img.size}")
 
-    sport_type_list = [s.strip() for s in sport_type.split(",") if s.strip()]
+    if isinstance(sport_type, str):
+        sport_type_list = [s.strip() for s in sport_type.split(",") if s.strip()]
+    elif isinstance(sport_type, list):
+        sport_type_list = sport_type
+    else:
+        sport_type_list = []
+        
     amenities_list = [s.strip() for s in amenities.split(",")] if amenities else []
     court_layout_obj = json.loads(court_layout) if court_layout else None
 
@@ -440,14 +448,23 @@ def count_active_facilities(db: Session = Depends(get_db)):
 
 @router.get("/popular-sports")
 def get_popular_sports(db: Session = Depends(get_db)):
-    results = (
-        db.query(Facility.sport_type, func.count(Facility.id).label("courts"))
-        .filter(Facility.is_active == True)
-        .group_by(Facility.sport_type)
-        .all()
-    )
-    return [{"sportType": r.sport_type, "courts": r.courts} for r in results]
-
+    sql = text("""
+        SELECT  x.sport_type      AS "sportType",
+                COUNT(DISTINCT f.id) AS "facilities",
+                SUM(COALESCE(x.court_counts, 0)) AS "courts"
+        FROM facilities f
+        JOIN LATERAL jsonb_to_recordset(f.court_layout::jsonb)
+             AS x(sport_type text, court_counts int)
+             ON TRUE
+        WHERE f.is_active = TRUE
+          AND (f.status IS NULL OR f.status = 'active')
+          AND f.court_layout IS NOT NULL
+        GROUP BY x.sport_type
+        ORDER BY "courts" DESC;
+    """)
+    rows = db.execute(sql).mappings().all()
+    return rows
+  
 @router.post("/{facility_id}/favorite")
 def add_favorite(
     facility_id: int,

@@ -186,6 +186,8 @@ const AdvancedSearch = ({
         const newFilters = { ...filters, [key]: value };
         setFilters(newFilters);
 
+        console.log();
+
         // Count active filters
         const count = Object.entries(newFilters).filter(([k, v]) => {
             if (k === 'searchText') return v.length > 0;
@@ -270,6 +272,7 @@ const AdvancedSearch = ({
                     </AutoComplete>
                 </Col>
 
+                {/* Theo môn thể thao */}
                 <Col xs={24} sm={6} md={4}>
                     <Select
                         size="large"
@@ -289,6 +292,7 @@ const AdvancedSearch = ({
                     </Select>
                 </Col>
 
+                {/* Theo khu vực */}
                 <Col xs={24} sm={6} md={4}>
                     <Select
                         size="large"

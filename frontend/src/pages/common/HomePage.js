@@ -23,7 +23,8 @@ const HomePage = () => {
         basketball: { name: "Bóng rổ", image: "🏀", description: "Sân bóng rổ trong nhà và ngoài trời" },
     }), []); // chỉ tạo 1 lần
 
-    React.useEffect(() => {
+    // Lấy data của các môn thể thao phổ biến
+    useEffect(() => {
         const fetchPopularSports = async () => {
             try {
                 const res = await fetch(`${process.env.REACT_APP_API_URL}/api/facilities/popular-sports`);
@@ -32,7 +33,8 @@ const HomePage = () => {
                 const merged = data.map(item => ({
                     ...sportMeta[item.sportType],
                     sportType: item.sportType,
-                    courts: item.courts
+                    courts: item.courts,
+                    facilities: item.facilities
                 }));
 
                 setPopularSports(merged);
@@ -44,7 +46,7 @@ const HomePage = () => {
         fetchPopularSports();
     }, [sportMeta]);
 
-    // Mock data
+    // Lấy stat của admin
     useEffect(() => {
         axios.get(`${process.env.REACT_APP_API_URL}/api/admin/stats`)
         .then(res => {
@@ -120,10 +122,13 @@ const HomePage = () => {
                                     {sport.name}
                                 </Title>
                                 <Paragraph type="secondary">
+                                    {sport.facilities} cơ sở
+                                </Paragraph>
+                                <Paragraph type="secondary">
                                     {sport.courts} sân có sẵn
                                 </Paragraph>
                             </div>
-                            <Paragraph style={{ fontSize: '12px', color: '#666' }}>
+                            <Paragraph style={{ fontSize: '12px', color: '#666', textAlign: 'center' }}>
                                 {sport.description}
                             </Paragraph>
                         </Card>

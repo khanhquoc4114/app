@@ -75,10 +75,10 @@ class Facility(Base):
     name = Column(String, nullable=False)
     owner_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # id user chủ sân
     sport_type = Column(ARRAY(String), nullable=False)  # badminton, football, tennis, etc.
-    court_layout = Column(JSON, nullable=True)   # lưu layout sân dưới dạng JSON
+    court_layout = Column(JSON, nullable=True)   # lưu layout sân dưới dạng JSON {sport_type, court_counts} cho từng môn thể thao
     description = Column(Text)
     price_per_hour = Column(Float, nullable=False)
-    cover_image = Column(Text, nullable=True)       # ảnh đại diện
+    cover_image = Column(Text, nullable=True)     # ảnh đại diện
     status = Column(String, default="active")     # active, inactive, maintenance
     location = Column(String)                     # thêm địa chỉ
     rating = Column(Float, default=0.0)           # điểm trung bình
