@@ -1,14 +1,6 @@
 import React from 'react';
 import { Card, Tag, Button, Rate, Typography, Space, Badge } from 'antd';
-import {
-    EnvironmentOutlined,
-    ClockCircleOutlined,
-    DollarOutlined,
-    StarOutlined,
-    WifiOutlined,
-    CarOutlined,
-    HomeOutlined,
-    ShopOutlined
+import {EnvironmentOutlined,ClockCircleOutlined,StarOutlined,WifiOutlined,CarOutlined,HomeOutlined,ShopOutlined
 } from '@ant-design/icons';
 
 const { Text, Paragraph } = Typography;

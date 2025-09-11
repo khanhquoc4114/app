@@ -9,7 +9,7 @@ const { Title, Text, Paragraph } = Typography;
 const { TabPane } = Tabs;
 
 const FacilityDetailPage = () => {
-  const { id } = useParams();
+  const {id} = useParams();
   const navigate = useNavigate();
   const [facility, setFacility] = useState(null);
   const [owner, setOwner] = useState(null);
@@ -36,7 +36,9 @@ const FacilityDetailPage = () => {
   const API_URL = process.env.REACT_APP_API_URL;
   const chatBubbleRef = useRef();
   const [selected, setSelected] = useState(0);
+  const didFetchMapRef = useRef(new Map());
 
+  // Load image
   const parseImages = (facility) => {
     const arr = [];
     if (facility?.cover_image) arr.push(facility.cover_image);
@@ -53,33 +55,22 @@ const FacilityDetailPage = () => {
     imgs.forEach(p => { if (p && !arr.includes(p)) arr.push(p); });
     return arr;
   };
+  const resolveImageUrl = (p, baseUrl = API_URL) => {
+    if (!p) return undefined;
 
-const resolveImageUrl = (p, baseUrl = API_URL) => {
-  if (!p) return undefined;
+    if (/^(https?:|blob:|data:)/i.test(p)) return p;
+    let rel = String(p).trim();
+    rel = rel.replace(/^\/+/, '');
+    if (rel.startsWith('facilities/uploads/')) {
+      rel = rel.replace(/^facilities\//, ''); // -> "uploads/..."
+    }
+    if (!rel.startsWith('uploads/')) {
+      rel = `uploads/${rel}`;
+    }
 
-  // Nếu đã là absolute (http/https/blob/data) thì trả nguyên
-  if (/^(https?:|blob:|data:)/i.test(p)) return p;
-
-  // Chuẩn hoá đường dẫn tương đối
-  let rel = String(p).trim();
-
-  // bỏ slash đầu nếu có
-  rel = rel.replace(/^\/+/, '');
-
-  // trường hợp dữ liệu cũ có "facilities/uploads/..."
-  if (rel.startsWith('facilities/uploads/')) {
-    rel = rel.replace(/^facilities\//, ''); // -> "uploads/..."
-  }
-
-  // đảm bảo luôn bắt đầu bằng "uploads/"
-  if (!rel.startsWith('uploads/')) {
-    rel = `uploads/${rel}`;
-  }
-
-  const base = (baseUrl || '').replace(/\/+$/, ''); // bỏ slash thừa
-  return `${base}/${rel}`; // -> http://localhost:8000/uploads/xxx.jpg
-};
-
+    const base = (baseUrl || '').replace(/\/+$/, '');
+    return `${base}/${rel}`;
+  };
   const imgList = useMemo(() => parseImages(facility), [facility]);
   const mainSrc = imgList.length
   ? resolveImageUrl(imgList[Math.min(selected, imgList.length - 1)], API_URL)
@@ -192,10 +183,10 @@ const resolveImageUrl = (p, baseUrl = API_URL) => {
   };
   // Khi facility thay đổi, reset selectedSportType
   useEffect(() => {
-  if (facility?.sport_type) {
-    setSelectedSportType(Array.isArray(facility.sport_type) ? facility.sport_type[0] : facility.sport_type);
-  }
-}, [facility]);
+    if (facility?.sport_type) {
+      setSelectedSportType(Array.isArray(facility.sport_type) ? facility.sport_type[0] : facility.sport_type);
+    }
+  }, [facility]);
   
   const handleDateChange = (date) => {
     setSelectedDate(date);
@@ -298,7 +289,6 @@ const resolveImageUrl = (p, baseUrl = API_URL) => {
     }
     */
   };
-
   useEffect(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -316,62 +306,135 @@ const resolveImageUrl = (p, baseUrl = API_URL) => {
   }, []);
 
   // fetch facility details
-  useEffect(() => {
-    async function fetchData() {
-      const token = localStorage.getItem('token');
-      if (!API_URL) {
-        message.error('Cấu hình API không hợp lệ');
-        setLoading(false);
-        return;
-      }
+  // useEffect(() => {
+  //   async function fetchData() {
+  //     const token = localStorage.getItem('token');
+  //     if (!API_URL) {
+  //       message.error('Cấu hình API không hợp lệ');
+  //       setLoading(false);
+  //       return;
+  //     }
 
-      setLoading(true);
+  //     setLoading(true);
+  //     try {
+  //       // Lấy thông tin sân
+  //       const res = await fetch(`${API_URL}/api/facilities/detail/${id}`, {
+  //         headers: {
+  //           'Authorization': `Bearer ${token}`,
+  //           'Content-Type': 'application/json'
+  //         }
+  //       });
+  //       if (!res.ok) {
+  //         throw new Error('Không thể tải thông tin sân');
+  //       }
+  //       const data = await res.json();
+
+  //       if (!data || !data.opening_hours) {
+  //         throw new Error('Dữ liệu sân không hợp lệ');
+  //       }
+
+  //       setFacility({
+  //         ...data,
+  //         available_slots: generateTimeSlots(data.opening_hours)
+  //       });
+        
+  //       // Lấy thông tin chủ sân
+  //       if (data.owner_id) {
+  //         const ownerRes = await fetch(`${API_URL}/api/users/${data.owner_id}`);
+  //         if (ownerRes.ok) {
+  //           setOwner(await ownerRes.json());
+  //         }
+  //       }
+
+  //       // Lấy các sân liên quan (cùng chủ hoặc cùng khu vực)
+  //       const relatedRes = await fetch(`${API_URL}/api/facilities?owner_id=${data.owner_id}&exclude_id=${id}`);
+  //       if (relatedRes.ok) {
+  //         setRelatedFacilities(await relatedRes.json());
+  //       }
+
+  //       // Set mock data for enhanced features
+  //       setReviews(mockReviews);
+  //       setFacilityStats(mockStats);
+  //     } catch (err) {
+  //       console.error('Error fetching facility data:', err);
+  //       message.error(err.message || 'Không thể tải dữ liệu sân.');
+  //     }
+  //     setLoading(false);
+  //   }
+  //   fetchData();
+  // }, [id, API_URL]);
+
+  useEffect(() => {
+    if (!id) return;
+
+    const map = didFetchMapRef.current;
+    map.set(id, true);
+
+    const controller = new AbortController();
+    const { signal } = controller;
+
+    const token = localStorage.getItem('token');
+    if (!API_URL) {
+      message.error('Cấu hình API không hợp lệ');
+      return;
+    }
+
+    (async () => {
       try {
-        // Lấy thông tin sân
+        // 1) Chi tiết sân
         const res = await fetch(`${API_URL}/api/facilities/detail/${id}`, {
           headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
+            Authorization: `Bearer ${token}`,
+          },
+          signal,
         });
-        if (!res.ok) {
-          throw new Error('Không thể tải thông tin sân');
-        }
-        const data = await res.json();
+        if (!res.ok) throw new Error('Không thể tải thông tin sân');
 
+        const data = await res.json();
         if (!data || !data.opening_hours) {
           throw new Error('Dữ liệu sân không hợp lệ');
         }
 
         setFacility({
           ...data,
-          available_slots: generateTimeSlots(data.opening_hours)
+          available_slots: generateTimeSlots(data.opening_hours),
         });
-        
-        // Lấy thông tin chủ sân
-        if (data.owner_id) {
-          const ownerRes = await fetch(`${API_URL}/api/users/${data.owner_id}`);
-          if (ownerRes.ok) {
-            setOwner(await ownerRes.json());
-          }
+
+        // 2) Các call phụ thuộc
+        const ownerUrl = data.owner_id
+          ? `${API_URL}/api/users/${data.owner_id}`
+          : null;
+
+        const relatedUrl = `${API_URL}/api/facilities?owner_id=${data.owner_id ?? ''}&exclude_id=${id}`;
+
+        const [ownerRes, relatedRes] = await Promise.all([
+          ownerUrl ? fetch(ownerUrl, { signal }) : Promise.resolve(null),
+          fetch(relatedUrl, { signal }),
+        ]);
+
+        if (ownerRes && ownerRes.ok) {
+          const ownerData = await ownerRes.json();
+          setOwner(ownerData);
         }
 
-        // Lấy các sân liên quan (cùng chủ hoặc cùng khu vực)
-        const relatedRes = await fetch(`${API_URL}/api/facilities?owner_id=${data.owner_id}&exclude_id=${id}`);
         if (relatedRes.ok) {
-          setRelatedFacilities(await relatedRes.json());
+          const related = await relatedRes.json();
+          setRelatedFacilities(related);
         }
 
-        // Set mock data for enhanced features
+        // 3) Mock data
         setReviews(mockReviews);
         setFacilityStats(mockStats);
       } catch (err) {
+        if (err.name === 'AbortError') return;
         console.error('Error fetching facility data:', err);
         message.error(err.message || 'Không thể tải dữ liệu sân.');
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
-    }
-    fetchData();
+    })();
+
+    return () => controller.abort();
   }, [id, API_URL]);
 
   useEffect(() => {
@@ -531,58 +594,190 @@ const resolveImageUrl = (p, baseUrl = API_URL) => {
         Quay lại
       </Button>
 
+      {/* Facility details (Images, . . . )*/}
       <Row gutter={32} style={{ marginBottom: 32 }}>
         {/* Left: Image gallery */}
         <Col xs={24} md={10}>
-          <Card style={{ boxShadow: '0 2px 8px #eee', minHeight: 350 }}>
+          <Card style={{ boxShadow: '0 2px 8px #eee', minHeight: 400 }}>
             {mainSrc ? (
               <>
-                <Image
-                  alt={facility?.name}
-                  src={mainSrc}
-                  fallback="/default-image.jpg"
-                  style={{ width: '100%', maxHeight: 350, objectFit: 'cover', borderRadius: 8 }}
-                  preview={{
-                    mask: <div style={{ background: 'rgba(0,0,0,0.5)', color: '#fff', padding: 8 }}>Xem ảnh lớn</div>,
+                {/* Main image - fixed container */}
+                <div style={{ 
+                  width: '100%', 
+                  height: 280, 
+                  overflow: 'hidden', 
+                  borderRadius: 8,
+                  position: 'relative',
+                  backgroundColor: '#f5f5f5'
+                }}>
+                  <Image
+                    alt={facility?.name}
+                    src={mainSrc}
+                    fallback="/default-image.jpg"
+                    style={{ 
+                      width: '100%', 
+                      height: '100%', 
+                      objectFit: 'contain',
+                      borderRadius: 8 
+                    }}
+                    preview={{
+                      mask: <div style={{ 
+                        background: 'rgba(0,0,0,0.5)', 
+                        color: '#fff', 
+                        padding: 8,
+                        borderRadius: 4
+                      }}>Xem ảnh lớn</div>,
+                    }}
+                  />
+                </div>
+                
+                {/* Draggable thumbnail container */}
+                <div 
+                  ref={(el) => {
+                    if (el) {
+                      let isDown = false;
+                      let startX;
+                      let scrollLeft;
+
+                      const handleMouseDown = (e) => {
+                        isDown = true;
+                        el.style.cursor = 'grabbing';
+                        startX = e.pageX - el.offsetLeft;
+                        scrollLeft = el.scrollLeft;
+                        e.preventDefault();
+                      };
+
+                      const handleMouseLeave = () => {
+                        isDown = false;
+                        el.style.cursor = 'grab';
+                      };
+
+                      const handleMouseUp = () => {
+                        isDown = false;
+                        el.style.cursor = 'grab';
+                      };
+
+                      const handleMouseMove = (e) => {
+                        if (!isDown) return;
+                        e.preventDefault();
+                        const x = e.pageX - el.offsetLeft;
+                        const walk = (x - startX) * 2;
+                        el.scrollLeft = scrollLeft - walk;
+                      };
+
+                      el.addEventListener('mousedown', handleMouseDown);
+                      el.addEventListener('mouseleave', handleMouseLeave);
+                      el.addEventListener('mouseup', handleMouseUp);
+                      el.addEventListener('mousemove', handleMouseMove);
+                    }
                   }}
-                />
-                <Space wrap style={{ marginTop: 12, maxWidth: '100%' }}>
-                  {imgList.map((p, idx) => {
-                    const thumb = resolveImageUrl(p, API_URL);
-                    const active = idx === selected;
-                    return (
-                      <div
-                        key={`${p}-${idx}`}
-                        onClick={() => setSelected(idx)}
-                        style={{
-                          width: 64, height: 64,
-                          borderRadius: 6, overflow: 'hidden',
-                          border: active ? '2px solid #1890ff' : '1px solid #eee',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        <Image
-                          src={thumb}
-                          alt={`thumb-${idx}`}
-                          preview={false}
-                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                          fallback="/default-image.jpg"
-                        />
-                      </div>
-                    );
-                  })}
-                </Space>
+                  style={{ 
+                    marginTop: 16, 
+                    overflowX: 'auto',
+                    overflowY: 'hidden',
+                    paddingBottom: 8,
+                    paddingTop: 4,
+                    scrollbarWidth: 'thin',
+                    scrollbarColor: '#ccc transparent',
+                    cursor: 'grab',
+                    userSelect: 'none'
+                  }}
+                >
+                  <div 
+                    style={{ 
+                      display: 'flex',
+                      gap: 12,
+                      minWidth: 'max-content',
+                      paddingRight: 8,
+                      paddingLeft: 2
+                    }}
+                  >
+                    {imgList.map((p, idx) => {
+                      const thumb = resolveImageUrl(p, API_URL);
+                      const active = idx === selected;
+                      return (
+<div
+  key={`${p}-${idx}`}
+  onClick={() => setSelected(idx)}
+  style={{
+    minWidth: 72,
+    width: 72,
+    height: 72,
+    borderRadius: 8,
+    overflow: 'hidden',
+    border: active ? '3px solid #1890ff' : '2px solid #ddd',
+    cursor: 'pointer',
+    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+    transform: active ? 'scale(1.08)' : 'scale(1)',
+    flexShrink: 0,
+    boxShadow: active
+      ? '0 4px 12px rgba(24, 144, 255, 0.3)'
+      : '0 2px 4px rgba(0,0,0,0.1)',
+    backgroundColor: '#fff',
+
+    /* 👇 quan trọng để căn giữa */
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center'
+  }}
+  onMouseDown={(e) => e.stopPropagation()}
+  onMouseEnter={(e) => {
+    if (!active) {
+      e.currentTarget.style.transform = 'translateY(-2px) scale(1.02)';
+      e.currentTarget.style.boxShadow = '0 6px 16px rgba(0,0,0,0.15)';
+    }
+  }}
+  onMouseLeave={(e) => {
+    if (!active) {
+      e.currentTarget.style.transform = 'scale(1)';
+      e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+    }
+  }}
+>
+  <Image
+    src={thumb}
+    alt={`thumb-${idx}`}
+    preview={false}
+
+    /* style áp vào wrapper <span> của AntD Image */
+    style={{
+      width: '100%',
+      height: '100%',
+      /* wrapper vẫn full để click area đủ lớn */
+    }}
+
+    /* 👇 CSS cho thẻ <img> thật sự */
+    imgStyle={{
+      maxWidth: '100%',
+      maxHeight: '100%',
+      objectFit: 'contain',
+      objectPosition: 'center',
+      display: 'block'
+    }}
+
+    fallback="/default-image.jpg"
+  />
+</div>
+                      );
+                    })}
+                  </div>
+                </div>
               </>
             ) : (
               <div style={{
-                height: 350, background: '#f5f5f5',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8
+                height: 400, 
+                background: '#f5f5f5',
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center', 
+                borderRadius: 8
               }}>
                 <Text type="secondary">Chưa có hình ảnh</Text>
               </div>
             )}
           </Card>
         </Col>
+        
         {/* Right: Info + actions */}
         <Col xs={24} md={14}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
@@ -1151,7 +1346,7 @@ const resolveImageUrl = (p, baseUrl = API_URL) => {
             <Card
               hoverable
               onClick={() => navigate(`/facilities/${f.id}`)}
-              cover={f.cover_image && <img alt={f.name} src={f.cover_image} style={{ height: 120, objectFit: 'cover' }} onError={(e) => { e.currentTarget.src = '/default-image.jpg'; }}/>}
+              cover={f.cover_image && <img alt={f.name} src={`http://localhost:8000/${f.cover_image}`} style={{ height: 120, objectFit: 'cover' }} onError={(e) => { e.currentTarget.src = '/default-image.jpg'; }}/>}
             >
               <Card.Meta
                 title={f.name}

@@ -255,8 +255,6 @@ const FacilitiesPage = () => {
         fetchFacilities();
     }, [API_URL]);
 
-
-
     const filteredFacilities = facilitiesWithDistance.filter(facility => {
         const searchText = filters.searchText.toLowerCase();
         const safeLower = v => (typeof v === 'string' ? v.toLowerCase() : '');
@@ -330,8 +328,6 @@ const FacilitiesPage = () => {
         };
         return icons[sportType] || '🏃';
     };
-
-
 
     const handleToggleFavorite = async (facilityId, e) => {
         e.stopPropagation();
@@ -434,9 +430,49 @@ const FacilitiesPage = () => {
                     alignItems: 'center',
                     justifyContent: 'center',
                     fontSize: '32px',
-                    position: 'relative'
+                    position: 'relative',
+                    overflow: 'hidden'
                 }}>
-                    {getSportIcon(facility.sport_type)}
+                    {/* Facility Image */}
+                    {facility.cover_image ? (
+                        <img
+                            src={`http://localhost:8000/${facility.cover_image}`}
+                            alt={facility.name}
+                            style={{
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'cover',
+                                transition: 'transform 0.3s ease'
+                            }}
+                            onError={(e) => {
+                                e.target.style.display = 'none';
+                                e.target.nextSibling.style.display = 'flex';
+                            }}
+                            onMouseEnter={(e) => {
+                                e.target.style.transform = 'scale(1.05)';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.target.style.transform = 'scale(1)';
+                            }}
+                        />
+                    ) : null}
+                    
+                    {/* Fallback icon (hidden by default if image exists) */}
+                    <div 
+                        style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            height: '100%',
+                            display: facility.cover_image ? 'none' : 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            background: 'linear-gradient(45deg, #f0f2f5, #d9d9d9)'
+                        }}
+                    >
+                        {getSportIcon(facility.sport_type)}
+                    </div>
 
                     {/* Distance badge */}
                     {showDistance && facility.distance && (
@@ -449,7 +485,8 @@ const FacilitiesPage = () => {
                             padding: '2px 6px',
                             borderRadius: '10px',
                             fontSize: '10px',
-                            fontWeight: 'bold'
+                            fontWeight: 'bold',
+                            zIndex: 3
                         }}>
                             {renderDistance(facility.distance)}
                         </div>
@@ -466,7 +503,8 @@ const FacilitiesPage = () => {
                             padding: '2px 6px',
                             borderRadius: '10px',
                             fontSize: '10px',
-                            fontWeight: 'bold'
+                            fontWeight: 'bold',
+                            zIndex: 3
                         }}>
                             ⭐ Yêu thích
                         </div>
@@ -490,7 +528,7 @@ const FacilitiesPage = () => {
                             border: 'none',
                             backdropFilter: 'blur(4px)',
                             transition: 'all 0.3s ease',
-                            zIndex: 2
+                            zIndex: 4
                         }}
                         onMouseEnter={(e) => {
                             e.currentTarget.style.transform = 'scale(1.1)';
@@ -519,7 +557,7 @@ const FacilitiesPage = () => {
                             border: '2px solid white',
                             boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
                             transition: 'all 0.3s ease',
-                            zIndex: 10
+                            zIndex: 4
                         }}
                         onMouseEnter={(e) => {
                             e.currentTarget.style.transform = 'scale(1.2)';
